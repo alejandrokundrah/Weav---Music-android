@@ -2042,8 +2042,15 @@ useEffect(() => {
           onSidebarWidthChange={setSidebarWidth}
           onNavigateAlbum={handleNavigateAlbum}
           onNavigatePlaylist={handleNavigatePlaylist}
-          showSearchBar={activeTab?.view !== "settings" && !playerUIState.isLyricsOpen}
+          showSearchBar={
+            activeTab?.view !== "settings"
+            && !playerUIState.isLyricsOpen
+            // The phone Home carries its own search button in the header.
+            && !(isPhone && activeTab?.view === "home")
+          }
           onOpenSearch={() => setIsSearchOpen(true)}
+          // The phone Home bleeds to the screen edges and supplies its own gutters.
+          edgeToEdge={isPhone && activeTab?.view === "home"}
           canGoBack={canNavigateBack}
           canGoForward={canNavigateForward}
           onNavigateBack={handleNavigateBack}
@@ -2100,6 +2107,8 @@ useEffect(() => {
                 searchController={searchController}
                 onSignIn={handleSignIn}
                 onOpenSearch={() => setIsSearchOpen(true)}
+                onOpenAlbum={handleNavigateAlbum}
+                onOpenPlaylist={handleNavigatePlaylist}
                 destinations={{
                   onOpenLibrary: handleOpenLibrary,
                   onOpenBrowse: () => handleOpenBrowse(),
@@ -2246,7 +2255,6 @@ useEffect(() => {
         <MobileNav
           activeView={activeTab?.view}
           onHome={handleNavigateHome}
-          onSearch={() => setIsSearchOpen(true)}
           onLibrary={handleOpenLibrary}
           onBrowse={() => handleOpenBrowse()}
           onSettings={handleOpenSettings}

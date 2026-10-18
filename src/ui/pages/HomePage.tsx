@@ -1,7 +1,7 @@
 import { type MouseEvent, useEffect, useMemo, useRef, useState } from "react";
 import { CylinderCarousel } from "@/components/motion/cylinder-carousel";
 import { PlayActiveIcon } from "@/ui/icons";
-import type { Track } from "../../datasource/types";
+import type { Album, Playlist, Track } from "../../datasource/types";
 import type { LibraryController, LibraryState } from "../../player/LibraryController";
 import type { PlayerControllerActions } from "../../player/playerStore";
 import type { SearchController } from "../../player/SearchController";
@@ -119,6 +119,9 @@ interface HomePageProps {
   destinations: HomeDestinationHandlers;
   /** Opens the search overlay; the phone Home has a search button in its header. */
   onOpenSearch?: () => void;
+  /** The phone Home's cards open albums and playlists directly. */
+  onOpenAlbum?: (album: Album) => void;
+  onOpenPlaylist?: (playlist: Playlist) => void;
 }
 
 function shuffle<T>(items: readonly T[]): T[] {
@@ -143,6 +146,8 @@ export function HomePage({
   onSignIn,
   destinations,
   onOpenSearch,
+  onOpenAlbum,
+  onOpenPlaylist,
 }: HomePageProps) {
   const { openTrackMenu } = useTrackContextMenu();
   const isPhone = useCompactViewport();
@@ -386,16 +391,18 @@ export function HomePage({
     return (
       <PhoneHome
         account={libraryState.library?.account ?? null}
+        isSignedIn={libraryState.status === "ready"}
         isSignedOut={libraryState.status === "signed-out"}
         isLoading={isLoadingSuggestions || isWaitingForLibrary}
         recentPlays={recentPlays}
         suggestions={suggestions}
-        currentTrackId={currentTrackId}
+        libraryController={libraryController}
+        searchController={searchController}
         onPlay={playTrack}
         onTrackMenu={openTrackMenu}
+        onOpenAlbum={onOpenAlbum ?? (() => {})}
+        onOpenPlaylist={onOpenPlaylist ?? (() => {})}
         onOpenSearch={onOpenSearch ?? (() => {})}
-        onOpenLibrary={destinations.onOpenLibrary}
-        onOpenHistory={destinations.onOpenHistory}
         onSignIn={() => void onSignIn()}
       />
     );

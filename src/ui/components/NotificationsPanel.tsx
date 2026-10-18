@@ -8,6 +8,7 @@ import type { FeedNotification } from "../../datasource/types";
 import { libraryController, playerController } from "../../player/playerStore";
 import { logInternalError } from "../../internal/logging";
 import { FloatingPanel } from "./FloatingPanel";
+import { PhoneBellIcon } from "./phone/PhoneIcons";
 
 /**
  * How often the unseen count is refreshed while the app is open.
@@ -72,7 +73,14 @@ function NotificationRow({
  * nobody reads most sessions. Only the unseen *count* is polled, because that is what decides
  * whether the button is worth looking at.
  */
-export function NotificationsPanel({ signedIn }: { signedIn: boolean }) {
+export function NotificationsPanel({
+  signedIn,
+  variant = "toolbar",
+}: {
+  signedIn: boolean;
+  /** `phone` swaps the toolbar button for the bell used in the phone Home header. */
+  variant?: "toolbar" | "phone";
+}) {
   const [open, setOpen] = useState(false);
   const [notifications, setNotifications] = useState<FeedNotification[] | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -136,7 +144,23 @@ export function NotificationsPanel({ signedIn }: { signedIn: boolean }) {
       onOpenChange={setOpen}
       side="bottom"
       className="w-96 max-w-[calc(100vw-2rem)] p-2"
-      trigger={
+      trigger={variant === "phone" ? (
+        <button
+          type="button"
+          className="relative grid size-10 place-items-center rounded-full text-[#e7e7e7] transition-transform active:scale-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
+          aria-label={unseen > 0 ? `Notifications, ${unseen} unread` : "Notifications"}
+          aria-expanded={open}
+          onClick={() => setOpen((value) => !value)}
+        >
+          <PhoneBellIcon />
+          {unseen > 0 && (
+            <span
+              className="absolute right-2 top-2 size-2 rounded-full bg-white ring-2 ring-[#131313]"
+              aria-hidden="true"
+            />
+          )}
+        </button>
+      ) : (
         <Tooltip side="bottom" content="Notifications">
           <Button
             variant="ghost"
@@ -163,7 +187,7 @@ export function NotificationsPanel({ signedIn }: { signedIn: boolean }) {
             )}
           </Button>
         </Tooltip>
-      }
+      )}
     >
       <div className="flex items-center justify-between gap-2 px-2 pb-1.5 pt-1">
         <span className="text-sm font-semibold text-foreground">Notifications</span>

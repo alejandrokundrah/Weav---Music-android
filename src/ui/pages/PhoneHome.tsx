@@ -1,306 +1,439 @@
-import { useState, type MouseEvent } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+  type MouseEvent,
+} from "react";
 import { cn } from "@/lib/utils";
-import { HeartIcon, PlayActiveIcon, SearchIcon } from "@/ui/icons";
-import type { AccountProfile, Track } from "../../datasource/types";
-import { ArtistLinks } from "../components/ArtistLinks";
-import { TrackArtwork } from "../components/TrackArtwork";
+import type {
+  AccountProfile,
+  Album,
+  BrowsePage,
+  BrowseShelf,
+  Playlist,
+  SearchResults,
+  Track,
+} from "../../datasource/types";
+import { logInternalError } from "../../internal/logging";
+import type { LibraryController } from "../../player/LibraryController";
+import type { SearchController } from "../../player/SearchController";
+import { NotificationsPanel } from "../components/NotificationsPanel";
+import {
+  CoverCard,
+  CoverCardSkeleton,
+  FocusCarousel,
+  ShelfRow,
+} from "../components/phone/CoverCard";
+import { PhoneSearchIcon } from "../components/phone/PhoneIcons";
 
-type HomeFilter = "all" | "recent" | "foryou";
+type HomeTab = "podcasts" | "music" | "asmr";
 
-const FILTERS: ReadonlyArray<{ value: HomeFilter; label: string }> = [
-  { value: "all", label: "All" },
-  { value: "recent", label: "Recently played" },
-  { value: "foryou", label: "For you" },
+const TABS: ReadonlyArray<{ value: HomeTab; label: string }> = [
+  { value: "podcasts", label: "Podcasts" },
+  { value: "music", label: "Music" },
+  { value: "asmr", label: "ASMR" },
 ];
+
+/** How many cards each row is allowed to build; a feed can hold far more than anyone scrolls. */
+const HERO_LIMIT = 10;
+const SHELF_LIMIT = 12;
+
+/**
+ * Which Explore shelf is "New Releases". YouTube titles it "New albums & singles" today and
+ * has changed the wording before, so this matches the idea rather than the string.
+ */
+const NEW_RELEASES_TITLE = /\bnew (albums?|releases?|music)\b/i;
 
 interface PhoneHomeProps {
   account: AccountProfile | null;
+  isSignedIn: boolean;
   isSignedOut: boolean;
   isLoading: boolean;
   recentPlays: readonly Track[];
   suggestions: readonly Track[];
-  currentTrackId: string | null;
+  libraryController: LibraryController;
+  searchController: SearchController;
   onPlay: (track: Track, queue: readonly Track[]) => void;
   onTrackMenu: (event: MouseEvent<HTMLElement>, track: Track) => void;
+  onOpenAlbum: (album: Album) => void;
+  onOpenPlaylist: (playlist: Playlist) => void;
   onOpenSearch: () => void;
-  onOpenLibrary: () => void;
-  onOpenHistory: () => void;
   onSignIn: () => void;
 }
 
+/** One card in a row, already bound to what tapping it and its play button do. */
+interface FeedCard {
+  id: string;
+  title: string;
+  subtitle?: string;
+  artworkUrl?: string;
+  variant: "track" | "album" | "playlist";
+  open: () => void;
+  play?: () => void;
+  menu?: (event: MouseEvent<HTMLElement>) => void;
+}
+
+interface FeedShelf {
+  title: string;
+  cards: FeedCard[];
+}
+
+type Remote<T> =
+  | { status: "idle" | "loading" | "error" }
+  | { status: "ready"; data: T };
+
 /**
- * The phone's Home: a greeting, filter chips, one featured card and plain song rows.
+ * Loads once, the first time `enabled` turns true, and keeps the result for as long as Home
+ * stays mounted. The data source caches browse pages itself, so there is nothing to refresh
+ * here; this only stops flipping between tabs from refetching.
+ */
+function useRemote<T>(enabled: boolean, load: () => Promise<T>, label: string): Remote<T> {
+  const [state, setState] = useState<Remote<T>>({ status: "idle" });
+  const startedRef = useRef(false);
+  const loadRef = useRef(load);
+  loadRef.current = load;
+
+  useEffect(() => {
+    if (!enabled || startedRef.current) return;
+    startedRef.current = true;
+    setState({ status: "loading" });
+    loadRef.current()
+      .then((data) => setState({ status: "ready", data }))
+      .catch((error: unknown) => {
+        logInternalError(`PhoneHome ${label} failed to load`, error);
+        setState({ status: "error" });
+      });
+  }, [enabled, label]);
+
+  return state;
+}
+
+function greetingFor(date: Date): string {
+  const hour = date.getHours();
+  if (hour < 5) return "Good Evening";
+  if (hour < 12) return "Good Morning";
+  if (hour < 18) return "Good Afternoon";
+  return "Good Evening";
+}
+
+function hasContent(shelf: BrowseShelf): boolean {
+  return shelf.albums.length + shelf.playlists.length + shelf.tracks.length > 0;
+}
+
+/**
+ * The phone's Home: greeting, a Podcasts / Music / ASMR switch, a centred carousel of covers
+ * and shelves of them underneath.
  *
- * It reads the same lists the desktop Home builds (recent plays and recommendations) and
- * plays through the same callback; only the presentation differs.
+ * Music is built from what the desktop Home already computes — recommendations for the
+ * carousel, recent plays as a shelf — plus YouTube Music's Explore feed for New Releases.
+ * Podcasts and ASMR are fetched the first time their tab is opened.
  */
 export function PhoneHome({
   account,
+  isSignedIn,
   isSignedOut,
   isLoading,
   recentPlays,
   suggestions,
-  currentTrackId,
+  libraryController,
+  searchController,
   onPlay,
   onTrackMenu,
+  onOpenAlbum,
+  onOpenPlaylist,
   onOpenSearch,
-  onOpenLibrary,
-  onOpenHistory,
   onSignIn,
 }: PhoneHomeProps) {
-  const [filter, setFilter] = useState<HomeFilter>("all");
+  const [tab, setTab] = useState<HomeTab>("music");
+  const [visited, setVisited] = useState<ReadonlySet<HomeTab>>(() => new Set(["music"]));
+
+  const selectTab = (next: HomeTab) => {
+    setTab(next);
+    setVisited((current) => (current.has(next) ? current : new Set(current).add(next)));
+  };
+
+  const explore = useRemote<BrowsePage>(
+    visited.has("music"),
+    () => libraryController.getBrowsePage("explore"),
+    "explore",
+  );
+  const podcasts = useRemote<BrowsePage>(
+    visited.has("podcasts"),
+    () => libraryController.getBrowsePage("podcasts"),
+    "podcasts",
+  );
+  const asmr = useRemote<SearchResults>(
+    visited.has("asmr"),
+    () => searchController.search("ASMR"),
+    "asmr",
+  );
+
+  const playLoaded = useCallback(
+    (load: () => Promise<Track[]>) => {
+      void load()
+        .then((tracks) => {
+          if (tracks[0]) onPlay(tracks[0], tracks);
+        })
+        .catch((error: unknown) => logInternalError("PhoneHome could not start playback", error));
+    },
+    [onPlay],
+  );
+
+  const cards = useMemo(() => {
+    const track = (item: Track, queue: readonly Track[]): FeedCard => ({
+      id: `track:${item.id}`,
+      title: item.title,
+      subtitle: item.artist,
+      artworkUrl: item.artworkUrl,
+      variant: "track",
+      open: () => onPlay(item, queue),
+      play: () => onPlay(item, queue),
+      menu: (event) => onTrackMenu(event, item),
+    });
+    const album = (item: Album): FeedCard => ({
+      id: `album:${item.id}`,
+      title: item.title,
+      subtitle: item.artist,
+      artworkUrl: item.artworkUrl,
+      variant: "album",
+      open: () => onOpenAlbum(item),
+      play: () => playLoaded(() => libraryController.getAlbumTracks(item)),
+    });
+    const playlist = (item: Playlist): FeedCard => ({
+      id: `playlist:${item.id}`,
+      title: item.title,
+      subtitle: item.owner,
+      artworkUrl: item.artworkUrl,
+      variant: "playlist",
+      open: () => onOpenPlaylist(item),
+      play: () => playLoaded(() => libraryController.getPlaylistTracks(item)),
+    });
+    /** A browse shelf mixes albums, playlists and songs; show them in that order. */
+    const fromShelf = (shelf: BrowseShelf): FeedCard[] => [
+      ...shelf.playlists.map(playlist),
+      ...shelf.albums.map(album),
+      ...shelf.tracks.map((item) => track(item, shelf.tracks)),
+    ];
+    return { track, album, playlist, fromShelf };
+  }, [libraryController, onOpenAlbum, onOpenPlaylist, onPlay, onTrackMenu, playLoaded]);
 
   const firstName = account?.name?.trim().split(/\s+/)[0];
-  const featured = suggestions[0];
-  const showRecent = filter !== "foryou";
-  const showForYou = filter !== "recent";
-  const recent = recentPlays.slice(0, filter === "recent" ? 30 : 6);
-  const forYou = suggestions.slice(1, filter === "foryou" ? 40 : 9);
+  const [now] = useState(() => new Date());
+
+  /* ── What the current tab shows ── */
+  let hero: FeedCard[] = [];
+  let heroLoading = false;
+  let shelves: FeedShelf[] = [];
+  let shelfLoading: string | null = null;
+  let failed = false;
+
+  if (tab === "music") {
+    hero = suggestions.slice(0, HERO_LIMIT).map((item) => cards.track(item, suggestions));
+    heroLoading = hero.length === 0 && isLoading;
+
+    if (explore.status === "ready") {
+      const shelf = explore.data.shelves.find(
+        (candidate) => NEW_RELEASES_TITLE.test(candidate.title) && hasContent(candidate),
+      );
+      if (shelf) {
+        shelves.push({ title: "New Releases", cards: cards.fromShelf(shelf).slice(0, SHELF_LIMIT) });
+      }
+    } else if (explore.status !== "error") {
+      shelfLoading = "New Releases";
+    }
+
+    if (recentPlays.length > 0) {
+      shelves.push({
+        title: "Recently played",
+        cards: recentPlays.slice(0, SHELF_LIMIT).map((item) => cards.track(item, recentPlays)),
+      });
+    }
+  } else if (tab === "podcasts") {
+    if (podcasts.status === "ready") {
+      const [lead, ...rest] = podcasts.data.shelves.filter(hasContent);
+      hero = lead ? cards.fromShelf(lead).slice(0, HERO_LIMIT) : [];
+      shelves = rest
+        .slice(0, 3)
+        .map((shelf) => ({ title: shelf.title, cards: cards.fromShelf(shelf).slice(0, SHELF_LIMIT) }));
+    } else if (podcasts.status === "error") {
+      failed = true;
+    } else {
+      heroLoading = true;
+    }
+  } else {
+    if (asmr.status === "ready") {
+      const { tracks, playlists } = asmr.data;
+      hero = tracks.length > 0
+        ? tracks.slice(0, HERO_LIMIT).map((item) => cards.track(item, tracks))
+        : playlists.slice(0, HERO_LIMIT).map(cards.playlist);
+      if (tracks.length > 0 && playlists.length > 0) {
+        shelves = [{ title: "Playlists", cards: playlists.slice(0, SHELF_LIMIT).map(cards.playlist) }];
+      }
+    } else if (asmr.status === "error") {
+      failed = true;
+    } else {
+      heroLoading = true;
+    }
+  }
+
+  const isEmpty = !heroLoading && hero.length === 0 && shelves.length === 0 && !shelfLoading;
 
   return (
-    <div className="flex flex-col gap-6 pb-4">
-      <header className="flex flex-col gap-4">
-        <div className="flex items-center justify-between">
-          <div className="size-12 shrink-0 overflow-hidden rounded-full bg-card">
-            {account?.artworkUrl ? (
-              <img src={account.artworkUrl} alt="" className="size-full object-cover" />
-            ) : (
-              <span className="grid size-full place-items-center text-lg font-semibold text-primary">
-                {(firstName ?? "Z").slice(0, 1).toUpperCase()}
-              </span>
-            )}
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={onOpenSearch}
-              aria-label="Search"
-              className="flex size-11 items-center justify-center rounded-full bg-card text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            >
-              <SearchIcon size={20} />
-            </button>
-            <button
-              type="button"
-              onClick={onOpenLibrary}
-              aria-label="Your library"
-              className="flex size-11 items-center justify-center rounded-full bg-card text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            >
-              <HeartIcon size={20} />
-            </button>
-          </div>
+    <div
+      className="font-lexend flex flex-col px-5 pb-4 pt-3 text-white"
+      style={{ "--card-w": "min(51vw, 15rem)" } as CSSProperties}
+    >
+      {/* The page runs edge to edge (Layout's `edgeToEdge`), so these are the design's own 20px
+          gutters; the carousels below pull back out of them with `-mx-5`. */}
+      <header className="flex items-center justify-between">
+        <div className="flex min-w-0 flex-col">
+          <span className="text-base font-light leading-5 text-[#cdcdcd]">{greetingFor(now)}</span>
+          {/* `tracking-normal`: the base h1/h2 rules add negative tracking and a 700 weight that
+              the design does not have. Weights below were fitted against the design's glyph
+              widths and stroke area, not eyeballed. */}
+          <h1 className="mt-1.5 flex items-center gap-2 text-[22px] font-normal leading-[30px] tracking-normal text-white">
+            <span className="truncate">{firstName ?? "Welcome"}</span>
+            {/* The design's chick faces sideways: U+1F424, not the front-on U+1F425. */}
+            <span aria-hidden="true" className="text-[22px] leading-none">🐤</span>
+          </h1>
         </div>
-        <h1 className="text-3xl font-semibold tracking-tight text-foreground">
-          {firstName ? `Hi, ${firstName}` : "Welcome"}
-        </h1>
+        <div className="-mr-2 flex items-center gap-2 text-[#e7e7e7]">
+          <button
+            type="button"
+            onClick={onOpenSearch}
+            aria-label="Search"
+            className="grid size-10 place-items-center rounded-full transition-transform active:scale-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
+          >
+            <PhoneSearchIcon />
+          </button>
+          <NotificationsPanel signedIn={isSignedIn} variant="phone" />
+        </div>
       </header>
 
+      <div
+        role="tablist"
+        aria-label="Home sections"
+        className="mt-6 grid grid-cols-3 items-center pl-0 pr-1"
+      >
+        {TABS.map(({ value, label }, index) => {
+          const selected = tab === value;
+          return (
+            <button
+              key={value}
+              type="button"
+              role="tab"
+              aria-selected={selected}
+              onClick={() => selectTab(value)}
+              className={cn(
+                "py-1 transition-[color,font-size] duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40",
+                index === 0 && "justify-self-start",
+                index === 1 && "justify-self-center",
+                index === 2 && "justify-self-end",
+                selected
+                  ? "text-2xl font-semibold text-[#e7e7e7] [text-shadow:0_10px_30px_rgba(255,255,255,0.3)]"
+                  : "text-base font-extralight text-[#929292]",
+              )}
+            >
+              {label}
+            </button>
+          );
+        })}
+      </div>
+
       {isSignedOut && (
-        <section className="flex items-center justify-between gap-3 rounded-2xl bg-card px-4 py-3 text-sm text-muted-foreground">
+        <section className="mt-6 flex items-center justify-between gap-3 rounded-2xl bg-[#1b1b1b] px-4 py-3 text-sm font-light text-[#929292]">
           <p>Sign in to see your history, playlists and albums.</p>
           <button
             type="button"
             onClick={onSignIn}
-            className="shrink-0 rounded-full bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground"
+            className="shrink-0 rounded-full bg-white px-4 py-2 text-sm font-medium text-[#131313]"
           >
             Sign in
           </button>
         </section>
       )}
 
-      <div
-        role="tablist"
-        aria-label="Filter home"
-        className="-mx-3 flex gap-2 overflow-x-auto px-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-      >
-        {FILTERS.map(({ value, label }) => (
-          <button
-            key={value}
-            type="button"
-            role="tab"
-            aria-selected={filter === value}
-            onClick={() => setFilter(value)}
-            className={cn(
-              "shrink-0 rounded-full px-5 py-2.5 text-sm font-medium transition-colors",
-              filter === value
-                ? "bg-primary text-primary-foreground"
-                : "bg-card text-muted-foreground",
-            )}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
-
-      {filter === "all" && (
-        <section className="flex flex-col gap-3">
-          <h2 className="text-xl font-semibold text-foreground">Curated &amp; trending</h2>
-          <div className="relative flex min-h-40 items-stretch overflow-hidden rounded-3xl bg-[#c4a8f5] p-5 text-[#1b1230]">
-            <div className="z-10 flex max-w-[60%] flex-col justify-between gap-4">
-              <div className="flex flex-col gap-1">
-                <h3 className="text-lg font-bold">Made for you</h3>
-                <p className="text-xs leading-snug opacity-80">
-                  A fresh mix picked from what you have been listening to.
-                </p>
-              </div>
-              <button
-                type="button"
-                disabled={!featured}
-                onClick={() => featured && onPlay(featured, suggestions)}
-                aria-label="Play your mix"
-                className="flex size-12 items-center justify-center rounded-full bg-[#2a1850] text-white transition-transform active:scale-95 disabled:opacity-40"
-              >
-                <PlayActiveIcon size={22} />
-              </button>
-            </div>
-            {featured?.artworkUrl && (
-              <img
-                src={featured.artworkUrl}
-                alt=""
-                aria-hidden="true"
-                className="absolute inset-y-0 right-0 h-full w-2/5 object-cover [mask-image:linear-gradient(to_right,transparent,black_40%)]"
-              />
-            )}
-          </div>
-        </section>
-      )}
-
-      {isLoading && recent.length === 0 && forYou.length === 0 && (
-        <div className="flex flex-col gap-3" role="status" aria-label="Loading">
-          {Array.from({ length: 5 }, (_, index) => (
-            <div key={index} className="flex items-center gap-3">
-              <div className="size-14 animate-pulse rounded-2xl bg-card" />
-              <div className="flex flex-1 flex-col gap-2">
-                <div className="h-3 w-2/3 animate-pulse rounded bg-card" />
-                <div className="h-3 w-1/3 animate-pulse rounded bg-card" />
-              </div>
-            </div>
-          ))}
+      {/* Keyed by tab so each one opens centred on its first card. */}
+      {heroLoading ? (
+        <div className="mt-9">
+          <FocusCarousel key={`${tab}:loading`} label="Loading">
+            {[0, 1, 2].map((slot) => (
+              <CoverCardSkeleton key={slot} layout="hero" />
+            ))}
+          </FocusCarousel>
         </div>
+      ) : hero.length > 0 ? (
+        <div className="relative mt-9">
+          <FocusCarousel key={tab} label={TABS.find((item) => item.value === tab)?.label ?? "Featured"}>
+            {hero.map((card) => (
+              <CoverCard
+                key={card.id}
+                layout="hero"
+                title={card.title}
+                subtitle={card.subtitle}
+                artworkUrl={card.artworkUrl}
+                variant={card.variant}
+                onOpen={card.open}
+                onPlay={card.play}
+                onContextMenu={card.menu}
+              />
+            ))}
+          </FocusCarousel>
+        </div>
+      ) : null}
+
+      {shelves.map((shelf) => (
+        <ShelfSection key={`${tab}:${shelf.title}`} title={shelf.title}>
+          <ShelfRow label={shelf.title}>
+            {shelf.cards.map((card) => (
+              <CoverCard
+                key={card.id}
+                layout="shelf"
+                title={card.title}
+                subtitle={card.subtitle}
+                artworkUrl={card.artworkUrl}
+                variant={card.variant}
+                onOpen={card.open}
+                onPlay={card.play}
+                onContextMenu={card.menu}
+              />
+            ))}
+          </ShelfRow>
+        </ShelfSection>
+      ))}
+
+      {shelfLoading && (
+        <ShelfSection title={shelfLoading}>
+          <ShelfRow label="Loading">
+            {[0, 1].map((slot) => (
+              <CoverCardSkeleton key={slot} layout="shelf" />
+            ))}
+          </ShelfRow>
+        </ShelfSection>
       )}
 
-      {showRecent && recent.length > 0 && (
-        <TrackSection
-          title="Recently played"
-          actionLabel={filter === "all" ? "See all" : undefined}
-          onAction={onOpenHistory}
-          tracks={recent}
-          queue={recentPlays}
-          currentTrackId={currentTrackId}
-          onPlay={onPlay}
-          onTrackMenu={onTrackMenu}
-        />
-      )}
-
-      {showForYou && forYou.length > 0 && (
-        <TrackSection
-          title="Top picks for you"
-          tracks={forYou}
-          queue={suggestions}
-          currentTrackId={currentTrackId}
-          onPlay={onPlay}
-          onTrackMenu={onTrackMenu}
-        />
+      {(isEmpty || failed) && (
+        <p className="mt-16 text-center text-sm font-light text-[#929292]">
+          {failed ? "Couldn't load this right now. Try again in a moment." : "Nothing here yet."}
+        </p>
       )}
     </div>
   );
 }
 
-interface TrackSectionProps {
-  title: string;
-  actionLabel?: string;
-  onAction?: () => void;
-  tracks: readonly Track[];
-  queue: readonly Track[];
-  currentTrackId: string | null;
-  onPlay: (track: Track, queue: readonly Track[]) => void;
-  onTrackMenu: (event: MouseEvent<HTMLElement>, track: Track) => void;
-}
-
-function TrackSection({
-  title,
-  actionLabel,
-  onAction,
-  tracks,
-  queue,
-  currentTrackId,
-  onPlay,
-  onTrackMenu,
-}: TrackSectionProps) {
+/**
+ * A titled row. `relative` is deliberate: the carousels above it are positioned and padded
+ * to keep their shadows from being clipped, and a positioned sibling is what keeps those
+ * invisible padding areas from sitting on top of this section's taps.
+ */
+function ShelfSection({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <section className="flex flex-col gap-3">
-      <div className="flex items-center justify-between">
-        <h2 className="text-xl font-semibold text-foreground">{title}</h2>
-        {actionLabel && onAction && (
-          <button type="button" onClick={onAction} className="text-sm text-muted-foreground">
-            {actionLabel}
-          </button>
-        )}
-      </div>
-      <div className="flex flex-col gap-3">
-        {tracks.map((track) => (
-          <PhoneTrackRow
-            key={track.id}
-            track={track}
-            isCurrent={track.id === currentTrackId}
-            onPlay={() => onPlay(track, queue)}
-            onMenu={(event) => onTrackMenu(event, track)}
-          />
-        ))}
-      </div>
+    <section className="relative mt-[50px] flex flex-col gap-[27px]">
+      <h2 className="text-2xl font-medium leading-none tracking-normal text-[#e7e7e7]">{title}</h2>
+      {children}
     </section>
-  );
-}
-
-/** Rounded cover, title and artist, and a round play button — the row from the reference. */
-export function PhoneTrackRow({
-  track,
-  isCurrent,
-  onPlay,
-  onMenu,
-}: {
-  track: Track;
-  isCurrent: boolean;
-  onPlay: () => void;
-  onMenu?: (event: MouseEvent<HTMLElement>) => void;
-}) {
-  return (
-    <div
-      className="flex items-center gap-3"
-      onContextMenu={onMenu}
-    >
-      <button
-        type="button"
-        onClick={onPlay}
-        className="flex min-w-0 flex-1 items-center gap-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-      >
-        <TrackArtwork
-          className="size-14 shrink-0 rounded-2xl object-cover"
-          size={112}
-          artworkUrl={track.artworkUrl}
-          iconSize={24}
-        />
-        <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-          <strong
-            className={cn(
-              "truncate text-sm font-semibold",
-              isCurrent ? "text-primary" : "text-foreground",
-            )}
-          >
-            {track.title}
-          </strong>
-          <span className="truncate text-xs text-muted-foreground">
-            <ArtistLinks artists={track.artists} fallback={track.artist} />
-          </span>
-        </span>
-      </button>
-      <button
-        type="button"
-        onClick={onPlay}
-        aria-label={`Play ${track.title}`}
-        className="flex size-10 shrink-0 items-center justify-center rounded-full bg-card text-foreground transition-transform active:scale-95"
-      >
-        <PlayActiveIcon size={16} />
-      </button>
-    </div>
   );
 }
