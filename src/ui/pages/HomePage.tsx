@@ -17,6 +17,8 @@ import { useMadeForYouVisible } from "../settings/homeSections";
 import { AlbumGridSkeleton, PickCardSkeleton, TrackRowSkeleton } from "../components/Skeleton";
 import { TrackRow } from "../components/TrackRow";
 import { useNowPlaying } from "../hooks/useNowPlaying";
+import { useCompactViewport } from "../hooks/useCompactViewport";
+import { PhoneHome } from "./PhoneHome";
 import { isOnline, useOnline } from "../../internal/connectivity";
 import { useOfflineEntries } from "../../player/offlineStore";
 
@@ -115,6 +117,8 @@ interface HomePageProps {
   searchController: SearchController;
   onSignIn: () => Promise<void>;
   destinations: HomeDestinationHandlers;
+  /** Opens the search overlay; the phone Home has a search button in its header. */
+  onOpenSearch?: () => void;
 }
 
 function shuffle<T>(items: readonly T[]): T[] {
@@ -138,8 +142,10 @@ export function HomePage({
   searchController,
   onSignIn,
   destinations,
+  onOpenSearch,
 }: HomePageProps) {
   const { openTrackMenu } = useTrackContextMenu();
+  const isPhone = useCompactViewport();
   const showMadeForYou = useMadeForYouVisible();
   const recentlyPlayed = useMemo(
     () => libraryState.library?.recentlyPlayed ?? EMPTY_TRACKS,
@@ -372,6 +378,25 @@ export function HomePage({
         onPlay={(track) => playerController.playTrackById(track.id, downloads)}
         onContextMenu={openTrackMenu}
         onOpenDownloads={destinations.onOpenDownloads}
+      />
+    );
+  }
+
+  if (isPhone) {
+    return (
+      <PhoneHome
+        account={libraryState.library?.account ?? null}
+        isSignedOut={libraryState.status === "signed-out"}
+        isLoading={isLoadingSuggestions || isWaitingForLibrary}
+        recentPlays={recentPlays}
+        suggestions={suggestions}
+        currentTrackId={currentTrackId}
+        onPlay={playTrack}
+        onTrackMenu={openTrackMenu}
+        onOpenSearch={onOpenSearch ?? (() => {})}
+        onOpenLibrary={destinations.onOpenLibrary}
+        onOpenHistory={destinations.onOpenHistory}
+        onSignIn={() => void onSignIn()}
       />
     );
   }

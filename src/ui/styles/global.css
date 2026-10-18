@@ -695,3 +695,21 @@ html[data-fx-off~="marquee"] .animate-marquee-vertical {
   --skin-lcd-glare: oklch(1 0 0 / 35%);
   --skin-danger: oklch(0.5 0.2 27);
 }
+
+/*
+ * Phone palette: near-black surfaces with a lime accent. Scoped to the same width the phone
+ * layout switches on (see useCompactViewport), so the desktop app keeps its red identity.
+ * Dark only — `data-theme="light"` is left alone.
+ */
+@media (max-width: 767px) {
+  html:not([data-theme="light"]) {
+    --color-background: #0d0c11;
+    --color-card: #181720;
+    --color-popover: #181720;
+    --color-muted: #201f29;
+    --color-secondary: #201f29;
+    --color-primary: #cfe86a;
+    --color-primary-foreground: #14130a;
+    --color-ring: #cfe86a;
+  }
+}

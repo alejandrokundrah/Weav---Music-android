@@ -185,11 +185,18 @@ export function PlayerBar({ onToggleLyrics, onToggleQueue, isQueueOpen, onConnec
         /* One row on a phone: what is playing, the transport, the queue; the seek bar under it.
            Volume, download, playback options and lyrics are desktop-width luxuries here. */
         <div
-          className="group/playerbar flex shrink-0 flex-col gap-1 bg-background px-3 pb-1.5 pt-2"
-          onClick={handlePlayerBarClick}
+          className="group/playerbar mx-3 mb-2 flex shrink-0 flex-col gap-1 rounded-3xl bg-card px-3 pb-2 pt-2"
         >
           <div className="flex items-center gap-2">
-            <div className="min-w-0 flex-1">
+            {/* Tapping the song opens the full-screen player; the buttons inside it (like)
+                keep their own meaning. */}
+            <div
+              className="min-w-0 flex-1"
+              onClick={(event) => {
+                if ((event.target as HTMLElement).closest("button")) return;
+                handlePlayerBarClick();
+              }}
+            >
               <TrackInfo />
             </div>
             <PlaybackControls compact extraControlsAlwaysVisible />

@@ -325,7 +325,10 @@ export function LibraryPage({
   return (
     <div className="flex flex-col gap-5">
       <header className="flex flex-col gap-5 pb-1">
-        <h1 className="text-4xl font-bold tracking-[-0.03em] text-foreground">Library</h1>
+        <h1 className="text-4xl font-bold tracking-[-0.03em] text-foreground max-md:text-center max-md:text-2xl max-md:font-semibold">
+          <span className="md:hidden">My Music</span>
+          <span className="max-md:hidden">Library</span>
+        </h1>
 
         <div className="flex flex-wrap items-center gap-3">
           {/*
@@ -335,7 +338,7 @@ export function LibraryPage({
             the keyboard model is not.
           */}
           <div
-            className="flex shrink-0 gap-1 rounded-full bg-card/70 p-1"
+            className="flex shrink-0 gap-1 rounded-full bg-card/70 p-1 max-md:-mx-1 max-md:max-w-full max-md:gap-2 max-md:overflow-x-auto max-md:bg-transparent max-md:p-0 max-md:px-1 max-md:[scrollbar-width:none] max-md:[&::-webkit-scrollbar]:hidden"
             role="tablist"
             aria-label="Library section"
           >
@@ -356,7 +359,8 @@ export function LibraryPage({
                   onKeyDown={(event) => onTabKeyDown(event, index)}
                   onClick={() => selectTab(item.value)}
                   className={cn(
-                    "relative isolate rounded-full px-4 py-1.5 text-sm font-medium transition-colors",
+                    "relative isolate shrink-0 rounded-full px-4 py-1.5 text-sm font-medium transition-colors max-md:px-5 max-md:py-2.5",
+                    !active && "max-md:bg-card",
                     "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                     active ? "text-primary-foreground" : "text-muted-foreground hover:text-foreground",
                   )}
@@ -369,7 +373,7 @@ export function LibraryPage({
                     />
                   )}
                   {item.label}
-                  <span className="ml-1.5 tabular-nums opacity-60">{counts[item.value]}</span>
+                  <span className="ml-1.5 tabular-nums opacity-60 max-md:hidden">{counts[item.value]}</span>
                 </button>
               );
             })}
@@ -398,7 +402,7 @@ export function LibraryPage({
             </label>
 
             <Select
-              className="w-40 shrink-0"
+              className="w-40 shrink-0 max-md:w-32"
               value={activeSort}
               onValueChange={(value) => setSort(value as LibrarySort)}
             >

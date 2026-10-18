@@ -465,7 +465,7 @@ export const TrackRow = memo(function TrackRow({
       /* The position number is only useful until you have decided to act on the row, so it
           gives way to a play glyph on hover — and to a level meter once this row is the one
           playing. All three share the slot, so the row never reflows between states. */
-      <span className="relative w-6 shrink-0 text-right text-xs tabular-nums text-muted-foreground">
+      <span className="relative w-6 shrink-0 text-right text-xs tabular-nums text-muted-foreground max-md:hidden">
         <span
           className={cn(
             "transition-opacity",
@@ -516,7 +516,7 @@ export const TrackRow = memo(function TrackRow({
 
       {showArtwork ? (
         <TrackArtwork
-          className="size-10 shrink-0 "
+          className="size-10 shrink-0 max-md:size-14 max-md:rounded-2xl"
           size={40}
           artworkUrl={track.artworkUrl}
           iconSize={18}
@@ -589,11 +589,12 @@ export const TrackRow = memo(function TrackRow({
 
       {/* Hover actions. The row itself is a <button>, so these cannot be buttons — see
           QuickAction. They sit before `trailing` so durations stay hard against the edge. */}
-      {showRating && <RatingActions track={track} />}
-      {showDownload && <DownloadAction track={track} />}
+      {/* No hover on a phone, and no width to spare: these only appear on desktop. */}
+      {showRating && <span className="contents max-md:hidden"><RatingActions track={track} /></span>}
+      {showDownload && <span className="contents max-md:hidden"><DownloadAction track={track} /></span>}
 
       {(onQuickAddToQueue || onQuickAdd) && (
-        <span className="flex shrink-0 items-center">
+        <span className="flex shrink-0 items-center max-md:hidden">
           {onQuickAddToQueue && (
             <QuickAction
               label={`Add ${track.title} to the queue`}

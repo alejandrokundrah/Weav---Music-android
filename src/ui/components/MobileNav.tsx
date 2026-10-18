@@ -55,28 +55,30 @@ export function MobileNav({
   return (
     <nav
       aria-label="Main"
-      className="flex shrink-0 items-stretch border-t border-border bg-background pb-[env(safe-area-inset-bottom)]"
+      className="shrink-0 px-5 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-1"
     >
-      {items.map(({ key, label, Icon, ActiveIcon, active, onPress }) => {
-        const Glyph = active ? ActiveIcon : Icon;
-        return (
-          <button
-            key={key}
-            type="button"
-            onClick={onPress}
-            aria-label={label}
-            aria-current={active ? "page" : undefined}
-            className={cn(
-              "flex h-14 min-w-0 flex-1 flex-col items-center justify-center gap-0.5 text-[11px] font-medium transition-colors",
-              "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring",
-              active ? "text-primary" : "text-muted-foreground",
-            )}
-          >
-            <Glyph size={22} />
-            <span className="truncate">{label}</span>
-          </button>
-        );
-      })}
+      {/* A floating pill: icons only, the current page marked by a lime disc. */}
+      <div className="mx-auto flex max-w-sm items-center justify-between rounded-full bg-card p-1.5 shadow-lg ring-1 ring-white/10">
+        {items.map(({ key, label, Icon, ActiveIcon, active, onPress }) => {
+          const Glyph = active ? ActiveIcon : Icon;
+          return (
+            <button
+              key={key}
+              type="button"
+              onClick={onPress}
+              aria-label={label}
+              aria-current={active ? "page" : undefined}
+              className={cn(
+                "flex size-12 items-center justify-center rounded-full transition-colors",
+                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                active ? "bg-primary text-primary-foreground" : "text-muted-foreground",
+              )}
+            >
+              <Glyph size={22} />
+            </button>
+          );
+        })}
+      </div>
     </nav>
   );
 }

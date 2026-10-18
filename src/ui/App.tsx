@@ -44,6 +44,7 @@ import { ArtistNavigationProvider } from "./components/ArtistLinks";
 import { cn } from "@/lib/utils";
 import { TitleBar } from "./components/TitleBar";
 import { PlayerBar } from "./components/player/PlayerBar";
+import { NowPlayingScreen } from "./components/player/NowPlayingScreen";
 import { QueuePanel } from "./components/player/QueuePanel";
 import { useQueuePanelCollapsed } from "./settings/queuePanel";
 import { useNativeWindowControls } from "./settings/windowControls";
@@ -2098,6 +2099,7 @@ useEffect(() => {
                 libraryState={libraryState}
                 searchController={searchController}
                 onSignIn={handleSignIn}
+                onOpenSearch={() => setIsSearchOpen(true)}
                 destinations={{
                   onOpenLibrary: handleOpenLibrary,
                   onOpenBrowse: () => handleOpenBrowse(),
@@ -2248,6 +2250,19 @@ useEffect(() => {
           onLibrary={handleOpenLibrary}
           onBrowse={() => handleOpenBrowse()}
           onSettings={handleOpenSettings}
+        />
+      )}
+      {isPhone && isExpandedPlayerBar && (
+        <NowPlayingScreen
+          onClose={() => setIsExpandedPlayerBar(false)}
+          onOpenQueue={() => {
+            setIsExpandedPlayerBar(false);
+            handleToggleQueue();
+          }}
+          onOpenLyrics={() => {
+            setIsExpandedPlayerBar(false);
+            handleToggleLyrics();
+          }}
         />
       )}
       <SearchOverlay
