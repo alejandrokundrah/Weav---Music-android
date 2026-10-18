@@ -27,6 +27,8 @@ import { AlbumGridSkeleton, TrackListSkeleton } from "../components/Skeleton";
 import { TrackArtwork } from "../components/TrackArtwork";
 import { TrackRow } from "../components/TrackRow";
 import { useNowPlaying } from "../hooks/useNowPlaying";
+import { useCompactViewport } from "../hooks/useCompactViewport";
+import { PhoneArtist } from "./PhoneArtist";
 import { usePlaylistContextMenu } from "../components/PlaylistContextMenu";
 import { useTrackContextMenu } from "../components/TrackContextMenu";
 import { loadFailedMessage } from "../../internal/connectivity";
@@ -87,6 +89,7 @@ export function ArtistView({
   onOpenAlbum: (album: Album) => void;
   onOpenPlaylist: (playlist: Playlist) => void;
 }) {
+  const isPhone = useCompactViewport();
   const { openPlaylistPicker, openTrackMenu } = useTrackContextMenu();
   const { openPlaylistMenu, openAlbumMenu } = usePlaylistContextMenu();
   const { currentTrackId, isPlaying, isLoading: isPlayerLoading } = useNowPlaying();
@@ -286,6 +289,72 @@ export function ArtistView({
       showToast("Unable to copy the link.");
     }
   };
+
+  const toastNode = toast && createPortal(
+    <div className="fixed bottom-28 left-1/2 z-[60] flex -translate-x-1/2 items-center gap-2 rounded-full bg-popover/95 px-4 py-2 text-sm text-foreground shadow-2xl backdrop-blur" role="status">
+      {toast === "Url copied to clipboard" && (
+        <CheckIcon size={18} aria-hidden="true" />
+      )}
+      <span>{toast}</span>
+    </div>,
+    document.body,
+  );
+
+  /** Starts whatever a release or playlist card's play button points at. */
+  const playLoaded = (load: () => Promise<Track[]>) => {
+    void load()
+      .then((tracks) => {
+        if (tracks[0]) void playerController.playTrackById(tracks[0].id, tracks);
+      })
+      .catch(() => showToast("Unable to start playback."));
+  };
+
+  if (isPhone) {
+    return (
+      <>
+        <PhoneArtist
+          artist={displayedArtist}
+          page={page}
+          isLoading={isLoading}
+          error={error}
+          isCollectionPlaying={isCurrentCollection && isPlaying}
+          isCollectionLoading={isCurrentCollection && isPlayerLoading}
+          onTogglePlay={togglePlayCollection}
+          onShuffle={() => void playShuffled()}
+          onAddToQueue={() => playerController.addTracksToQueue(page?.allSongs ?? [])}
+          isSubscribed={isSubscribed}
+          isSubscribing={isSubscribing}
+          notificationLevel={notificationLevel}
+          onToggleSubscribe={() => void toggleArtistSubscription()}
+          onNotificationChange={(level) => void changeNotificationLevel(level)}
+          popularSongs={popularSongs}
+          allSongsCount={allSongs.length}
+          hiddenSongCount={hiddenSongCount}
+          showAllSongs={showAllSongs}
+          onToggleShowAll={() => setShowAllSongs((current) => !current)}
+          currentTrackId={currentTrackId}
+          isPlaying={isPlaying}
+          viewsLabel={compactViews}
+          onSelectTrack={(track) =>
+            void playerController.playTrackById(track.id, page?.allSongs ?? [track])}
+          onTrackMenu={openTrackMenu}
+          releaseFilters={releaseFilters}
+          filter={filter}
+          onFilterChange={setFilter}
+          releases={visibleReleases}
+          onOpenAlbum={onOpenAlbum}
+          onPlayAlbum={(album) => playLoaded(() => libraryController.getAlbumTracks(album))}
+          onAlbumMenu={openAlbumMenu}
+          playlists={page?.playlists ?? []}
+          onOpenPlaylist={onOpenPlaylist}
+          onPlayPlaylist={(playlist) =>
+            playLoaded(() => libraryController.getPlaylistTracks(playlist))}
+          onPlaylistMenu={openPlaylistMenu}
+        />
+        {toastNode}
+      </>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-8">
@@ -541,15 +610,7 @@ export function ArtistView({
           )}
         </>
       )}
-      {toast && createPortal(
-        <div className="fixed bottom-28 left-1/2 z-[60] flex -translate-x-1/2 items-center gap-2 rounded-full bg-popover/95 px-4 py-2 text-sm text-foreground shadow-2xl backdrop-blur" role="status">
-          {toast === "Url copied to clipboard" && (
-            <CheckIcon size={18} aria-hidden="true" />
-          )}
-          <span>{toast}</span>
-        </div>,
-        document.body,
-      )}
+      {toastNode}
     </div>
   );
 }
