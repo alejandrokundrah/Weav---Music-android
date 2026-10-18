@@ -13,6 +13,8 @@
  * pull in this stylesheet, so one import covers both windows.
  */
 @import "@fontsource-variable/inter";
+/* Lexend: the phone Home's display face (see PhoneHome). Bundled for the same offline reason. */
+@import "@fontsource-variable/lexend";
 @import "tailwindcss";
 @source not "../../../docs";
 
@@ -697,19 +699,26 @@ html[data-fx-off~="marquee"] .animate-marquee-vertical {
 }
 
 /*
- * Phone palette: near-black surfaces with a lime accent. Scoped to the same width the phone
- * layout switches on (see useCompactViewport), so the desktop app keeps its red identity.
- * Dark only — `data-theme="light"` is left alone.
+ * Phone palette: the Home design's neutral near-black surfaces (#131313 page, #1B1B1B for the
+ * nav and cards), with the lime accent kept for the screens that use it. Scoped to the same
+ * width the phone layout switches on (see useCompactViewport), so the desktop app keeps its
+ * red identity. Dark only — `data-theme="light"` is left alone.
  */
 @media (max-width: 767px) {
   html:not([data-theme="light"]) {
-    --color-background: #0d0c11;
-    --color-card: #181720;
-    --color-popover: #181720;
-    --color-muted: #201f29;
-    --color-secondary: #201f29;
+    --color-background: #131313;
+    --color-card: #1b1b1b;
+    --color-popover: #1b1b1b;
+    --color-muted: #222222;
+    --color-secondary: #222222;
     --color-primary: #cfe86a;
     --color-primary-foreground: #14130a;
     --color-ring: #cfe86a;
   }
+}
+
+@theme {
+  /* The phone Home's face. Opt in with `font-lexend`; everything else stays on Inter. */
+  --font-lexend: "Lexend Variable", ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto,
+    Arial, sans-serif;
 }

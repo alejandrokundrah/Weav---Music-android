@@ -21,6 +21,13 @@ interface LayoutProps {
   onNavigateBack: () => void;
   onNavigateForward: () => void;
   fullBleedContent?: boolean;
+  /**
+   * Phone only: drops the page's side/top/bottom insets so content can run to the screen edges.
+   * The phone Home sets this — its cards bleed off both sides and its shadows run under the
+   * bottom nav, neither of which survives being clipped by an inset scroll container. The page
+   * then owns its own gutters. Ignored at desktop widths.
+   */
+  edgeToEdge?: boolean;
   hideSidebar?: boolean;
   showTransientScrollbar?: boolean;
   rightPanel?: ReactNode;
@@ -53,6 +60,7 @@ export function Layout({
   onNavigateBack,
   onNavigateForward,
   fullBleedContent = false,
+  edgeToEdge = false,
   hideSidebar = false,
   showTransientScrollbar = false,
   rightPanel,
@@ -244,7 +252,12 @@ export function Layout({
         )}
         {/* No backdrop-blur: `bg-background` is fully opaque, so a backdrop filter here costs a
             composited layer and a blur pass to render something nothing can see through. */}
-        <div className="relative flex min-h-0 min-w-0 flex-1 flex-col gap-3 px-4 pt-3 max-md:px-3 max-md:pt-2 bg-background rounded-tl-lg">
+        <div
+          className={cn(
+            "relative flex min-h-0 min-w-0 flex-1 flex-col gap-3 px-4 pt-3 max-md:px-3 max-md:pt-2 bg-background rounded-tl-lg",
+            edgeToEdge && "max-md:px-0 max-md:pt-0",
+          )}
+        >
           {/*
             Ambient wash for the page beneath. Rendered here rather than inside the page so
             it can start at the very top of the column — behind the search bar — instead of
@@ -297,13 +310,14 @@ export function Layout({
             </div>
           )}
 
-          <div className="relative flex min-h-0 min-w-0 flex-1 gap-3 pb-3 ">
+          <div className={cn("relative flex min-h-0 min-w-0 flex-1 gap-3 pb-3", edgeToEdge && "max-md:pb-0")}>
             <div className="relative min-h-0 min-w-0 flex-1">
               <div
                 ref={pageContentRef}
                 className={cn(
                   "h-full overflow-y-auto overscroll-contain rounded-xl ",
                   fullBleedContent ? "p-0" : "p-4 max-md:p-2",
+                  edgeToEdge && "max-md:rounded-none max-md:p-0",
                 )}
                 data-page-scroll-root
               >
