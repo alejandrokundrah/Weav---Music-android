@@ -2261,17 +2261,7 @@ useEffect(() => {
         />
       )}
       {isPhone && isExpandedPlayerBar && (
-        <NowPlayingScreen
-          onClose={() => setIsExpandedPlayerBar(false)}
-          onOpenQueue={() => {
-            setIsExpandedPlayerBar(false);
-            handleToggleQueue();
-          }}
-          onOpenLyrics={() => {
-            setIsExpandedPlayerBar(false);
-            handleToggleLyrics();
-          }}
-        />
+        <NowPlayingScreen onClose={() => setIsExpandedPlayerBar(false)} />
       )}
       <SearchOverlay
         isOpen={isSearchOpen && activeTab?.view !== "settings"}

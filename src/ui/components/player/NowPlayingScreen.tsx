@@ -1,52 +1,64 @@
+import { useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import { cn } from "@/lib/utils";
 import {
-  ArrowLeftIcon,
   HeartActiveIcon,
   HeartIcon,
   PauseActiveIcon,
   PlayActiveIcon,
-  QueuePanelIcon,
-  ShuffleActiveIcon,
-  ShuffleIcon,
-  SkipNextIcon,
-  SkipPreviousIcon,
+  SkipNextActiveIcon,
+  SkipPreviousActiveIcon,
 } from "@/ui/icons";
+import type { Track } from "../../../datasource/types";
 import {
   playerController,
   shallowEqual,
   useLibraryState,
   usePlayerSelector,
+  usePlayerSessionSelector,
 } from "../../../player/playerStore";
-import { ArtistLinks } from "../ArtistLinks";
+import type { PlayerSession } from "../../../player/PlayerController";
 import { TrackArtwork } from "../TrackArtwork";
 import { useTrackContextMenu } from "../TrackContextMenu";
 import { SeekBar } from "./SeekBar";
 
 interface NowPlayingScreenProps {
   onClose: () => void;
-  onOpenQueue: () => void;
-  onOpenLyrics: () => void;
 }
 
-const ROUND_BUTTON =
-  "flex shrink-0 items-center justify-center rounded-full transition-[transform,background-color,opacity] active:scale-95 disabled:pointer-events-none disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
+const EMPTY_QUEUE: Track[] = [];
+
+function selectNeighbours(session: PlayerSession | null) {
+  return { queue: session?.queue ?? EMPTY_QUEUE, queueIndex: session?.queueIndex ?? -1 };
+}
+
+function neighboursEqual(
+  a: ReturnType<typeof selectNeighbours>,
+  b: ReturnType<typeof selectNeighbours>,
+) {
+  return a.queue === b.queue && a.queueIndex === b.queueIndex;
+}
+
+/** How far a swipe has to travel before it counts, in CSS pixels. */
+const SWIPE_DISTANCE = 64;
 
 /**
- * The phone's full-screen player: blurred cover as the backdrop, the cover itself as a disc,
- * then title, seek bar and the transport with a lime play button.
+ * The phone's full-screen player, laid out on the 375 x 812 design canvas: a drag handle, a
+ * cover carousel with the neighbouring songs peeking in from either side, title and artist,
+ * a heart, and an arc-shaped progress line above the transport.
  *
- * Opened by tapping the mini player bar. Everything it shows is read from the same player
- * store the desktop bar uses, so it cannot disagree with it.
+ * Swipe the cover sideways to skip, drag the handle (or the screen) down to close.
+ * Everything shown is read from the same player store the desktop bar uses.
  */
-export function NowPlayingScreen({ onClose, onOpenQueue, onOpenLyrics }: NowPlayingScreenProps) {
+export function NowPlayingScreen({ onClose }: NowPlayingScreenProps) {
   const state = usePlayerSelector(
     (player) => ({
       currentTrack: player.currentTrack,
       status: player.status,
-      shuffleEnabled: player.shuffleEnabled,
+      history: player.history,
     }),
     shallowEqual,
   );
+  const { queue, queueIndex } = usePlayerSessionSelector(selectNeighbours, neighboursEqual);
   const libraryState = useLibraryState();
   const { toggleTrackLike } = useTrackContextMenu();
 
@@ -54,58 +66,116 @@ export function NowPlayingScreen({ onClose, onOpenQueue, onOpenLyrics }: NowPlay
   const isBusy = state.status === "loading";
   const isPlaying = state.status === "playing";
 
+  const previousTrack: Track | undefined =
+    (queueIndex > 0 ? queue[queueIndex - 1] : undefined)
+    ?? state.history[state.history.length - 1];
+  const nextTrack: Track | undefined = queueIndex >= 0 ? queue[queueIndex + 1] : undefined;
+
   const canLike = Boolean(track) && track?.source !== "local";
   const isLiked = Boolean(
     track && libraryState.library?.likedSongs.some((liked) => liked.id === track.id),
   );
   const isLikePending = Boolean(track && libraryState.pendingLikeTrackIds.has(track.id));
 
+  // Horizontal drag on the cover carousel.
+  const [dragX, setDragX] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
+  const dragStart = useRef<{ x: number; y: number } | null>(null);
+
+  // Vertical drag on the handle strip.
+  const sheetStart = useRef<number | null>(null);
+
+  const onCarouselDown = (event: ReactPointerEvent<HTMLDivElement>) => {
+    event.currentTarget.setPointerCapture(event.pointerId);
+    dragStart.current = { x: event.clientX, y: event.clientY };
+    setIsDragging(true);
+  };
+  const onCarouselMove = (event: ReactPointerEvent<HTMLDivElement>) => {
+    if (!dragStart.current) return;
+    setDragX(event.clientX - dragStart.current.x);
+  };
+  const onCarouselUp = () => {
+    const distance = dragX;
+    dragStart.current = null;
+    setIsDragging(false);
+    setDragX(0);
+    if (distance <= -SWIPE_DISTANCE && nextTrack) void playerController.skipToNext();
+    else if (distance >= SWIPE_DISTANCE) void playerController.skipToPrevious();
+  };
+
+  const onHandleDown = (event: ReactPointerEvent<HTMLDivElement>) => {
+    event.currentTarget.setPointerCapture(event.pointerId);
+    sheetStart.current = event.clientY;
+  };
+  const onHandleUp = (event: ReactPointerEvent<HTMLDivElement>) => {
+    const start = sheetStart.current;
+    sheetStart.current = null;
+    // A tap or a downward drag both close it.
+    if (start === null || event.clientY - start > -8) onClose();
+  };
+
   return (
-    <div className="fixed inset-0 z-50 flex flex-col overflow-hidden bg-background text-foreground">
-      {/* Backdrop: the cover, blown up and blurred, fading into the page colour. */}
-      {track?.artworkUrl && (
-        <img
-          src={track.artworkUrl}
-          alt=""
-          aria-hidden="true"
-          className="pointer-events-none absolute inset-0 size-full scale-150 object-cover opacity-50 blur-3xl"
-        />
-      )}
+    <div className="fixed inset-0 z-50 flex flex-col overflow-hidden bg-[#131313] text-white">
+      {/* Drag handle */}
       <div
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-0 bg-gradient-to-b from-background/10 via-background/60 to-background"
-      />
+        role="button"
+        tabIndex={0}
+        aria-label="Close player"
+        onPointerDown={onHandleDown}
+        onPointerUp={onHandleUp}
+        onKeyDown={(event) => {
+          if (event.key === "Enter" || event.key === " ") onClose();
+        }}
+        className="flex h-14 shrink-0 cursor-pointer touch-none items-end justify-center pb-2 pt-[env(safe-area-inset-top)] focus-visible:outline-none"
+      >
+        <span className="h-[7px] w-[69px] rounded-full bg-[#2e2e2e]" />
+      </div>
 
-      <div className="relative flex min-h-0 flex-1 flex-col px-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-[max(0.75rem,env(safe-area-inset-top))]">
-        <header className="flex items-center justify-between">
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Close player"
-            className={cn(ROUND_BUTTON, "size-11 bg-white/15 text-foreground backdrop-blur")}
+      {/* Cover carousel */}
+      <div
+        className="relative mx-auto mt-3 aspect-[260/282] h-[min(282px,34dvh)] shrink-0 touch-pan-y"
+        onPointerDown={onCarouselDown}
+        onPointerMove={onCarouselMove}
+        onPointerUp={onCarouselUp}
+        onPointerCancel={onCarouselUp}
+      >
+        <div
+          className="absolute inset-0"
+          style={{
+            transform: `translateX(${dragX}px)`,
+            transition: isDragging ? "none" : "transform 220ms ease-out",
+          }}
+        >
+          {/* Neighbours: half-faded, cropped by the screen edge, a 28px gap from the cover. */}
+          <div
+            aria-hidden="true"
+            className="absolute right-[calc(100%+28px)] top-1/2 aspect-[218/240] h-[85%] -translate-y-1/2 overflow-hidden rounded-[42px] bg-[#1b1b1b] opacity-50"
           >
-            <ArrowLeftIcon size={20} />
-          </button>
-          <h1 className="text-base font-semibold">Now Playing</h1>
-          <button
-            type="button"
-            onClick={() => track && void toggleTrackLike(track)}
-            disabled={!canLike || isLikePending}
-            aria-pressed={isLiked}
-            aria-label={isLiked ? "Remove from liked songs" : "Add to liked songs"}
-            className={cn(
-              ROUND_BUTTON,
-              "size-11 bg-white/15 backdrop-blur",
-              isLiked ? "text-primary" : "text-foreground",
+            {previousTrack && (
+              <TrackArtwork
+                className="size-full object-cover"
+                size={256}
+                artworkUrl={previousTrack.artworkUrl}
+                iconSize={32}
+              />
             )}
+          </div>
+          <div
+            aria-hidden="true"
+            className="absolute left-[calc(100%+28px)] top-1/2 aspect-[227/240] h-[85%] -translate-y-1/2 overflow-hidden rounded-[42px] bg-[#1b1b1b] opacity-50"
           >
-            {isLiked ? <HeartActiveIcon size={20} /> : <HeartIcon size={20} />}
-          </button>
-        </header>
+            {nextTrack && (
+              <TrackArtwork
+                className="size-full object-cover"
+                size={256}
+                artworkUrl={nextTrack.artworkUrl}
+                iconSize={32}
+              />
+            )}
+          </div>
 
-        <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-6">
-          <div className="aspect-square w-[min(72vw,20rem)] shrink-0 overflow-hidden rounded-full bg-card shadow-2xl">
-            {track ? (
+          <div className="absolute inset-0 overflow-hidden rounded-[32px] bg-[#1b1b1b] shadow-[0_20px_60px_rgba(244,153,150,0.15)]">
+            {track && (
               <TrackArtwork
                 className="size-full object-cover"
                 size={512}
@@ -113,87 +183,70 @@ export function NowPlayingScreen({ onClose, onOpenQueue, onOpenLyrics }: NowPlay
                 iconSize={72}
                 loading="eager"
               />
-            ) : null}
-          </div>
-
-          <div className="flex w-full min-w-0 flex-col items-center gap-1 text-center">
-            <p className="w-full truncate text-2xl font-semibold">
-              {track?.title ?? "Nothing playing"}
-            </p>
-            {track && (
-              <p className="w-full truncate text-sm text-muted-foreground">
-                <ArtistLinks artists={track.artists} fallback={track.artist} />
-              </p>
             )}
           </div>
+        </div>
+      </div>
+
+      {/* Title, artist, heart */}
+      <div className="mt-[clamp(1.5rem,6.5dvh,3.5rem)] flex shrink-0 flex-col items-center px-8 text-center">
+        <p className="w-full truncate text-2xl font-semibold leading-tight">
+          {track?.title ?? "Nothing playing"}
+        </p>
+        <p className="mt-2 w-full truncate text-xl font-light leading-tight">
+          {track ? (track.artist || track.artists?.map((artist) => artist.name).join(", ")) : ""}
+        </p>
+        <button
+          type="button"
+          onClick={() => track && void toggleTrackLike(track)}
+          disabled={!canLike || isLikePending}
+          aria-pressed={isLiked}
+          aria-label={isLiked ? "Remove from liked songs" : "Add to liked songs"}
+          className="mt-6 flex size-12 items-center justify-center rounded-full text-white transition-transform active:scale-90 disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
+          style={{ filter: "drop-shadow(0 4px 12px rgba(255,255,255,0.35))" }}
+        >
+          {isLiked ? <HeartActiveIcon size={26} /> : <HeartIcon size={26} />}
+        </button>
+      </div>
+
+      {/* Arc progress and the transport, on the 375 x 222 bottom crop of the design. */}
+      <div className="mt-auto shrink-0 pb-[env(safe-area-inset-bottom)]">
+        <div className="relative aspect-[375/222] w-full">
+          <SeekBar variant="arc" />
 
           <button
             type="button"
-            onClick={onOpenLyrics}
+            onClick={() => void playerController.skipToPrevious()}
             disabled={!track}
-            className="rounded-full bg-white/10 px-5 py-2 text-sm font-medium text-foreground backdrop-blur transition-colors active:bg-white/20 disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            aria-label="Previous track"
+            className="absolute left-[26.7%] top-[63%] flex size-12 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full text-[#d9d9d9] transition-transform active:scale-90 disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
           >
-            Lyrics
+            <SkipPreviousActiveIcon size={24} />
           </button>
-        </div>
 
-        <div className="flex flex-col gap-5">
-          <SeekBar />
+          <button
+            type="button"
+            onClick={() => void playerController.togglePlayPause()}
+            disabled={isBusy || !track}
+            aria-label={isBusy ? "Loading song" : isPlaying ? "Pause" : "Play"}
+            className={cn(
+              "absolute left-1/2 top-[63%] flex size-[66px] -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-[#191919] text-[#d0d0d0]",
+              "shadow-[0_10px_50px_rgba(0,0,0,0.25),inset_0_4px_7px_rgba(176,176,176,0.05)]",
+              "transition-transform active:scale-95 disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60",
+            )}
+          >
+            {isPlaying ? <PauseActiveIcon size={26} /> : <PlayActiveIcon size={26} />}
+          </button>
 
-          <div className="flex items-center justify-between">
-            <button
-              type="button"
-              onClick={() => playerController.toggleShuffle()}
-              aria-pressed={state.shuffleEnabled}
-              aria-label={state.shuffleEnabled ? "Turn off shuffle" : "Shuffle"}
-              className={cn(
-                ROUND_BUTTON,
-                "size-11",
-                state.shuffleEnabled ? "text-primary" : "text-muted-foreground",
-              )}
-            >
-              {state.shuffleEnabled ? <ShuffleActiveIcon size={22} /> : <ShuffleIcon size={22} />}
-            </button>
-
-            <button
-              type="button"
-              onClick={() => void playerController.skipToPrevious()}
-              disabled={!track}
-              aria-label="Previous track"
-              className={cn(ROUND_BUTTON, "size-12 bg-card text-foreground")}
-            >
-              <SkipPreviousIcon size={22} />
-            </button>
-
-            <button
-              type="button"
-              onClick={() => void playerController.togglePlayPause()}
-              disabled={isBusy || !track}
-              aria-label={isBusy ? "Loading song" : isPlaying ? "Pause" : "Play"}
-              className={cn(ROUND_BUTTON, "size-[4.5rem] bg-primary text-primary-foreground")}
-            >
-              {isPlaying ? <PauseActiveIcon size={30} /> : <PlayActiveIcon size={30} />}
-            </button>
-
-            <button
-              type="button"
-              onClick={() => void playerController.skipToNext()}
-              disabled={!track}
-              aria-label="Next track"
-              className={cn(ROUND_BUTTON, "size-12 bg-card text-foreground")}
-            >
-              <SkipNextIcon size={22} />
-            </button>
-
-            <button
-              type="button"
-              onClick={onOpenQueue}
-              aria-label="Open queue"
-              className={cn(ROUND_BUTTON, "size-11 text-muted-foreground")}
-            >
-              <QueuePanelIcon size={22} />
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={() => void playerController.skipToNext()}
+            disabled={!track}
+            aria-label="Next track"
+            className="absolute left-[73%] top-[63%] flex size-12 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full text-[#d9d9d9] transition-transform active:scale-90 disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
+          >
+            <SkipNextActiveIcon size={24} />
+          </button>
         </div>
       </div>
     </div>

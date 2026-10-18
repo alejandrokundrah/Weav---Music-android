@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { shallowEqual, usePlayerSelector } from "../../../player/playerStore";
 import { playerController } from "../../../player/playerStore";
 import { playerUIStore, usePlayerUIState } from "../../stores/playerUIStore";
@@ -37,7 +37,35 @@ const IDLE_POLL_MS = 250;
 
 const formatTime = formatMinutesSeconds;
 
-export function SeekBar() {
+/*
+ * The arc variant draws on the phone player's 375-wide design canvas: a circle of radius 254
+ * centred at (186.5, 870) whose crown sits at y=616, cropped to y 590..812. The playhead is
+ * placed by *x* (progress * 375), not by distance along the curve, so the invisible range
+ * input laid over it maps a finger's horizontal position to time one-to-one.
+ */
+const ARC_WIDTH = 375;
+const ARC_CX = 186.5;
+const ARC_CY = 870;
+const ARC_R = 254;
+const ARC_START_X = -32;
+const ARC_START_Y = 740.5;
+const ARC_END_X = 405;
+
+function arcY(x: number): number {
+  const dx = Math.min(Math.abs(x - ARC_CX), ARC_R);
+  return ARC_CY - Math.sqrt(ARC_R * ARC_R - dx * dx);
+}
+
+/** `01:35`, the design's zero-padded form. */
+function padTime(seconds: number): string {
+  const whole = Math.max(0, Math.floor(Number.isFinite(seconds) ? seconds : 0));
+  const mins = Math.floor(whole / 60).toString().padStart(2, "0");
+  const secs = (whole % 60).toString().padStart(2, "0");
+  return `${mins}:${secs}`;
+}
+
+export function SeekBar({ variant = "bar" }: { variant?: "bar" | "arc" } = {}) {
+  const gradientId = useId();
   const state = usePlayerSelector(
     (player) => ({ currentTrack: player.currentTrack, status: player.status }),
     shallowEqual,
@@ -241,6 +269,84 @@ export function SeekBar() {
   };
 
   const isDisabled = !state.currentTrack || state.status === "loading";
+
+  if (variant === "arc") {
+    const progress = duration > 0 ? Math.min(1, Math.max(0, currentTime / duration)) : 0;
+    const dotX = progress * ARC_WIDTH;
+    const dotY = arcY(dotX);
+    const labelClass =
+      "pointer-events-none absolute top-[63%] -translate-y-1/2 text-sm font-light tabular-nums text-[#939393]";
+
+    return (
+      <div className="absolute inset-0">
+        <svg
+          viewBox="0 590 375 222"
+          className="size-full"
+          fill="none"
+          aria-hidden="true"
+        >
+          <defs>
+            <linearGradient
+              id={gradientId}
+              gradientUnits="userSpaceOnUse"
+              x1="-17.5"
+              y1="704.5"
+              x2={dotX}
+              y2={dotY}
+            >
+              <stop stopColor="#000" />
+              <stop offset="0.86" stopColor="#ececec" />
+              <stop offset="1" stopColor="#fff" />
+            </linearGradient>
+          </defs>
+          <path
+            d={`M${ARC_START_X} ${ARC_START_Y}A${ARC_R} ${ARC_R} 0 0 1 ${ARC_END_X} ${ARC_START_Y}`}
+            stroke="#272727"
+            strokeOpacity="0.4"
+            strokeWidth="2"
+          />
+          {progress > 0 && (
+            <path
+              d={`M${ARC_START_X} ${ARC_START_Y}A${ARC_R} ${ARC_R} 0 0 1 ${dotX} ${dotY}`}
+              stroke={`url(#${gradientId})`}
+              strokeWidth="2"
+            />
+          )}
+          <circle
+            cx={dotX}
+            cy={dotY}
+            r="2.5"
+            fill="#fff"
+            style={{ filter: "drop-shadow(0 2px 5px #fff) drop-shadow(0 2px 15px #fff)" }}
+          />
+        </svg>
+
+        <span className={`${labelClass} left-[5.5%]`}>{padTime(currentTime)}</span>
+        <span className={`${labelClass} right-[5.5%]`}>
+          -{padTime(Math.max(0, duration - currentTime))}
+        </span>
+
+        {/* The real control: invisible, over the top of the arc, so seeking keeps all the
+            commit/reconcile behaviour of the bar variant. */}
+        <input
+          type="range"
+          min="0"
+          max={duration || 100}
+          step="any"
+          value={currentTime}
+          onChange={handleSeekChange}
+          onKeyUp={commitKeyboardSeek}
+          onPointerDown={handleSeekStart}
+          onPointerMove={handleSeekMove}
+          onPointerUp={(event) => void handleSeekEnd(event)}
+          onPointerCancel={handleSeekCancel}
+          disabled={isDisabled}
+          className="absolute inset-x-0 top-0 h-[45%] w-full cursor-pointer touch-none opacity-0"
+          aria-label="Seek"
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="group/seek flex w-full items-center gap-2.5">
