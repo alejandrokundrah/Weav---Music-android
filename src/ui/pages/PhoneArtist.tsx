@@ -67,6 +67,9 @@ export interface PhoneArtistProps {
   onOpenPlaylist: (playlist: Playlist) => void;
   onPlayPlaylist: (playlist: Playlist) => void;
   onPlaylistMenu: (event: MouseEvent<HTMLElement>, playlist: Playlist) => void;
+
+  /** Back one page. Omitted when there is nothing to go back to. */
+  onBack?: () => void;
 }
 
 /**
@@ -74,9 +77,10 @@ export interface PhoneArtistProps {
  * #131313 canvas, Lexend, a big rounded portrait with a warm bloom under it, round glass-style
  * controls, light-weight secondary text, and the same cover cards in horizontal shelves.
  *
- * No gutters of its own: the app's page container already provides the 20px the design uses,
- * and its search bar carries back and search. Presentational only. `ArtistView` still owns loading, caching, subscribing and playback, and
- * hands this component the results — so the desktop and phone layouts cannot drift apart in
+ * No gutters of its own: the app's page container already provides the 20px the design uses.
+ * The page has no search bar above it, so it draws its own back button. Presentational only.
+ * `ArtistView` still owns loading, caching, subscribing and playback, and hands this component
+ * the results — so the desktop and phone layouts cannot drift apart in
  * behaviour, only in how they look.
  */
 export function PhoneArtist(props: PhoneArtistProps) {
@@ -102,9 +106,20 @@ export function PhoneArtist(props: PhoneArtistProps) {
       className="font-lexend flex flex-col pb-8 pt-1 text-white"
       style={{ "--card-w": "min(51vw, 15rem)" } as CSSProperties}
     >
+      {props.onBack && (
+        <button
+          type="button"
+          onClick={props.onBack}
+          aria-label="Back"
+          className="grid size-10 place-items-center rounded-full bg-[#1b1b1b] text-[#e7e7e7] transition-transform active:scale-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
+        >
+          <BackGlyph />
+        </button>
+      )}
+
       {/* Portrait. The shape and bloom are the player screen's artwork and the Home hero's
           shadow; the portrait is square-ish rather than circular to match them. */}
-      <div className="mt-3 flex justify-center">
+      <div className="mt-4 flex justify-center">
         <div
           className="w-[min(69vw,16.25rem)] overflow-hidden bg-[#1b1b1b]"
           style={{
@@ -477,6 +492,14 @@ const stroke = {
   strokeLinecap: "round",
   strokeLinejoin: "round",
 } as const;
+
+function BackGlyph() {
+  return (
+    <svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M15 5l-7 7 7 7" {...stroke} />
+    </svg>
+  );
+}
 
 function ShuffleGlyph() {
   return (

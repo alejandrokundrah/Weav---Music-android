@@ -82,12 +82,15 @@ export function ArtistView({
   libraryController,
   onOpenAlbum,
   onOpenPlaylist,
+  onBack,
 }: {
   artist?: Artist;
   playerController: PlayerControllerActions;
   libraryController: LibraryController;
   onOpenAlbum: (album: Album) => void;
   onOpenPlaylist: (playlist: Playlist) => void;
+  /** Phone only: the phone layout has no search bar to carry back, so it draws its own button. */
+  onBack?: () => void;
 }) {
   const isPhone = useCompactViewport();
   const { openPlaylistPicker, openTrackMenu } = useTrackContextMenu();
@@ -350,6 +353,7 @@ export function ArtistView({
           onPlayPlaylist={(playlist) =>
             playLoaded(() => libraryController.getPlaylistTracks(playlist))}
           onPlaylistMenu={openPlaylistMenu}
+          onBack={onBack}
         />
         {toastNode}
       </>
