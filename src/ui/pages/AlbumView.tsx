@@ -4,6 +4,9 @@ import { CloseIcon, SearchIcon } from "@/ui/icons";
 import { TrackRow } from "../components/TrackRow";
 import { TrackListSkeleton } from "../components/Skeleton";
 import { useNowPlaying } from "../hooks/useNowPlaying";
+import { useCompactViewport } from "../hooks/useCompactViewport";
+import { usePlaylistContextMenu } from "../components/PlaylistContextMenu";
+import { PhoneCollection } from "./PhoneCollection";
 import type { Album, Track } from "../../datasource/types";
 import type { LibraryController } from "../../player/LibraryController";
 import type { PlayerControllerActions } from "../../player/playerStore";
@@ -41,7 +44,9 @@ function getTrackRenderKey(track: Track, index: number): string {
 }
 
 export function AlbumView({ album, playerController, libraryController }: AlbumViewProps) {
+  const isPhone = useCompactViewport();
   const { openPlaylistPicker, openTrackMenu } = useTrackContextMenu();
+  const { openAlbumMenu } = usePlaylistContextMenu();
   const keyboardShortcuts = useKeyboardShortcuts();
   const {
     currentTrackId,
@@ -174,6 +179,56 @@ export function AlbumView({ album, playerController, libraryController }: AlbumV
     event.preventDefault();
     event.currentTarget.blur();
   };
+
+  /*
+   * The phone draws the same album with its own layout. Everything above — loading, search,
+   * playback — is shared, so the two cannot drift apart in behaviour, only in how they look.
+   */
+  if (isPhone) {
+    const loopMode = isCurrentCollection ? playbackOrderMode : "in-order";
+    return (
+      <PhoneCollection
+        kind="album"
+        title={album.title}
+        subtitle={<ArtistLinks artists={album.artists} fallback={album.artist} />}
+        meta={formatCollectionMeta(tracks)}
+        artworkUrl={album.artworkUrl}
+        isLoading={isLoading}
+        error={error}
+        emptyMessage={null}
+        actionsDisabled={isLoading || Boolean(error) || tracks.length === 0}
+        isCollectionPlaying={isCurrentCollection && isPlaying}
+        isCollectionLoading={isCurrentCollection && isPlayerLoading}
+        onTogglePlay={togglePlayCollection}
+        onShuffle={() => void playShuffled()}
+        onAddToQueue={() => playerController.addTracksToQueue(tracks)}
+        onAddToPlaylist={() => openPlaylistPicker(tracks[0], tracks)}
+        loopMode={loopMode}
+        onLoop={
+          loopMode !== "in-order"
+            ? () => playerController.setPlaybackOrderMode(
+              playbackOrderMode === "repeat-all" ? "repeat-one" : "in-order",
+            )
+            : playInLoop
+        }
+        download={{ onStart: () => queueDownloads(tracks), counts: downloadCounts }}
+        onMore={(event) => openAlbumMenu(event, album)}
+        showTools={isLoading || tracks.length > 0}
+        searchLabel="Search album"
+        searchQuery={albumSearchQuery}
+        onSearchChange={setAlbumSearchQuery}
+        searchInputRef={albumSearchInputRef}
+        tracks={visibleTracks}
+        getTrackKey={getTrackRenderKey}
+        showTrackArtwork={false}
+        hideArtistFor={album.artist}
+        currentTrackId={currentTrackId}
+        isPlaying={isPlaying}
+        onSelectTrack={(track) => void playerController.playTrackById(track.id, visibleTracks)}
+        onTrackMenu={(event, track) => openTrackMenu(event, track)}
+      />
+    );
+  }
 
   return (
     <div className="flex flex-col gap-8">
