@@ -82,7 +82,15 @@ export function TrackArtwork({
    * every other one — a queue row resolving at 120px would then be handed to the page header,
    * which paints it at 300px and looks visibly soft.
    */
-  const cacheKey = artworkUrl && sizeBucket !== null ? `${artworkUrl}@${sizeBucket}` : artworkUrl;
+  /** A sized slot bigger than every bucket: wants the best the host has, not the stored thumbnail. */
+  const isHero = size != null && sizeBucket === null;
+  const cacheKey = artworkUrl
+    ? sizeBucket !== null
+      ? `${artworkUrl}@${sizeBucket}`
+      : isHero
+        ? `${artworkUrl}@hero`
+        : artworkUrl
+    : artworkUrl;
   /*
    * A previously resolved URL short-circuits the whole candidate walk: it is the only
    * candidate, so a remount paints from cache instead of re-requesting the ones that failed
@@ -100,8 +108,8 @@ export function TrackArtwork({
     if (cached) return [cached];
     // preferProxy does not touch this ladder — it stays a live fallback even while the proxy
     // races it below. Only truly local artwork (no URL to walk at all) skips it.
-    return isLocalArtwork ? [] : getArtworkUrlCandidates(artworkUrl, sizeBucket);
-  }, [artworkUrl, cacheKey, isLocalArtwork, sizeBucket]);
+    return isLocalArtwork ? [] : getArtworkUrlCandidates(artworkUrl, sizeBucket, isHero);
+  }, [artworkUrl, cacheKey, isHero, isLocalArtwork, sizeBucket]);
   const [artworkIndex, setArtworkIndex] = useState(0);
   const [retryCount, setRetryCount] = useState(0);
   const [proxiedArtworkUrl, setProxiedArtworkUrl] = useState<string | null>(null);
@@ -191,7 +199,7 @@ export function TrackArtwork({
      * Fetches the head of the ladder, which is the sized variant when one was requested: the
      * proxy path should not be the one place that quietly downloads the full-size original.
      */
-    const proxyUrl = getArtworkUrlCandidates(artworkUrl, sizeBucket)[0] ?? artworkUrl;
+    const proxyUrl = getArtworkUrlCandidates(artworkUrl, sizeBucket, isHero)[0] ?? artworkUrl;
     void resolveArtworkThroughProxy(cacheKey, async () => {
       // Embedded cover: read it out of the file's tags. Same cache, same object-URL budget,
       // same request sharing — only where the bytes come from differs.
@@ -231,6 +239,7 @@ export function TrackArtwork({
     artworkIndex,
     artworkUrl,
     cacheKey,
+    isHero,
     isLocalArtwork,
     isLocalImage,
     isOfflineArtwork,

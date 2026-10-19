@@ -104,16 +104,37 @@ export function getArtworkSizeBucket(cssPx: number): number | null {
   return ARTWORK_SIZE_BUCKETS.find((bucket) => bucket >= needed) ?? null;
 }
 
+/** Largest square the image host serves for album art; beyond it the request just errors. */
+const HERO_ARTWORK_SIZE = 1200;
+
+/** Video-backed songs only carry `hqdefault` (480x360); `maxresdefault` is 1280x720 when it exists. */
+function maxResVideoThumbnail(url: string): string | null {
+  const match = url.match(/^(https:\/\/i\d?\.ytimg\.com\/vi)(?:_webp)?\/([^/]+)\/[^/?]+/);
+  return match ? `${match[1]}/${match[2]}/maxresdefault.jpg` : null;
+}
+
 /**
  * `size` is the requested width; omitting it keeps the original URL first, which is what
  * callers rendering at an unknown or full-bleed size want. Everything after the first entry is
  * a fallback for the first one 404ing, so the original stays in the ladder either way.
  */
-export function getArtworkUrlCandidates(url?: string, size?: number | null): string[] {
+export function getArtworkUrlCandidates(
+  url?: string,
+  size?: number | null,
+  /**
+   * The slot is bigger than every bucket (a player cover on a 3x phone needs ~1400 device
+   * pixels). The stored URL is usually a ~226px thumbnail, so asking for it as-is is what made
+   * the cover look soft: request the biggest variant the host offers first, and keep the
+   * original behind it for when that variant does not exist.
+   */
+  hero = false,
+): string[] {
   if (!url?.trim()) return [];
 
   const normalized = normalizeArtworkUrl(url);
   const candidates = [
+    hero ? withYoutubeSize(normalized, HERO_ARTWORK_SIZE) : null,
+    hero ? maxResVideoThumbnail(normalized) : null,
     size == null ? null : withYoutubeSize(normalized, size),
     normalized,
     withYoutubeSize(normalized, 544),
