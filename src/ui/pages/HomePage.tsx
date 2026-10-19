@@ -391,7 +391,6 @@ export function HomePage({
     return (
       <PhoneHome
         account={libraryState.library?.account ?? null}
-        isSignedIn={libraryState.status === "ready"}
         isSignedOut={libraryState.status === "signed-out"}
         isLoading={isLoadingSuggestions || isWaitingForLibrary}
         recentPlays={recentPlays}
@@ -403,6 +402,7 @@ export function HomePage({
         onOpenAlbum={onOpenAlbum ?? (() => {})}
         onOpenPlaylist={onOpenPlaylist ?? (() => {})}
         onOpenSearch={onOpenSearch ?? (() => {})}
+        onOpenDownloads={destinations.onOpenDownloads}
         onSignIn={() => void onSignIn()}
       />
     );

@@ -20,14 +20,13 @@ import type {
 import { logInternalError } from "../../internal/logging";
 import type { LibraryController } from "../../player/LibraryController";
 import type { SearchController } from "../../player/SearchController";
-import { NotificationsPanel } from "../components/NotificationsPanel";
 import {
   CoverCard,
   CoverCardSkeleton,
   FocusCarousel,
   ShelfRow,
 } from "../components/phone/CoverCard";
-import { PhoneSearchIcon } from "../components/phone/PhoneIcons";
+import { PhoneHomeHeader } from "../components/phone/PhoneHomeHeader";
 
 type HomeTab = "podcasts" | "music" | "asmr";
 
@@ -49,7 +48,6 @@ const NEW_RELEASES_TITLE = /\bnew (albums?|releases?|music)\b/i;
 
 interface PhoneHomeProps {
   account: AccountProfile | null;
-  isSignedIn: boolean;
   isSignedOut: boolean;
   isLoading: boolean;
   recentPlays: readonly Track[];
@@ -61,6 +59,8 @@ interface PhoneHomeProps {
   onOpenAlbum: (album: Album) => void;
   onOpenPlaylist: (playlist: Playlist) => void;
   onOpenSearch: () => void;
+  /** The header's downloads panel links through to the full Downloads page. */
+  onOpenDownloads: () => void;
   onSignIn: () => void;
 }
 
@@ -133,7 +133,6 @@ function hasContent(shelf: BrowseShelf): boolean {
  */
 export function PhoneHome({
   account,
-  isSignedIn,
   isSignedOut,
   isLoading,
   recentPlays,
@@ -145,6 +144,7 @@ export function PhoneHome({
   onOpenAlbum,
   onOpenPlaylist,
   onOpenSearch,
+  onOpenDownloads,
   onSignIn,
 }: PhoneHomeProps) {
   const [tab, setTab] = useState<HomeTab>("music");
@@ -286,32 +286,15 @@ export function PhoneHome({
       className="font-lexend flex flex-col px-5 pb-4 pt-3 text-white"
       style={{ "--card-w": "min(51vw, 15rem)" } as CSSProperties}
     >
-      {/* The page runs edge to edge (Layout's `edgeToEdge`), so these are the design's own 20px
-          gutters; the carousels below pull back out of them with `-mx-5`. */}
-      <header className="flex items-center justify-between">
-        <div className="flex min-w-0 flex-col">
-          <span className="text-base font-light leading-5 text-[#cdcdcd]">{greetingFor(now)}</span>
-          {/* `tracking-normal`: the base h1/h2 rules add negative tracking and a 700 weight that
-              the design does not have. Weights below were fitted against the design's glyph
-              widths and stroke area, not eyeballed. */}
-          <h1 className="mt-1.5 flex items-center gap-2 text-[22px] font-normal leading-[30px] tracking-normal text-white">
-            <span className="truncate">{firstName ?? "Welcome"}</span>
-            {/* The design's chick faces sideways: U+1F424, not the front-on U+1F425. */}
-            <span aria-hidden="true" className="text-[22px] leading-none">🐤</span>
-          </h1>
-        </div>
-        <div className="-mr-2 flex items-center gap-2 text-[#e7e7e7]">
-          <button
-            type="button"
-            onClick={onOpenSearch}
-            aria-label="Search"
-            className="grid size-10 place-items-center rounded-full transition-transform active:scale-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
-          >
-            <PhoneSearchIcon />
-          </button>
-          <NotificationsPanel signedIn={isSignedIn} variant="phone" />
-        </div>
-      </header>
+      {/* The page runs edge to edge (Layout's `edgeToEdge`), so the header's gutters are the
+          design's own 20px; the carousels below pull back out of them with `-mx-5`. */}
+      <PhoneHomeHeader
+        greeting={greetingFor(now)}
+        name={firstName ?? "Welcome"}
+        avatarUrl={account?.artworkUrl}
+        onOpenSearch={onOpenSearch}
+        onOpenDownloads={onOpenDownloads}
+      />
 
       <div
         role="tablist"

@@ -177,6 +177,55 @@ export function PhoneBellIcon({ size = 24, ...props }: IconProps) {
   );
 }
 
+/**
+ * The Home header's downloads button: a dashed lime ring around a down arrow.
+ *
+ * Geometry is the design's own, in the design's coordinates (the 27.8px box the ring was
+ * drawn in). The ring is a separate group from the arrow so that it alone can turn while
+ * something is downloading — the arrow stays put, which is what makes it read as progress
+ * rather than as a spinner. The colour is the design's `#ADF106`, not `--color-primary`:
+ * this is a fixed brand mark in the header, not a themed accent.
+ */
+export function PhoneDownloadIcon({
+  size = 28,
+  spinning = false,
+  ...props
+}: IconProps & { spinning?: boolean }) {
+  const stroke = {
+    stroke: "#ADF106",
+    strokeWidth: 2.8956,
+    strokeLinecap: "round",
+    strokeLinejoin: "round",
+  } as const;
+
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="320 59 27.8 27.8"
+      fill="none"
+      aria-hidden="true"
+      {...props}
+    >
+      {/* `fill-box` + `center`: the ring's own bounding box is its centre of rotation, so the
+          group needs no coordinates of its own. Honours reduced motion; Paper-PC mode already
+          stops every CSS animation. */}
+      <g
+        className={spinning ? "animate-[spin_5s_linear_infinite] motion-reduce:animate-none" : undefined}
+        style={{ transformBox: "fill-box", transformOrigin: "center" }}
+      >
+        <path d="M333.841 84.9827C331.596 85.0671 329.374 84.4964 327.447 83.3402C325.52 82.184 323.971 80.4923 322.989 78.4712C322.007 76.45 321.634 74.1868 321.915 71.9574C322.197 69.728 323.121 67.6285 324.575 65.9151" {...stroke} />
+        <path d="M344.539 76.6143C344.866 75.4794 345.018 74.3011 344.988 73.1204" {...stroke} />
+        <path d="M343.849 68.3819C343.143 66.911 342.135 65.6058 340.889 64.5518" {...stroke} />
+        <path d="M342.224 80.9198C341.915 81.2835 341.583 81.6276 341.23 81.9503" {...stroke} />
+        <path d="M336.885 62.3602C333.96 61.4399 330.79 61.7168 328.069 63.1302" {...stroke} />
+      </g>
+      <path d="M328.779 73.5815L333.582 78.0382L338.038 73.2354" {...stroke} />
+      <path d="M333.235 68.7787L333.581 78.0381" {...stroke} />
+    </svg>
+  );
+}
+
 /* ── Glass play glyph ─────────────────────────────────────────────── */
 
 /**
