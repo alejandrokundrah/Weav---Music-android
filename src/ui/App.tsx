@@ -2045,12 +2045,29 @@ useEffect(() => {
           showSearchBar={
             activeTab?.view !== "settings"
             && !playerUIState.isLyricsOpen
-            // The phone Home carries its own search button in the header.
-            && !(isPhone && activeTab?.view === "home")
+            // The phone screens carry their own headers and search/back actions.
+            && !(
+              isPhone
+              && (
+                activeTab?.view === "home"
+                || activeTab?.view === "search"
+                || activeTab?.view === "library"
+                || activeTab?.view === "browse"
+              )
+            )
           }
           onOpenSearch={() => setIsSearchOpen(true)}
-          // The phone Home bleeds to the screen edges and supplies its own gutters.
-          edgeToEdge={isPhone && activeTab?.view === "home"}
+          // Phone pages bleed to the screen edges and supply their own 20px gutters.
+          edgeToEdge={
+            isPhone
+            && (
+              activeTab?.view === "home"
+              || activeTab?.view === "search"
+              || activeTab?.view === "library"
+              || activeTab?.view === "browse"
+              || activeTab?.view === "settings"
+            )
+          }
           canGoBack={canNavigateBack}
           canGoForward={canNavigateForward}
           onNavigateBack={handleNavigateBack}
@@ -2164,6 +2181,8 @@ useEffect(() => {
                 onOpenArtist={(artist) => handleNavigateArtist(artist)}
                 onOpenAlbum={handleNavigateAlbum}
                 onOpenPlaylist={handleNavigatePlaylist}
+                onSearch={(q) => runSearch(q, false)}
+                onBack={canNavigateBack ? handleNavigateBack : undefined}
                 />
             )}
             {activeTab?.view === "library" && (

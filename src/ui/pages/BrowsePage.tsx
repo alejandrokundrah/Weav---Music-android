@@ -19,6 +19,8 @@ import { BrowseShelves } from "../components/BrowseShelves";
 import { TrackRow } from "../components/TrackRow";
 import { useTrackContextMenu } from "../components/TrackContextMenu";
 import { useNowPlaying } from "../hooks/useNowPlaying";
+import { useCompactViewport } from "../hooks/useCompactViewport";
+import { PhoneBrowse } from "./PhoneBrowse";
 import { loadFailedMessage } from "../../internal/connectivity";
 
 /**
@@ -128,6 +130,39 @@ export function BrowsePage({
   const playShelfTrack = (shelfTracks: Track[], track: Track) => {
     void playerController.playTrackById(track.id, shelfTracks);
   };
+
+  const isPhone = useCompactViewport();
+
+  if (isPhone) {
+    return (
+      <PhoneBrowse
+        surface={surface}
+        onSurfaceChange={(s) => {
+          setSurface(s);
+          setDrillDown([]);
+        }}
+        drillDown={drillDown}
+        onDrillDown={(link) => setDrillDown((stack) => [...stack, link])}
+        onBackDrillDown={() => setDrillDown((stack) => stack.slice(0, -1))}
+        isLoading={page === null && !isDownloads && !error}
+        error={error}
+        page={page}
+        isDownloads={isDownloads}
+        downloads={downloads}
+        inFlight={inFlight}
+        downloadingId={offline.downloadingId}
+        downloadProgress={offline.progress}
+        onRemoveAllDownloads={() => void removeAllDownloads()}
+        currentTrackId={currentTrackId}
+        isPlaying={isPlaying}
+        onPlayTrack={(track, queue) => playShelfTrack(queue as Track[], track)}
+        onTrackMenu={(e, track) => openTrackMenu(e, track)}
+        onOpenAlbum={onOpenAlbum}
+        onOpenArtist={onOpenArtist}
+        onOpenPlaylist={onOpenPlaylist}
+      />
+    );
+  }
 
   return (
     <div className="flex flex-col gap-6">

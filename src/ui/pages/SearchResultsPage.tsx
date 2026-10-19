@@ -16,6 +16,9 @@ import { ArtistLinks } from "../components/ArtistLinks";
 import { TrackArtwork } from "../components/TrackArtwork";
 import { usePlaylistContextMenu } from "../components/PlaylistContextMenu";
 import { useTrackContextMenu } from "../components/TrackContextMenu";
+import { useCompactViewport } from "../hooks/useCompactViewport";
+import { useNowPlaying } from "../hooks/useNowPlaying";
+import { PhoneSearch } from "./PhoneSearch";
 
 function normalizeSearchKey(value: string): string {
   return value
@@ -81,6 +84,8 @@ export function SearchResultsPage({
   onOpenArtist,
   onOpenAlbum,
   onOpenPlaylist,
+  onSearch,
+  onBack,
 }: {
   query: string;
   results: SearchResults;
@@ -90,7 +95,11 @@ export function SearchResultsPage({
   onOpenArtist: (artist: Artist) => void;
   onOpenAlbum: (album: Album) => void;
   onOpenPlaylist: (playlist: Playlist) => void;
+  onSearch?: (query: string) => void;
+  onBack?: () => void;
 }) {
+  const isPhone = useCompactViewport();
+  const { currentTrackId, isPlaying } = useNowPlaying();
   const { openTrackMenu } = useTrackContextMenu();
   const { openPlaylistMenu, openAlbumMenu } = usePlaylistContextMenu();
   const [scope, setScope] = useState<SearchScope>("all");
@@ -307,6 +316,35 @@ export function SearchResultsPage({
   const enterStyle = useCallback((index: number) => ({
     "--search-enter-delay": `${Math.min(Math.max(index, 0), 18) * 28}ms`,
   } as CSSProperties), []);
+
+  if (isPhone) {
+    const scopesWithCounts = availableScopes.map((s) => ({
+      value: s.value,
+      label: s.label,
+      count: s.value !== "all" ? results[s.field].length : undefined,
+    }));
+
+    return (
+      <PhoneSearch
+        query={query}
+        onSearchSubmit={onSearch}
+        isLoading={isLoading}
+        isDeepLoading={isDeepLoading}
+        scope={scope}
+        onScopeChange={setScope}
+        availableScopes={scopesWithCounts}
+        scopedResults={scopedResults}
+        currentTrackId={currentTrackId}
+        isPlaying={isPlaying}
+        onPlayTrack={playTrack}
+        onTrackMenu={openTrackMenu}
+        onOpenArtist={onOpenArtist}
+        onOpenAlbum={onOpenAlbum}
+        onOpenPlaylist={onOpenPlaylist}
+        onBack={onBack}
+      />
+    );
+  }
 
   return (
     <div className="flex flex-col gap-8">
