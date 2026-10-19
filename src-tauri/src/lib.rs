@@ -2358,6 +2358,18 @@ fn build_login_window(
     loaded: Arc<AtomicBool>,
     slot_id: &str,
 ) -> Result<tauri::WebviewWindow, CommandError> {
+    // Android hosts exactly one webview in its single activity. Opening a second window there
+    // takes the whole app down, which is what "the app closes when I sign in" was. Sign-in on
+    // Android runs in the main webview instead (see `sign_in_youtube_music`).
+    #[cfg(target_os = "android")]
+    {
+        let _ = (app, visible, &loaded, slot_id);
+        return Err(CommandError {
+            message: "a separate sign-in window is not available on Android".to_string(),
+        });
+    }
+
+    #[cfg(not(target_os = "android"))]
     if let Some(existing) = app.get_webview_window(YOUTUBE_LOGIN_WINDOW) {
         let _ = existing.close();
     }
@@ -2511,16 +2523,47 @@ async fn sign_in_youtube_music(
      * unused — cleaned up rather than left as an orphaned directory.
      */
     let candidate_slot_id = generate_slot_id();
-    let window = build_login_window(&app, true, Arc::new(AtomicBool::new(false)), &candidate_slot_id)?;
-    eprintln!("[internal][tauri][info] sign_in_youtube_music login window created");
 
-    let result = poll_for_sign_in(&app, &jar, &account_lock, &window, &candidate_slot_id);
-    // Any failure (cancel, timeout, keyring error) must not leave the window up or the partition behind (#144).
-    if result.is_err() {
-        let _ = window.close();
-        remove_login_partition(&app, &candidate_slot_id);
+    /*
+     * Android: no second window. The main webview itself is sent to Google, this thread watches
+     * its cookies, and once the session lands it is sent back to the app, which then restores
+     * the signed-in account from the store like any other launch. The page this command was
+     * called from is gone by then, so the returned value only matters on failure paths.
+     */
+    #[cfg(target_os = "android")]
+    {
+        let window = app.get_webview_window("main").ok_or_else(|| CommandError {
+            message: "the app window is unavailable".to_string(),
+        })?;
+        let return_url = window.url().map_err(|error| CommandError {
+            message: format!("unable to remember the app address: {error}"),
+        })?;
+        let result = poll_for_sign_in(
+            &app,
+            &jar,
+            &account_lock,
+            &window,
+            &candidate_slot_id,
+            Some(return_url.clone()),
+        );
+        if result.is_err() {
+            let _ = window.navigate(return_url);
+        }
+        return result;
     }
-    result
+
+    {
+        let window = build_login_window(&app, true, Arc::new(AtomicBool::new(false)), &candidate_slot_id)?;
+        eprintln!("[internal][tauri][info] sign_in_youtube_music login window created");
+
+        let result = poll_for_sign_in(&app, &jar, &account_lock, &window, &candidate_slot_id, None);
+        // Any failure (cancel, timeout, keyring error) must not leave the window up or the partition behind (#144).
+        if result.is_err() {
+            let _ = window.close();
+            remove_login_partition(&app, &candidate_slot_id);
+        }
+        result
+    }
 }
 
 fn poll_for_sign_in(
@@ -2529,7 +2572,18 @@ fn poll_for_sign_in(
     account_lock: &AccountStoreLock,
     window: &tauri::WebviewWindow,
     candidate_slot_id: &str,
+    // Set on Android, where the "login window" is the main webview: finishing means navigating
+    // back to the app rather than closing a window.
+    return_url: Option<url::Url>,
 ) -> Result<SignInResult, CommandError> {
+    let finish = |window: &tauri::WebviewWindow| match &return_url {
+        Some(url) => {
+            let _ = window.navigate(url.clone());
+        }
+        None => {
+            let _ = window.close();
+        }
+    };
     let login_url = YOUTUBE_LOGIN_URL.parse().map_err(|error| CommandError {
         message: format!("invalid YouTube Music sign-in URL: {error}"),
     })?;
@@ -2541,7 +2595,7 @@ fn poll_for_sign_in(
     for poll in 1..=300 {
         let harvested = match harvest_session_cookie(window) {
             // Closing the window mid-read fails the read on macOS; that is still a cancel (#143).
-            Err(_) if app.get_webview_window(YOUTUBE_LOGIN_WINDOW).is_none() => None,
+            Err(_) if app.get_webview_window(window.label()).is_none() => None,
             other => other?,
         };
         if let Some(cookie_header) = harvested {
@@ -2570,7 +2624,7 @@ fn poll_for_sign_in(
                 account_changed,
                 slot_id,
             );
-            let _ = window.close();
+            finish(window);
             return Ok(SignInResult {
                 cookie: cookie_header,
                 account_changed,
@@ -2578,7 +2632,7 @@ fn poll_for_sign_in(
             });
         }
 
-        if app.get_webview_window(YOUTUBE_LOGIN_WINDOW).is_none() {
+        if app.get_webview_window(window.label()).is_none() {
             eprintln!(
                 "[internal][tauri][warn] sign_in_youtube_music cancelled poll={}",
                 poll
@@ -2628,6 +2682,14 @@ async fn refresh_youtube_music_cookie(
         eprintln!("[internal][tauri][info] refresh_youtube_music_cookie no active account to renew");
         return Ok(None);
     };
+
+    // No hidden second webview on Android, so there is nothing to renew silently with; the
+    // caller treats None as "sign in again", which is the honest answer there.
+    #[cfg(target_os = "android")]
+    {
+        let _ = &active_slot_id;
+        return Ok(None);
+    }
 
     let loaded = Arc::new(AtomicBool::new(false));
     let window = build_login_window(&app, false, loaded.clone(), &active_slot_id)?;
