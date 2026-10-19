@@ -56,8 +56,6 @@ import {
   setThemePreference,
   useThemePreference,
 } from "../settings/theme";
-import { useCompactViewport } from "../hooks/useCompactViewport";
-import { PhoneSettings } from "./PhoneSettings";
 import { invoke } from "@tauri-apps/api/core";
 import { open as openDialog } from "@tauri-apps/plugin-dialog";
 import { relaunch } from "@tauri-apps/plugin-process";
@@ -1010,75 +1008,6 @@ export function SettingsPage({
     if (bytes < 1024 ** 3) return `${(bytes / 1024 ** 2).toFixed(1)} MB`;
     return `${(bytes / 1024 ** 3).toFixed(2)} GB`;
   };
-
-  const isPhone = useCompactViewport();
-  const potatoPcMode = usePotatoPcMode();
-
-  if (isPhone) {
-    return (
-      <PhoneSettings
-        libraryState={libraryState}
-        account={account ?? null}
-        isSignedIn={Boolean(isSignedIn)}
-        onSignIn={onSignIn}
-        onSignOut={() => void libraryController.signOut()}
-        themePreference={themePreference}
-        onThemeChange={setThemePreference}
-        potatoPcMode={potatoPcMode}
-        onPotatoPcChange={setPotatoPcMode}
-        madeForYouVisible={madeForYouVisible}
-        onMadeForYouChange={setMadeForYouVisible}
-        streamingQuality={streamingQuality}
-        onStreamingQualityChange={setStreamingQuality}
-        downloadQuality={downloadQuality}
-        onDownloadQualityChange={setDownloadQuality}
-        audioEngineMode={audioEngineMode}
-        onAudioEngineModeChange={setAudioEngineMode}
-        authenticatedStreaming={authenticatedStreaming}
-        onAuthenticatedStreamingChange={setAuthenticatedStreaming}
-        youtubeScrobbling={youtubeScrobbling}
-        onYouTubeScrobblingChange={(enabled) => {
-          setYouTubeScrobbling(enabled);
-          setAuthenticatedStreaming(enabled);
-        }}
-        gaplessEnabled={gaplessEnabled}
-        onGaplessChange={setGaplessEnabled}
-        crossfadeSec={crossfadeSec}
-        onCrossfadeChange={setCrossfadeSec}
-        sessionRestoreEnabled={sessionRestoreEnabled}
-        onSessionRestoreChange={setSessionRestoreEnabled}
-        preferredLyricsSource={preferredLyricsSource}
-        onPreferredLyricsSourceChange={setPreferredLyricsSourceId}
-        lyricsFontScale={lyricsFontScale}
-        onLyricsFontScaleChange={setLyricsFontScale}
-        lyricsTranslationLang={lyricsTranslationLang}
-        onLyricsTranslationLangChange={setLyricsTranslationLang}
-        cacheBytes={cacheStats?.usedBytes ?? 0}
-        onClearCache={handleClearCache}
-        offlineBytes={offlineState.usedBytes}
-        offlineCount={Object.keys(offlineState.entries).length}
-        offlineMaxGb={offlineMaxGb}
-        onOfflineMaxGbChange={(gb) => {
-          setOfflineMaxGb(gb);
-          setOfflineMaxBytes(Math.max(1, gb) * 1024 ** 3);
-        }}
-        onRemoveAllDownloads={() => removeAllDownloads()}
-        lastFmSession={lastFmSession}
-        lastFmScrobblingEnabled={lastFmScrobblingEnabled}
-        onLastFmScrobblingChange={setLastFmScrobblingEnabled}
-        onConnectLastFm={() => void handleStartLastFmAuth()}
-        onDisconnectLastFm={() => void handleDisconnectLastFm()}
-        installedVersion={installedVersion ?? ""}
-        updateInfo={updateResult}
-        isCheckingUpdate={updateStatus === "checking"}
-        onCheckForUpdates={() => void handleCheckForUpdates()}
-        onInstallUpdate={() => void handleInstallUpdate()}
-        updateProgress={updateProgress}
-        onRestartOnboarding={onRestartOnboarding}
-        onDeleteAllAppData={onDeleteAllAppData}
-      />
-    );
-  }
 
   return (
     <main className="@container/settings flex min-h-0 flex-1 flex-col gap-7">

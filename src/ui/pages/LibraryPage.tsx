@@ -33,8 +33,6 @@ import { useNowPlaying } from "../hooks/useNowPlaying";
 import { useTrackSelection } from "../hooks/useTrackSelection";
 import { isLikedSongsId, likedSongsCover } from "../likedSongsArtwork";
 import { useHiddenPlaylistIds } from "../settings/hiddenPlaylists";
-import { useCompactViewport } from "../hooks/useCompactViewport";
-import { PhoneLibrary } from "./PhoneLibrary";
 
 type LibraryTab = "songs" | "albums" | "artists" | "playlists";
 
@@ -313,53 +311,6 @@ export function LibraryPage({
     artists: artists.length,
     playlists: visiblePlaylists.length,
   };
-
-  const isPhone = useCompactViewport();
-
-  if (isPhone && !library) {
-    return (
-      <div className="flex min-h-full flex-col items-center justify-center bg-[#131313] px-6 py-24 text-center font-lexend text-[#929292]">
-        <p className="text-base font-light">
-          {libraryState.status === "signed-out"
-            ? "Sign in to see your playlists, saved albums, and songs."
-            : "Loading your library..."}
-        </p>
-      </div>
-    );
-  }
-
-  if (isPhone) {
-    return (
-      <PhoneLibrary
-        tab={tab}
-        onTabChange={setTab}
-        query={query}
-        onQueryChange={setQuery}
-        sort={sort}
-        onSortChange={setSort}
-        songs={songs}
-        albums={albums}
-        artists={artists}
-        playlists={displayedPlaylists}
-        counts={counts}
-        currentTrackId={currentTrackId}
-        isPlaying={isPlaying}
-        onPlaySong={(track, queue) => void playerController.playTrackById(track.id, queue as Track[])}
-        onShuffleSongs={() => {
-          if (songs.length > 0) {
-            const shuffled = [...songs].sort(() => Math.random() - 0.5);
-            void playerController.playTrackById(shuffled[0].id, shuffled);
-          }
-        }}
-        onTrackMenu={(e, track) => openTrackMenu(e, track)}
-        onOpenAlbum={onOpenAlbum}
-        onOpenArtist={onOpenArtist}
-        onOpenPlaylist={onOpenPlaylist}
-        onPlaylistMenu={(e, playlist) => openPlaylistMenu(e, playlist)}
-        onAlbumMenu={(e, album) => openAlbumMenu(e, album)}
-      />
-    );
-  }
 
   if (!library) {
     return (

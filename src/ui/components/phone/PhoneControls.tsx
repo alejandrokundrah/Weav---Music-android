@@ -1,4 +1,4 @@
-import type { MouseEvent, ReactNode } from "react";
+import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
 /**
@@ -17,7 +17,7 @@ export function RoundButton({
   children,
 }: {
   label: string;
-  onClick: (event: MouseEvent<HTMLButtonElement>) => void;
+  onClick: () => void;
   disabled?: boolean;
   className?: string;
   children: ReactNode;
