@@ -32,7 +32,7 @@ const usesNativeWindowsMediaSession =
 const usesNativeMacosMediaSession =
   isTauri() && /Macintosh|Mac OS X/i.test(navigator.userAgent);
 const usesNativeLinuxMediaSession =
-  isTauri() && /Linux/i.test(navigator.userAgent);
+  isTauri() && /Linux/i.test(navigator.userAgent) && !/Android/i.test(navigator.userAgent);
 const usesNativeMediaSession =
   usesNativeWindowsMediaSession ||
   usesNativeMacosMediaSession ||

@@ -56,6 +56,15 @@ export function PhoneFloatingCapsule({ onOpenFullPlayer }: PhoneFloatingCapsuleP
   const [isDismissed, setIsDismissed] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
 
+  /**
+   * Visibility gating: The capsule only appears when the user returns
+   * from having the app in the background. It stays hidden while the
+   * user is actively inside the app.
+   */
+  const [wasBackgrounded, setWasBackgrounded] = useState(false);
+  const [showCapsule, setShowCapsule] = useState(false);
+  const autoHideTimerRef = useRef<number | null>(null);
+
   // Position state with safe defaults
   const [pos, setPos] = useState<{ x: number; y: number }>(() => {
     try {
@@ -91,17 +100,34 @@ export function PhoneFloatingCapsule({ onOpenFullPlayer }: PhoneFloatingCapsuleP
     return () => window.clearInterval(interval);
   }, [isPlaying]);
 
-  // Handle visibility change (tabbing away or returning)
+  // Visibility change: detect when app goes to background and comes back
   useEffect(() => {
     const handleVisibility = () => {
-      if (document.visibilityState === "visible") {
-        // Ensure capsule is visible when user tabs back
-        if (track) setIsDismissed(false);
+      if (document.visibilityState === "hidden") {
+        // App just went to background
+        setWasBackgrounded(true);
+      } else if (document.visibilityState === "visible" && wasBackgrounded) {
+        // User is back from background — show the capsule
+        if (track && (isPlaying || isLoading)) {
+          setIsDismissed(false);
+          setShowCapsule(true);
+
+          // Auto-hide after 8 seconds
+          if (autoHideTimerRef.current) window.clearTimeout(autoHideTimerRef.current);
+          autoHideTimerRef.current = window.setTimeout(() => {
+            setShowCapsule(false);
+            setExpanded(false);
+          }, 8000);
+        }
+        setWasBackgrounded(false);
       }
     };
     document.addEventListener("visibilitychange", handleVisibility);
-    return () => document.removeEventListener("visibilitychange", handleVisibility);
-  }, [track]);
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibility);
+      if (autoHideTimerRef.current) window.clearTimeout(autoHideTimerRef.current);
+    };
+  }, [wasBackgrounded, track, isPlaying, isLoading]);
 
   // Save position on change
   const savePosition = (nextPos: { x: number; y: number }) => {
@@ -111,7 +137,8 @@ export function PhoneFloatingCapsule({ onOpenFullPlayer }: PhoneFloatingCapsuleP
     } catch {}
   };
 
-  if (!track || isDismissed) return null;
+  // Only render when returning from background with active playback
+  if (!track || isDismissed || !showCapsule) return null;
 
   const currentWidth = expanded ? EXPANDED_WIDTH : COLLAPSED_WIDTH;
   const currentHeight = expanded ? EXPANDED_HEIGHT : COLLAPSED_HEIGHT;
@@ -241,6 +268,8 @@ export function PhoneFloatingCapsule({ onOpenFullPlayer }: PhoneFloatingCapsuleP
             type="button"
             onClick={(e) => {
               e.stopPropagation();
+              setShowCapsule(false);
+              if (autoHideTimerRef.current) window.clearTimeout(autoHideTimerRef.current);
               onOpenFullPlayer();
             }}
             aria-label="Open full player"
@@ -298,6 +327,8 @@ export function PhoneFloatingCapsule({ onOpenFullPlayer }: PhoneFloatingCapsuleP
                   type="button"
                   onClick={(e) => {
                     e.stopPropagation();
+                    setShowCapsule(false);
+                    if (autoHideTimerRef.current) window.clearTimeout(autoHideTimerRef.current);
                     onOpenFullPlayer();
                   }}
                   aria-label="Expand to full screen"
@@ -310,6 +341,8 @@ export function PhoneFloatingCapsule({ onOpenFullPlayer }: PhoneFloatingCapsuleP
                   onClick={(e) => {
                     e.stopPropagation();
                     setIsDismissed(true);
+                    setShowCapsule(false);
+                    if (autoHideTimerRef.current) window.clearTimeout(autoHideTimerRef.current);
                   }}
                   aria-label="Close floating mini player"
                   className="flex size-7 items-center justify-center rounded-full bg-[#252525] text-[#929292] transition-transform active:scale-90 hover:text-white"
