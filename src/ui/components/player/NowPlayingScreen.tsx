@@ -2,7 +2,6 @@ import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } f
 import { cn, formatMinutesSeconds } from "@/lib/utils";
 import { SpinnerSteps } from "@/components/motion/loader";
 import {
-  ArrowLeftIcon,
   CheckActiveIcon,
   ChevronDownIcon,
   DownloadIcon,
@@ -33,7 +32,7 @@ import {
 import { TrackArtwork } from "../TrackArtwork";
 import { useTrackContextMenu } from "../TrackContextMenu";
 import { SeekBar } from "./SeekBar";
-import { QueuePanel } from "./QueuePanel";
+import { PhoneQueue } from "./PhoneQueue";
 
 interface NowPlayingScreenProps {
   onClose: () => void;
@@ -518,30 +517,7 @@ export function NowPlayingScreen({ onClose }: NowPlayingScreenProps) {
       </div>
 
       {/* Slide-up Queue Sheet */}
-      {showQueue && (
-        <div className="fixed inset-0 z-[60] flex flex-col bg-[#131313] animate-in fade-in slide-in-from-bottom duration-200">
-          <div className="flex h-14 shrink-0 items-center justify-between border-b border-[#222222] px-4 pt-[env(safe-area-inset-top)]">
-            <button
-              type="button"
-              onClick={() => setShowQueue(false)}
-              className="flex size-10 items-center justify-center rounded-full bg-[#1b1b1b] text-white transition-transform active:scale-90"
-              aria-label="Back to player"
-            >
-              <ArrowLeftIcon size={18} />
-            </button>
-            <div className="flex flex-col items-center">
-              <span className="text-sm font-semibold text-white">Playing Queue</span>
-              <span className="text-[11px] font-light text-[#929292]">
-                {upcomingCount === 0 ? "Nothing queued" : `${upcomingCount} upcoming songs`}
-              </span>
-            </div>
-            <div className="w-10" />
-          </div>
-          <div className="min-h-0 flex-1 overflow-hidden">
-            <QueuePanel onClose={() => setShowQueue(false)} />
-          </div>
-        </div>
-      )}
+      {showQueue && <PhoneQueue onClose={() => setShowQueue(false)} />}
 
       {/* Speed & Sleep Timer Bottom Sheet */}
       {showSpeedSheet && (

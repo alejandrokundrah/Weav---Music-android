@@ -266,7 +266,7 @@ const EMPTY_QUEUE: Track[] = [];
  * changes. Comparing by track identity (not the wrapping array) is what lets
  * `usePlayerSessionSelector` hand back the previous, still-equal snapshot on those emits.
  */
-function selectQueueSlice(session: PlayerSession | null) {
+export function selectQueueSlice(session: PlayerSession | null) {
   return {
     queue: session?.queue ?? EMPTY_QUEUE,
     queueIndex: session?.queueIndex ?? -1,
@@ -276,7 +276,7 @@ function selectQueueSlice(session: PlayerSession | null) {
   };
 }
 
-function queueSliceEqual(
+export function queueSliceEqual(
   a: ReturnType<typeof selectQueueSlice>,
   b: ReturnType<typeof selectQueueSlice>,
 ) {
