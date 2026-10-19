@@ -48,8 +48,8 @@ export interface PhoneSettingsProps {
   onSignOut: () => Promise<void> | void;
 
   /* Theme & Appearance */
-  themePreference: ThemePreference;
-  onThemeChange: (theme: ThemePreference) => void;
+  themePreference?: ThemePreference;
+  onThemeChange?: (theme: ThemePreference) => void;
   potatoPcMode: boolean;
   onPotatoPcChange: (enabled: boolean) => void;
   madeForYouVisible: boolean;
@@ -128,8 +128,6 @@ export function PhoneSettings({
   isSignedIn,
   onSignIn,
   onSignOut,
-  themePreference,
-  onThemeChange,
   potatoPcMode,
   onPotatoPcChange,
   madeForYouVisible,
@@ -584,24 +582,11 @@ export function PhoneSettings({
             <div className="flex items-center justify-between gap-3 pt-2">
               <div className="flex flex-col">
                 <span className="text-sm font-medium text-white">Theme</span>
-                <span className="text-xs font-light text-[#929292]">Color palette</span>
+                <span className="text-xs font-light text-[#929292]">Exclusive dark experience</span>
               </div>
-              <div className="flex items-center gap-1.5 rounded-full bg-[#252525] p-1">
-                {(["dark", "system", "light"] as const).map((t) => (
-                  <button
-                    key={t}
-                    type="button"
-                    onClick={() => onThemeChange(t)}
-                    className={cn(
-                      "rounded-full px-3 py-1 text-xs capitalize transition-colors",
-                      themePreference === t
-                        ? "bg-white font-medium text-[#131313]"
-                        : "text-[#929292] hover:text-white",
-                    )}
-                  >
-                    {t}
-                  </button>
-                ))}
+              <div className="flex items-center gap-1.5 rounded-full bg-[#252525] px-3.5 py-1.5 text-xs font-medium text-white">
+                <span className="size-2 rounded-full bg-[#cfe86a]" />
+                <span>Dark</span>
               </div>
             </div>
 

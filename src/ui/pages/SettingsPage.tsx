@@ -55,7 +55,6 @@ import { cn } from "@/lib/utils";
 import {
   setThemePreference,
   useThemePreference,
-  type ThemePreference,
 } from "../settings/theme";
 import { useCompactViewport } from "../hooks/useCompactViewport";
 import { PhoneSettings } from "./PhoneSettings";
@@ -580,21 +579,7 @@ const SETTINGS_TABS: Array<{
   { id: "shortcuts", label: "Shortcuts", description: "Keyboard bindings", icon: KeyIcon },
 ];
 
-const THEME_OPTIONS: Array<{
-  value: ThemePreference;
-  label: string;
-  hint: string;
-  swatch: string;
-}> = [
-  { value: "light", label: "Light", hint: "Always light", swatch: "bg-white" },
-  { value: "dark", label: "Dark", hint: "Always dark", swatch: "bg-neutral-900" },
-  {
-    value: "system",
-    label: "System",
-    hint: "Match the OS",
-    swatch: "bg-linear-to-br from-white to-neutral-900",
-  },
-];
+
 
 interface SettingsPageProps {
   libraryController: LibraryController;
@@ -2286,51 +2271,25 @@ export function SettingsPage({
               title="Theme"
               titleId="theme-settings-title"
               icon={<PaletteIcon size={18} aria-hidden="true" />}
-              description="Applies instantly across both windows."
+              description="Zuno is crafted exclusively with a dedicated dark theme."
             />
 
             <div
-              className="grid grid-cols-3 gap-2"
-              role="radiogroup"
+              className="flex items-center gap-3.5 rounded-xl bg-background/40 p-3.5 ring-1 ring-primary/30"
               aria-labelledby="theme-settings-title"
             >
-              {THEME_OPTIONS.map((option) => {
-                const isActive = themePreference === option.value;
-                return (
-                  <button
-                    key={option.value}
-                    type="button"
-                    role="radio"
-                    aria-checked={isActive}
-                    onClick={() => setThemePreference(option.value)}
-                    className={cn(
-                      "flex flex-col items-center gap-2 rounded-xl p-3 transition-colors",
-                      "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
-                      isActive ? "bg-primary/15" : "bg-background/40 hover:bg-card",
-                    )}
-                  >
-                    {/* Miniature window preview rather than a colour dot — it shows what
-                        the choice actually does. */}
-                    <span
-                      className={cn(
-                        "flex h-12 w-full flex-col justify-end overflow-hidden rounded-lg p-1 ring-1",
-                        option.swatch,
-                        isActive ? "ring-primary" : "ring-black/10",
-                      )}
-                      aria-hidden="true"
-                    >
-                      <span
-                        className={cn(
-                          "h-2 w-full rounded-sm",
-                          option.value === "light" ? "bg-neutral-300" : "bg-neutral-700",
-                        )}
-                      />
-                    </span>
-                    <span className="text-sm font-medium text-foreground">{option.label}</span>
-                    <span className="text-xs text-muted-foreground">{option.hint}</span>
-                  </button>
-                );
-              })}
+              <span
+                className="flex h-11 w-16 flex-col justify-end overflow-hidden rounded-lg bg-neutral-900 p-1 ring-1 ring-neutral-700"
+                aria-hidden="true"
+              >
+                <span className="h-1.5 w-full rounded-sm bg-neutral-700" />
+              </span>
+              <div className="flex flex-col">
+                <span className="text-sm font-medium text-foreground">Dark (Always on)</span>
+                <span className="text-xs text-muted-foreground">
+                  High-contrast dark palette optimized for OLED displays and low-light listening.
+                </span>
+              </div>
             </div>
           </section>
 

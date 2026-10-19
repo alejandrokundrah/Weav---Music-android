@@ -77,43 +77,7 @@
  * names, so every component follows without knowing a theme exists.
  *
  * `--color-primary` stays #ff0033 in both — it is the brand accent, not a surface.
- * Contrast is tuned for white text on primary in dark and near-black text elsewhere.
- */
-html[data-theme="light"] {
-  /*
-   * The background is deliberately *below* pure white and cards sit at white, i.e. the
-   * inverse of the dark theme where cards are lighter than the background. This app is
-   * borderless — surfaces are told apart by contrast alone — so a white-on-white pairing
-   * (the obvious first choice) makes every card, popover and hover state disappear.
-   */
-  --color-background: oklch(0.954 0 0);
-  --color-foreground: oklch(0.205 0 0);
-
-  --color-card: oklch(1 0 0);
-  --color-card-foreground: oklch(0.205 0 0);
-  --color-popover: oklch(1 0 0);
-  --color-popover-foreground: oklch(0.205 0 0);
-
-  --color-muted: oklch(0.915 0 0);
-  /* 0.45 keeps secondary text at ~4.6:1 on the background — readable, still recessive. */
-  --color-muted-foreground: oklch(0.45 0 0);
-
-  --color-secondary: oklch(0.915 0 0);
-  --color-secondary-foreground: oklch(0.205 0 0);
-
-  --color-border: oklch(0 0 0 / 10%);
-  --color-input: oklch(0 0 0 / 14%);
-
-  /* The accent wash has to be far weaker here or the chrome looks tinted pink. */
-  --ambient-bloom: 0.3;
-
-  /* A white hairline vanishes on a light surface; the edge has to darken instead. */
-  --window-edge: oklch(0 0 0 / 14%);
-  --window-edge-highlight: oklch(1 0 0 / 60%);
-
-  color-scheme: light;
-}
-
+html,
 html[data-theme="dark"] {
   color-scheme: dark;
 }
@@ -705,7 +669,7 @@ html[data-fx-off~="marquee"] .animate-marquee-vertical {
  * red identity. Dark only — `data-theme="light"` is left alone.
  */
 @media (max-width: 767px) {
-  html:not([data-theme="light"]) {
+  html {
     --color-background: #131313;
     --color-card: #1b1b1b;
     --color-popover: #1b1b1b;

@@ -77,11 +77,15 @@ export function NavHomeIcon({ active = false, ...props }: IconProps & { active?:
 
 export function NavExploreIcon({ active = false, ...props }: IconProps & { active?: boolean }) {
   return (
-    <NavGlyph box={[133, 756]} active={active} {...props}>
-      {(stroke) => (
+    <NavGlyph box={[0, 0]} active={active} {...props}>
+      {(stroke, round) => (
         <>
-          <path d="M145 758.75C150.109 758.75 154.25 762.891 154.25 768C154.25 773.109 150.109 777.25 145 777.25C139.891 777.25 135.75 773.109 135.75 768C135.75 762.891 139.891 758.75 145 758.75Z" strokeWidth="1.5" stroke={stroke} />
-          <path d="M143.771 766.129L146.496 765.244C147.273 764.991 148.008 765.727 147.756 766.504L146.871 769.229C146.772 769.534 146.533 769.772 146.229 769.871L143.503 770.756C142.726 771.009 141.991 770.273 142.243 769.496L143.128 766.771C143.227 766.466 143.466 766.228 143.771 766.129Z" strokeWidth="1.5" stroke={stroke} />
+          <path d="M2 10v3" strokeWidth="2.2" stroke={stroke} {...round} />
+          <path d="M6 6v11" strokeWidth="2.2" stroke={stroke} {...round} />
+          <path d="M10 3v18" strokeWidth="2.2" stroke={stroke} {...round} />
+          <path d="M14 8v7" strokeWidth="2.2" stroke={stroke} {...round} />
+          <path d="M18 5v13" strokeWidth="2.2" stroke={stroke} {...round} />
+          <path d="M22 10v3" strokeWidth="2.2" stroke={stroke} {...round} />
         </>
       )}
     </NavGlyph>
@@ -90,9 +94,21 @@ export function NavExploreIcon({ active = false, ...props }: IconProps & { activ
 
 export function NavPlayIcon({ active = false, ...props }: IconProps & { active?: boolean }) {
   return (
-    <NavGlyph box={[222, 756]} active={active} {...props}>
+    <NavGlyph box={[0, 0]} active={active} {...props}>
       {(stroke, round) => (
-        <path d="M228 769.861V766.516C228 763.21 228 761.557 229.06 760.993C230.121 760.428 231.492 761.352 234.234 763.199L236.836 764.951C239.161 766.517 240.324 767.3 240.3 768.392C240.277 769.484 239.081 770.216 236.69 771.68L234.089 773.272C231.393 774.923 230.045 775.748 229.022 775.175C228 774.602 228 773.022 228 769.861Z" strokeWidth="1.5" stroke={stroke} {...round} />
+        <>
+          <path d="M12 2a10 10 0 0 1 7.38 16.75" strokeWidth="2" stroke={stroke} {...round} />
+          <path
+            d="M9 9.003a1 1 0 0 1 1.517-.859l4.997 2.997a1 1 0 0 1 0 1.718l-4.997 2.997A1 1 0 0 1 9 14.996z"
+            strokeWidth="2"
+            stroke={stroke}
+            {...round}
+          />
+          <path d="M2.5 8.875a10 10 0 0 0-.5 3" strokeWidth="2" stroke={stroke} {...round} />
+          <path d="M2.83 16a10 10 0 0 0 2.43 3.4" strokeWidth="2" stroke={stroke} {...round} />
+          <path d="M4.636 5.235a10 10 0 0 1 .891-.857" strokeWidth="2" stroke={stroke} {...round} />
+          <path d="M8.644 21.42a10 10 0 0 0 7.631-.38" strokeWidth="2" stroke={stroke} {...round} />
+        </>
       )}
     </NavGlyph>
   );

@@ -45,6 +45,7 @@ import { cn } from "@/lib/utils";
 import { TitleBar } from "./components/TitleBar";
 import { PlayerBar } from "./components/player/PlayerBar";
 import { NowPlayingScreen } from "./components/player/NowPlayingScreen";
+import { PhoneFloatingCapsule } from "./components/phone/PhoneFloatingCapsule";
 import { QueuePanel } from "./components/player/QueuePanel";
 import { useQueuePanelCollapsed } from "./settings/queuePanel";
 import { useNativeWindowControls } from "./settings/windowControls";
@@ -2281,6 +2282,9 @@ useEffect(() => {
       )}
       {isPhone && isExpandedPlayerBar && (
         <NowPlayingScreen onClose={() => setIsExpandedPlayerBar(false)} />
+      )}
+      {isPhone && !isExpandedPlayerBar && (
+        <PhoneFloatingCapsule onOpenFullPlayer={() => setIsExpandedPlayerBar(true)} />
       )}
       <SearchOverlay
         isOpen={isSearchOpen && activeTab?.view !== "settings"}

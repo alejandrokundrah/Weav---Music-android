@@ -200,20 +200,23 @@ export function PlayerBar({ onToggleLyrics, onToggleQueue, isQueueOpen, onConnec
               <TrackInfo />
             </div>
             <PlaybackControls compact extraControlsAlwaysVisible />
-            <button
-              type="button"
-              className={cn(
-                "flex size-9 shrink-0 items-center justify-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                isQueueOpen ? "bg-card text-primary" : "text-muted-foreground",
-              )}
-              onClick={(event) => {
-                event.stopPropagation();
-                onToggleQueue();
-              }}
-              aria-label={isQueueOpen ? "Close queue" : "Open queue"}
-            >
-              <QueuePanelIcon size={18} />
-            </button>
+            <div className="flex shrink-0 items-center gap-0.5">
+              <DownloadButton />
+              <button
+                type="button"
+                className={cn(
+                  "flex size-9 shrink-0 items-center justify-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                  isQueueOpen ? "bg-card text-primary" : "text-muted-foreground",
+                )}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onToggleQueue();
+                }}
+                aria-label={isQueueOpen ? "Close queue" : "Open queue"}
+              >
+                <QueuePanelIcon size={18} />
+              </button>
+            </div>
           </div>
           <SeekBar />
         </div>
