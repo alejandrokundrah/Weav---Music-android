@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
+import { lazy, Suspense, useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import { cn, formatMinutesSeconds } from "@/lib/utils";
 import { SpinnerSteps } from "@/components/motion/loader";
 import {
@@ -7,6 +7,8 @@ import {
   DownloadIcon,
   HeartActiveIcon,
   HeartIcon,
+  LyricsActiveIcon,
+  LyricsIcon,
   PauseActiveIcon,
   PlayActiveIcon,
   QueuePanelIcon,
@@ -33,6 +35,10 @@ import { TrackArtwork } from "../TrackArtwork";
 import { useTrackContextMenu } from "../TrackContextMenu";
 import { SeekBar } from "./SeekBar";
 import { PhoneQueue } from "./PhoneQueue";
+
+const LyricsView = lazy(() =>
+  import("../../pages/LyricsView").then((m) => ({ default: m.LyricsView })),
+);
 
 interface NowPlayingScreenProps {
   onClose: () => void;
@@ -146,6 +152,7 @@ export function NowPlayingScreen({ onClose }: NowPlayingScreenProps) {
 
   // Queue Sheet state
   const [showQueue, setShowQueue] = useState(false);
+  const [showLyrics, setShowLyrics] = useState(false);
   const upcomingCount = Math.max(0, queue.length - 1 - queueIndex);
 
   // Speed & Sleep timer state
@@ -441,7 +448,21 @@ export function NowPlayingScreen({ onClose }: NowPlayingScreenProps) {
             </span>
           </button>
 
-          {/* 4. Queue Button */}
+          {/* 4. Lyrics Button */}
+          <button
+            type="button"
+            onClick={() => setShowLyrics(true)}
+            disabled={!track}
+            aria-label="Open lyrics"
+            className="group flex flex-col items-center gap-1.5 focus-visible:outline-none disabled:opacity-40"
+          >
+            <div className="flex size-11 items-center justify-center rounded-full bg-[#1b1b1b] text-[#a0a0a0] transition-all hover:text-white active:scale-90">
+              {showLyrics ? <LyricsActiveIcon size={22} /> : <LyricsIcon size={22} />}
+            </div>
+            <span className="text-[10px] font-medium tracking-tight text-[#e7e7e7]">Lyrics</span>
+          </button>
+
+          {/* 5. Queue Button */}
           <button
             type="button"
             onClick={() => setShowQueue(true)}
@@ -515,6 +536,15 @@ export function NowPlayingScreen({ onClose }: NowPlayingScreenProps) {
           </button>
         </div>
       </div>
+
+      {/* Lyrics sheet: the same synced lyrics view the desktop uses. */}
+      {showLyrics && (
+        <div className="font-lexend fixed inset-0 z-[60] bg-[#131313] pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] animate-in fade-in slide-in-from-bottom duration-200">
+          <Suspense fallback={null}>
+            <LyricsView onClose={() => setShowLyrics(false)} />
+          </Suspense>
+        </div>
+      )}
 
       {/* Slide-up Queue Sheet */}
       {showQueue && <PhoneQueue onClose={() => setShowQueue(false)} />}
