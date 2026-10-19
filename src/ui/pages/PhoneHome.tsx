@@ -52,6 +52,8 @@ interface PhoneHomeProps {
   isLoading: boolean;
   recentPlays: readonly Track[];
   suggestions: readonly Track[];
+  /** "Because you listen to …" rows, built from the listener's own taste. */
+  personalShelves?: ReadonlyArray<{ title: string; tracks: readonly Track[] }>;
   libraryController: LibraryController;
   searchController: SearchController;
   onPlay: (track: Track, queue: readonly Track[]) => void;
@@ -137,6 +139,7 @@ export function PhoneHome({
   isLoading,
   recentPlays,
   suggestions,
+  personalShelves = [],
   libraryController,
   searchController,
   onPlay,
@@ -243,6 +246,13 @@ export function PhoneHome({
       }
     } else if (explore.status !== "error") {
       shelfLoading = "New Releases";
+    }
+
+    for (const personal of personalShelves) {
+      shelves.push({
+        title: personal.title,
+        cards: personal.tracks.slice(0, SHELF_LIMIT).map((item) => cards.track(item, personal.tracks)),
+      });
     }
 
     if (recentPlays.length > 0) {

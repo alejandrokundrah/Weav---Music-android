@@ -13,6 +13,12 @@ import { useTrackContextMenu } from "../components/TrackContextMenu";
 import { HomeDestinations, type HomeDestinationHandlers } from "../components/HomeDestinations";
 import { ArtistLinks } from "../components/ArtistLinks";
 import { usePlayHistory } from "../../player/playHistory";
+import {
+  buildTasteProfile,
+  pickSeeds,
+  rankByTaste,
+  seedForArtist,
+} from "../../player/taste";
 import { useMadeForYouVisible } from "../settings/homeSections";
 import { AlbumGridSkeleton, PickCardSkeleton, TrackRowSkeleton } from "../components/Skeleton";
 import { TrackRow } from "../components/TrackRow";
@@ -21,6 +27,12 @@ import { useCompactViewport } from "../hooks/useCompactViewport";
 import { PhoneHome } from "./PhoneHome";
 import { isOnline, useOnline } from "../../internal/connectivity";
 import { useOfflineEntries } from "../../player/offlineStore";
+
+/** A "Because you listen to …" row on the phone Home. */
+export interface PersonalShelf {
+  title: string;
+  tracks: Track[];
+}
 
 const FALLBACK_QUERIES = [
   "new music",
@@ -185,6 +197,17 @@ export function HomePage({
     () => uniqueTracks([...playHistory.map((entry) => entry.track), ...recentlyPlayed]),
     [playHistory, recentlyPlayed],
   );
+  const likedSongs = libraryState.library?.likedSongs ?? EMPTY_TRACKS;
+  const taste = useMemo(
+    () => buildTasteProfile(playHistory, likedSongs, recentlyPlayed),
+    [playHistory, likedSongs, recentlyPlayed],
+  );
+  /* Read inside the load below, which is keyed on the recent list alone: a live profile in its
+     deps would refetch the whole row after every song. */
+  const tasteRef = useRef(taste);
+  tasteRef.current = taste;
+  const [personalShelves, setPersonalShelves] = useState<PersonalShelf[]>([]);
+  const topArtistKey = taste.topArtists.slice(0, 2).join("|");
   const online = useOnline();
   const offlineEntries = useOfflineEntries();
   const downloads = useMemo(
@@ -224,7 +247,10 @@ export function HomePage({
     let loadPromise = suggestionLoads.get(suggestionCacheKey);
     if (!loadPromise) {
       loadPromise = (async () => {
-        const seeds = shuffle(recentlyPlayed).slice(0, 3);
+        const profile = tasteRef.current;
+        const seeds = profile.hasSignal
+          ? pickSeeds(profile, 3)
+          : shuffle(recentlyPlayed).slice(0, 3);
         let loaded: Track[] = [];
 
         if (seeds.length > 0) {
@@ -237,7 +263,10 @@ export function HomePage({
         }
 
         if (loaded.length < 12) {
-          const query = FALLBACK_QUERIES[Math.floor(Math.random() * FALLBACK_QUERIES.length)];
+          const favourite = profile.topArtists[0];
+          const query = favourite
+            ? `${favourite} mix`
+            : FALLBACK_QUERIES[Math.floor(Math.random() * FALLBACK_QUERIES.length)];
           try {
             loaded.push(...await searchController.searchTracks(query));
           } catch {
@@ -245,7 +274,7 @@ export function HomePage({
           }
         }
 
-        return shuffle(uniqueTracks([...loaded, ...recentlyPlayed])).slice(0, 36);
+        return rankByTaste(uniqueTracks([...loaded, ...recentlyPlayed]), profile).slice(0, 36);
       })();
       suggestionLoads.set(suggestionCacheKey, loadPromise);
     }
@@ -266,6 +295,34 @@ export function HomePage({
     searchController,
     suggestionCacheKey,
   ]);
+
+  useEffect(() => {
+    if (!online || !topArtistKey) {
+      setPersonalShelves([]);
+      return;
+    }
+    const profile = tasteRef.current;
+    let cancelled = false;
+    void Promise.all(
+      topArtistKey.split("|").map(async (artist): Promise<PersonalShelf | null> => {
+        const seed = seedForArtist(profile, artist);
+        if (!seed) return null;
+        const cacheKey = `because:${artist}`;
+        let tracks = readSuggestionCache(cacheKey);
+        if (!tracks) {
+          tracks = await libraryController.getRecommendations(seed).catch(() => [] as Track[]);
+          if (tracks.length > 0) writeSuggestionCache(cacheKey, tracks);
+        }
+        const fresh = tracks.filter((track) => !profile.justPlayed.has(track.id)).slice(0, 12);
+        return fresh.length > 0 ? { title: `Because you listen to ${seed.artist}`, tracks: fresh } : null;
+      }),
+    ).then((shelves) => {
+      if (!cancelled) setPersonalShelves(shelves.filter((shelf): shelf is PersonalShelf => shelf !== null));
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [online, topArtistKey, libraryController]);
 
   const compactRecent = useMemo(
     () => recentPlays.slice(0, RECENT_COMPACT_COUNT),
@@ -395,6 +452,7 @@ export function HomePage({
         isLoading={isLoadingSuggestions || isWaitingForLibrary}
         recentPlays={recentPlays}
         suggestions={suggestions}
+        personalShelves={personalShelves}
         libraryController={libraryController}
         searchController={searchController}
         onPlay={playTrack}
