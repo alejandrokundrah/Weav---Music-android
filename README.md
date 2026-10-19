@@ -141,62 +141,13 @@ gst-inspect-1.0 | grep -E 'avdec_aac|avdec_h264'
 <details>
 <summary>⬜ A blank grey window</summary>
 
-A WebKitGTK rendering problem under Wayland, most often on Nvidia. Launch from a terminal
-with one of:
 
-```bash
-WEBKIT_DISABLE_DMABUF_RENDERER=1 zuno
-WEBKIT_DISABLE_COMPOSITING_MODE=1 zuno
-GDK_BACKEND=x11 zuno
-```
-
-Launching from an app menu instead? Add the same variable to the `Exec` line of
-`zuno.desktop` (typically `/usr/share/applications/zuno.desktop`, or
-`~/.local/share/applications/zuno.desktop` for a user install):
-
-```
-Exec=env WEBKIT_DISABLE_DMABUF_RENDERER=1 zuno
 ```
 
 </details>
 
 <details>
 <summary>⚠️ An EGL error on launch</summary>
-
-Preload the system Wayland client library:
-
-```bash
-LD_PRELOAD=/usr/lib/libwayland-client.so ~/Downloads/zuno*.AppImage
-```
-
-In Gear Lever, add `LD_PRELOAD=/usr/lib/libwayland-client.so` to Zuno's environment variables.
-
-</details>
-
-#### 🪵 Anything else
-
-Open **Settings → Library → Application log**, reproduce the problem, and attach the log to
-an issue along with your desktop environment, display server (X11 or Wayland) and distro —
-those three narrow down a Linux bug faster than anything else. The log also lives at
-`~/.local/share/com.zuno.desktop/logs/current.log`.
-
-### macOS notes
-
-#### "Apple is not able to verify that it is free from malware"
-
-The macOS builds aren't signed with an Apple Developer ID, so Gatekeeper blocks them on first
-launch. This isn't a malware finding — it means the binary is unsigned. Drag Zuno to
-Applications, then either:
-
-- open **System Settings → Privacy & Security**, scroll to the message about Zuno, and click
-  **Open Anyway**, or
-- clear the quarantine flag yourself:
-
-```bash
-xattr -dr com.apple.quarantine /Applications/Zuno.app
-```
-
-Build from source instead if you'd rather not trust a prebuilt, unsigned binary.
 
 #### A Keychain prompt on sign-in
 
@@ -245,22 +196,10 @@ By contributing you agree to the [Contributor License Agreement](CLA.md).
 
 ## Credits
 
-Zuno is a fork of **[JustAnotherMusicClient](https://github.com/2latemc/JustAnotherMusicClient)**
-by [2latemc](https://github.com/2latemc), used under the Apache 2.0 licence. The original
-project did the hard groundwork of getting YouTube Music working on the desktop.
-
-If you want to support the original author, they accept donations
-[on Ko-fi](https://ko-fi.com/totally2late).
-
+Weav  is a fork of Zuno.
 <br />
 
 ## Legal
-
-**Zuno provides no downloading functionality.** It is a client for audio listening, with
-theming and interface additions.
-
-Zuno interacts with YouTube and YouTube Music. Access to those services remains governed by
-their own terms, policies, availability and regional restrictions.
 
 WEAV does not host or claim ownership of music, videos, artwork, metadata, or any other
 content supplied by third parties. Rights in that content remain with their respective
