@@ -6,6 +6,7 @@ import { CheckIcon, CloseIcon, DownloadIcon } from "@/ui/icons";
 import type { Track } from "../../datasource/types";
 import { cancelDownload, useOfflineState } from "../../player/offlineStore";
 import { FloatingPanel } from "./FloatingPanel";
+import { PhoneDownloadIcon } from "./phone/PhoneIcons";
 import { TrackArtwork } from "./TrackArtwork";
 
 /** Newest first, and only a handful: the full list lives on the Downloads page. */
@@ -74,7 +75,14 @@ function DownloadRow({
  * is a number nobody reads. Everything here comes from the offline store's own state, so the
  * panel costs nothing to keep open and needs no fetching of its own.
  */
-export function DownloadsPanel({ onOpenDownloads }: { onOpenDownloads?: () => void }) {
+export function DownloadsPanel({
+  onOpenDownloads,
+  variant = "toolbar",
+}: {
+  onOpenDownloads?: () => void;
+  /** `phone` swaps the toolbar button for the lime ring used in the phone Home header. */
+  variant?: "toolbar" | "phone";
+}) {
   const [open, setOpen] = useState(false);
   const offline = useOfflineState();
 
@@ -96,7 +104,19 @@ export function DownloadsPanel({ onOpenDownloads }: { onOpenDownloads?: () => vo
       onOpenChange={setOpen}
       side="bottom"
       className="w-96 max-w-[calc(100vw-2rem)] p-2"
-      trigger={
+      trigger={variant === "phone" ? (
+        /* No tooltip — there is no hover on a phone — and no count badge: the ring turning is
+           the in-progress signal, and the panel it opens carries the numbers. */
+        <button
+          type="button"
+          className="grid size-10 place-items-center rounded-full transition-transform active:scale-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
+          aria-label={activeCount > 0 ? `Downloads, ${activeCount} in progress` : "Downloads"}
+          aria-expanded={open}
+          onClick={() => setOpen((value) => !value)}
+        >
+          <PhoneDownloadIcon spinning={activeCount > 0} />
+        </button>
+      ) : (
         <Tooltip
           side="bottom"
           content={activeCount > 0 ? `Downloading ${activeCount}` : "Downloads"}
@@ -124,7 +144,7 @@ export function DownloadsPanel({ onOpenDownloads }: { onOpenDownloads?: () => vo
             )}
           </Button>
         </Tooltip>
-      }
+      )}
     >
       <div className="flex items-center justify-between gap-2 px-2 pb-1.5 pt-1">
         <span className="text-sm font-semibold text-foreground">Downloads</span>
