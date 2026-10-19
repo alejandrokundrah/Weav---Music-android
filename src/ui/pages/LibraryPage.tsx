@@ -5,6 +5,7 @@ import {
   useRef,
   useState,
   useSyncExternalStore,
+  type CSSProperties,
   type KeyboardEvent as ReactKeyboardEvent,
   type MouseEvent,
 } from "react";
@@ -29,6 +30,16 @@ import { TrackArtwork } from "../components/TrackArtwork";
 import { TrackRow } from "../components/TrackRow";
 import { useTrackContextMenu } from "../components/TrackContextMenu";
 import { usePlaylistContextMenu } from "../components/PlaylistContextMenu";
+import { CoverCard } from "../components/phone/CoverCard";
+import {
+  PhoneArtistBubble,
+  PhoneHeading,
+  PhoneNotice,
+  PhonePill,
+  PhoneSongRow,
+  PhoneTabs,
+} from "../components/phone/PhoneParts";
+import { useCompactViewport } from "../hooks/useCompactViewport";
 import { useNowPlaying } from "../hooks/useNowPlaying";
 import { useTrackSelection } from "../hooks/useTrackSelection";
 import { isLikedSongsId, likedSongsCover } from "../likedSongsArtwork";
@@ -132,6 +143,7 @@ export function LibraryPage({
   onOpenArtist: (artist: Artist) => void;
   onOpenPlaylist: (playlist: Playlist) => void;
 }) {
+  const isPhone = useCompactViewport();
   const [tab, setTab] = useState<LibraryTab>("songs");
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState<LibrarySort>("recent");
@@ -319,6 +331,165 @@ export function LibraryPage({
           ? "Sign in to see your library."
           : "Loading your library..."}
       </p>
+    );
+  }
+
+  if (isPhone) {
+    const trimmed = query.trim();
+    const emptyText = (noun: string) =>
+      trimmed ? `No ${noun} match "${trimmed}".` : `No ${noun} in your library yet.`;
+    return (
+      <div
+        className="font-lexend flex flex-col pb-8 pt-1 text-white"
+        style={{ "--card-w": "min(51vw, 15rem)" } as CSSProperties}
+      >
+        <PhoneHeading>My Music</PhoneHeading>
+        <PhoneTabs
+          className="mt-6"
+          label="Library section"
+          tabs={TABS}
+          value={tab}
+          onChange={selectTab}
+        />
+
+        <div className="mt-5 flex items-center gap-2">
+          <label className="flex h-11 min-w-0 flex-1 items-center gap-2.5 rounded-full bg-[#1b1b1b] pl-4 pr-3 text-[#929292]">
+            <SearchIcon size={17} className="shrink-0" aria-hidden="true" />
+            <input
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder={`Filter ${tab}`}
+              aria-label="Filter library"
+              className="min-w-0 flex-1 bg-transparent text-sm font-light text-white outline-none placeholder:text-[#929292]"
+            />
+            {isFiltering && (
+              <button
+                type="button"
+                onClick={() => setQuery("")}
+                aria-label="Clear filter"
+                className="shrink-0 text-[#929292]"
+              >
+                <CloseIcon size={14} />
+              </button>
+            )}
+          </label>
+          <PhonePill
+            onPress={() =>
+              setSort(
+                activeSort === "recent"
+                  ? "title"
+                  : activeSort === "title" && tab !== "artists"
+                    ? "artist"
+                    : "recent",
+              )
+            }
+            className="h-11 shrink-0 !py-0"
+          >
+            {activeSort === "recent"
+              ? "Recent"
+              : activeSort === "title"
+                ? tab === "artists" ? "Name" : "Title"
+                : tab === "playlists" ? "Owner" : "Artist"}
+          </PhonePill>
+        </div>
+
+        <div className="mt-6" id={`${tabsId}-panel`} role="tabpanel">
+          {tab === "songs" &&
+            (songs.length === 0 ? (
+              <PhoneNotice>{emptyText("songs")}</PhoneNotice>
+            ) : (
+              <div className="flex flex-col gap-1">
+                {songs.map((track) => (
+                  <PhoneSongRow
+                    key={track.id}
+                    track={track}
+                    isCurrent={currentTrackId === track.id}
+                    onSelect={() => void playerController.playTrackById(track.id, songs)}
+                    onMenu={(event) => openTrackMenu(event, track)}
+                  />
+                ))}
+              </div>
+            ))}
+
+          {tab === "albums" &&
+            (albums.length === 0 ? (
+              <PhoneNotice>{emptyText("albums")}</PhoneNotice>
+            ) : (
+              <div className="grid grid-cols-2 gap-x-4 gap-y-8">
+                {albums.map((album) => (
+                  <CoverCard
+                    key={album.id}
+                    layout="shelf"
+                    variant="album"
+                    title={album.title}
+                    subtitle={album.artist}
+                    artworkUrl={isLikedSongsId(album.id) ? likedSongsCover : album.artworkUrl}
+                    onOpen={() => onOpenAlbum(album)}
+                    onContextMenu={(event) => openAlbumMenu(event, album)}
+                  />
+                ))}
+              </div>
+            ))}
+
+          {tab === "artists" &&
+            (artists.length === 0 ? (
+              <PhoneNotice>{emptyText("artists")}</PhoneNotice>
+            ) : (
+              <div className="grid grid-cols-3 gap-y-6">
+                {artists.map((artist) => (
+                  <PhoneArtistBubble
+                    key={artist.id}
+                    artist={artist}
+                    className="w-full"
+                    onOpen={() => onOpenArtist(artist)}
+                  />
+                ))}
+              </div>
+            ))}
+
+          {tab === "playlists" &&
+            (playlists.length === 0 ? (
+              <PhoneNotice>{emptyText("playlists")}</PhoneNotice>
+            ) : (
+              <div className="flex flex-col gap-6">
+                {hiddenPlaylistCount > 0 && (
+                  <PhonePill
+                    className="self-start"
+                    onPress={() => setShowHiddenPlaylists((current) => !current)}
+                  >
+                    {showHiddenPlaylists ? "Hide the hidden playlists" : `Show ${hiddenPlaylistCount} hidden`}
+                  </PhonePill>
+                )}
+                {displayedPlaylists.length === 0 ? (
+                  <PhoneNotice className="mt-4">All your playlists are hidden.</PhoneNotice>
+                ) : (
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-8">
+                    {displayedPlaylists.map((playlist) => (
+                      <div
+                        key={playlist.id}
+                        className={hiddenPlaylistIdSet.has(playlist.id) ? "opacity-40" : undefined}
+                      >
+                        <CoverCard
+                          layout="shelf"
+                          variant="playlist"
+                          title={playlist.title}
+                          subtitle={playlist.owner}
+                          artworkUrl={
+                            isLikedSongsId(playlist.id, playlist.kind)
+                              ? likedSongsCover
+                              : playlist.artworkUrl
+                          }
+                          onOpen={() => onOpenPlaylist(playlist)}
+                          onContextMenu={(event) => openPlaylistMenu(event, playlist)}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))}
+        </div>
+      </div>
     );
   }
 

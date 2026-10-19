@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import { cn } from "@/lib/utils";
 import { SpinnerSteps } from "@/components/motion/loader";
 import { ArrowLeftIcon, DownloadIcon } from "@/ui/icons";
@@ -19,6 +19,8 @@ import { BrowseShelves } from "../components/BrowseShelves";
 import { TrackRow } from "../components/TrackRow";
 import { useTrackContextMenu } from "../components/TrackContextMenu";
 import { useNowPlaying } from "../hooks/useNowPlaying";
+import { useCompactViewport } from "../hooks/useCompactViewport";
+import { PhoneHeading, PhoneNotice, PhonePill, PhoneSongRow, PhoneTabs } from "../components/phone/PhoneParts";
 import { loadFailedMessage } from "../../internal/connectivity";
 
 /**
@@ -101,6 +103,7 @@ export function BrowsePage({
   const [confirmRemoveAll, setConfirmRemoveAll] = useState(false);
   const { currentTrackId, isPlaying } = useNowPlaying();
   const { openTrackMenu, openPlaylistPicker } = useTrackContextMenu();
+  const isPhone = useCompactViewport();
 
   useEffect(() => {
     // Downloads never hits the network, so the feed fetch is skipped entirely.
@@ -128,6 +131,125 @@ export function BrowsePage({
   const playShelfTrack = (shelfTracks: Track[], track: Track) => {
     void playerController.playTrackById(track.id, shelfTracks);
   };
+
+  if (isPhone) {
+    const title = drillDown[drillDown.length - 1]?.title ?? (isDownloads ? "Downloads" : "Browse");
+    const status = (
+      <p className="text-sm font-extralight text-[#929292]">
+        {downloads.length} {downloads.length === 1 ? "song" : "songs"} · {formatSize(offline.usedBytes)}
+        {inFlight.length > 0 ? ` · ${inFlight.length} in progress` : ""}
+        {offline.downloadingId
+          ? offline.progress !== null
+            ? ` · downloading ${offline.progress}%`
+            : " · downloading"
+          : ""}
+      </p>
+    );
+    const sizeLabel = (text: string) => (
+      <span className="shrink-0 pr-3 text-xs font-extralight tabular-nums text-[#929292]">{text}</span>
+    );
+    return (
+      <div className="font-lexend flex flex-col pb-8 pt-1 text-white" style={{ "--card-w": "min(51vw, 15rem)" } as CSSProperties}>
+        <div className="flex items-center gap-3">
+          {drillDown.length > 0 && (
+            <button
+              type="button"
+              onClick={() => setDrillDown((stack) => stack.slice(0, -1))}
+              aria-label="Back"
+              className="grid size-10 shrink-0 place-items-center rounded-full bg-[#1b1b1b] text-[#e7e7e7] transition-transform active:scale-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
+            >
+              <ArrowLeftIcon size={18} aria-hidden="true" />
+            </button>
+          )}
+          <PhoneHeading className="min-w-0 truncate">{title}</PhoneHeading>
+        </div>
+        <PhoneTabs
+          className="mt-6"
+          label="Browse feed"
+          tabs={SURFACES}
+          value={surface}
+          onChange={(value) => {
+            setSurface(value);
+            setDrillDown([]);
+          }}
+        />
+
+        {isDownloads ? (
+          downloads.length === 0 && inFlight.length === 0 ? (
+            <PhoneNotice>
+              Nothing downloaded yet. Use the download button on any song to keep it on this device.
+            </PhoneNotice>
+          ) : (
+            <div className="mt-6 flex flex-col gap-4">
+              <div className="flex items-center justify-between gap-3">
+                {status}
+                <PhonePill
+                  className="shrink-0 !px-4 !py-2"
+                  onPress={() => {
+                    if (confirmRemoveAll) {
+                      void removeAllDownloads();
+                      setConfirmRemoveAll(false);
+                      return;
+                    }
+                    setConfirmRemoveAll(true);
+                  }}
+                >
+                  {confirmRemoveAll ? "Tap again" : "Remove all"}
+                </PhonePill>
+              </div>
+              <div className="flex flex-col gap-1">
+                {inFlight.map((track) => (
+                  <PhoneSongRow
+                    key={`pending:${track.id}`}
+                    track={track}
+                    dimmed
+                    onSelect={() => playShelfTrack([track], track)}
+                    trailing={sizeLabel(
+                      offline.downloadingId === track.id
+                        ? offline.progress !== null ? `${offline.progress}%` : "Downloading"
+                        : "Queued",
+                    )}
+                  />
+                ))}
+                {downloads.map((entry) => (
+                  <PhoneSongRow
+                    key={entry.track.id}
+                    track={entry.track}
+                    isCurrent={currentTrackId === entry.track.id}
+                    onSelect={() => playShelfTrack(downloads.map((item) => item.track), entry.track)}
+                    onMenu={(event) => openTrackMenu(event, entry.track)}
+                    trailing={sizeLabel(formatSize(entry.byteLength))}
+                  />
+                ))}
+              </div>
+            </div>
+          )
+        ) : error ? (
+          <PhoneNotice>{error}</PhoneNotice>
+        ) : page === null ? (
+          <div className="mt-16 flex items-center justify-center gap-2 text-sm font-light text-[#929292]">
+            <SpinnerSteps size={18} color="currentColor" />
+            Loading…
+          </div>
+        ) : page.shelves.length === 0 ? (
+          <PhoneNotice>YouTube Music returned nothing for this feed.</PhoneNotice>
+        ) : (
+          <BrowseShelves
+            shelves={page.shelves}
+            playerController={playerController}
+            onOpenAlbum={onOpenAlbum}
+            onOpenArtist={onOpenArtist}
+            onOpenPlaylist={onOpenPlaylist}
+            onFollowLink={(link) =>
+              setDrillDown((stack) => [
+                ...stack,
+                { browseId: link.browseId, title: link.title, params: link.params },
+              ])}
+          />
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-6">

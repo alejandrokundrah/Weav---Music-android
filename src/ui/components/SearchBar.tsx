@@ -54,11 +54,12 @@ export function SearchBar({
         type="button"
         onClick={onOpen}
         data-onboarding="search"
-        className="group flex h-9 min-w-0 flex-1 items-center gap-2.5 rounded-full bg-card px-3.5 text-left text-sm text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+        className="group flex h-9 min-w-0 flex-1 items-center gap-2.5 rounded-full bg-card px-3.5 text-left text-sm text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring max-md:font-lexend max-md:h-11 max-md:bg-[#1b1b1b] max-md:px-4 max-md:font-extralight max-md:text-[#929292]"
       >
         <SearchIcon size={17} className="shrink-0" />
-        <span className="truncate">Search artists, songs, playlists, and albums</span>
-        <kbd className="ml-auto shrink-0 rounded bg-background/60 px-1.5 py-0.5 font-sans text-xs text-muted-foreground">
+        <span className="truncate max-md:hidden">Search artists, songs, playlists, and albums</span>
+        <span className="truncate md:hidden">Songs, artists, albums</span>
+        <kbd className="ml-auto max-md:hidden shrink-0 rounded bg-background/60 px-1.5 py-0.5 font-sans text-xs text-muted-foreground">
           {primaryModifierLabel} Space
         </kbd>
       </button>

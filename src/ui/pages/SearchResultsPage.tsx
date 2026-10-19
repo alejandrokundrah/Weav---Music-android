@@ -16,6 +16,9 @@ import { ArtistLinks } from "../components/ArtistLinks";
 import { TrackArtwork } from "../components/TrackArtwork";
 import { usePlaylistContextMenu } from "../components/PlaylistContextMenu";
 import { useTrackContextMenu } from "../components/TrackContextMenu";
+import { useCompactViewport } from "../hooks/useCompactViewport";
+import { logInternalError } from "../../internal/logging";
+import { PhoneSearchResults } from "./PhoneSearchResults";
 
 function normalizeSearchKey(value: string): string {
   return value
@@ -93,6 +96,7 @@ export function SearchResultsPage({
 }) {
   const { openTrackMenu } = useTrackContextMenu();
   const { openPlaylistMenu, openAlbumMenu } = usePlaylistContextMenu();
+  const isPhone = useCompactViewport();
   const [scope, setScope] = useState<SearchScope>("all");
 
   // A scope from the previous query is meaningless against the next one, and silently hiding
@@ -307,6 +311,37 @@ export function SearchResultsPage({
   const enterStyle = useCallback((index: number) => ({
     "--search-enter-delay": `${Math.min(Math.max(index, 0), 18) * 28}ms`,
   } as CSSProperties), []);
+
+  if (isPhone) {
+    const playLoaded = (load: () => Promise<Track[]>) => {
+      void load()
+        .then((tracks) => {
+          if (tracks[0]) void playerController.playTrackById(tracks[0].id, tracks, true);
+        })
+        .catch((error: unknown) => logInternalError("Search could not start playback", error));
+    };
+
+    return (
+      <PhoneSearchResults
+        query={query}
+        isLoading={isLoading || (isDeepLoading && !hasResults)}
+        scopes={availableScopes.map(({ value, label }) => ({ value, label }))}
+        scope={scope}
+        onScopeChange={setScope}
+        results={scopedResults}
+        songsFirst={songsFirst}
+        onPlayTrack={playTrack}
+        onTrackMenu={openTrackMenu}
+        onOpenArtist={onOpenArtist}
+        onOpenAlbum={onOpenAlbum}
+        onPlayAlbum={(album) => playLoaded(() => libraryController.getAlbumTracks(album))}
+        onAlbumMenu={openAlbumMenu}
+        onOpenPlaylist={onOpenPlaylist}
+        onPlayPlaylist={(playlist) => playLoaded(() => libraryController.getPlaylistTracks(playlist))}
+        onPlaylistMenu={openPlaylistMenu}
+      />
+    );
+  }
 
   return (
     <div className="flex flex-col gap-8">

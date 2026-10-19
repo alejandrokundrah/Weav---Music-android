@@ -1,12 +1,13 @@
 import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
-import { ClockIcon, CloseIcon, SearchIcon } from "@/ui/icons";
+import { ArrowLeftIcon, ClockIcon, CloseIcon, SearchIcon } from "@/ui/icons";
 import type { Album, Artist, Playlist, SearchResults, Track } from "../../datasource/types";
 import type { SearchController } from "../../player/SearchController";
 import { TrackArtwork } from "./TrackArtwork";
 import { useTrackContextMenu } from "./TrackContextMenu";
 import { isMacOS, primaryModifierLabel } from "../platform";
 import { usePlaylistContextMenu } from "./PlaylistContextMenu";
+import { useCompactViewport } from "../hooks/useCompactViewport";
 
 const RECENT_SEARCHES_KEY = "yt-music-dock:recent-searches";
 const MAX_RECENT_SEARCHES = 5;
@@ -82,6 +83,7 @@ export function SearchOverlay({
 }: SearchOverlayProps) {
   const { openTrackMenu } = useTrackContextMenu();
   const { openPlaylistMenu, openAlbumMenu } = usePlaylistContextMenu();
+  const isPhone = useCompactViewport();
   const inputRef = useRef<HTMLInputElement>(null);
   const requestIdRef = useRef(0);
   const modifiersRef = useRef({ primary: false, shift: false });
@@ -324,6 +326,174 @@ export function SearchOverlay({
     const recentSearch = visibleRecentSearches[recentSearchIndex];
     if (recentSearch) submitQuery(recentSearch, openInNewTab);
   };
+
+  if (isPhone) {
+    const previewSubtitle = !preview
+      ? ""
+      : preview.type === "playlist"
+        ? `Playlist · ${preview.value.owner}`
+        : preview.type === "album"
+          ? `Album · ${preview.value.artist}`
+          : preview.type === "artist"
+            ? preview.value.subscriberCount || "Artist"
+            : preview.value.artist;
+    const trimmedQuery = query.trim();
+
+    return (
+      <div
+        className="font-lexend fixed inset-0 z-[70] flex flex-col bg-[#131313] pt-[env(safe-area-inset-top)] text-white"
+        data-onboarding="search-panel"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Search artists, songs, playlists, and albums"
+      >
+        <form
+          className="flex items-center gap-3 px-5 pb-3 pt-4"
+          onSubmit={(event) => {
+            event.preventDefault();
+            submitQuery(query, false);
+          }}
+        >
+          <button
+            type="button"
+            onClick={onDismiss ?? onClose}
+            aria-label="Close search"
+            className="grid size-11 shrink-0 place-items-center rounded-full bg-[#1b1b1b] text-[#e7e7e7] transition-transform active:scale-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
+          >
+            <ArrowLeftIcon size={20} />
+          </button>
+          <label className="flex h-11 min-w-0 flex-1 items-center gap-2.5 rounded-full bg-[#1b1b1b] pl-4 pr-2 text-[#929292]">
+            <SearchIcon size={18} className="shrink-0" />
+            <input
+              ref={inputRef}
+              value={query}
+              onChange={(event) => {
+                setQuery(event.target.value);
+                onQueryChange?.(event.target.value);
+                setSelectedIndex(0);
+              }}
+              onKeyDown={handleKeyDown}
+              enterKeyHint="search"
+              autoComplete="off"
+              autoCapitalize="none"
+              spellCheck={false}
+              placeholder="Songs, artists, albums"
+              aria-label="Search artists, songs, playlists, and albums"
+              className="min-w-0 flex-1 bg-transparent text-base font-light text-white outline-none placeholder:text-[#929292]"
+            />
+            {query ? (
+              <button
+                type="button"
+                onClick={() => {
+                  setQuery("");
+                  onQueryChange?.("");
+                  inputRef.current?.focus();
+                }}
+                aria-label="Clear search"
+                className="grid size-8 shrink-0 place-items-center rounded-full text-[#929292] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
+              >
+                <CloseIcon size={14} />
+              </button>
+            ) : null}
+          </label>
+        </form>
+
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 pb-[max(1.5rem,env(safe-area-inset-bottom))]">
+          {isLoading && <p className="px-1 pb-3 text-sm font-extralight text-[#929292]">Searching…</p>}
+
+          {preview && (
+            <button
+              type="button"
+              onClick={openPreview}
+              className="mb-4 flex w-full items-center gap-3 rounded-3xl bg-[#1b1b1b] p-3 text-left transition-transform active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
+            >
+              <TrackArtwork
+                className={cn(
+                  "size-14 shrink-0 bg-[#131313]",
+                  preview.type === "artist" ? "rounded-full" : "rounded-2xl",
+                )}
+                size={56}
+                artworkUrl={preview.value.artworkUrl}
+                iconSize={24}
+                loading="eager"
+                variant={preview.type === "artist" ? "artist" : "track"}
+              />
+              <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+                <span className="truncate text-sm font-normal text-white">
+                  {preview.type === "artist" ? preview.value.name : preview.value.title}
+                </span>
+                <span className="truncate text-xs font-extralight text-[#929292]">{previewSubtitle}</span>
+              </span>
+              <span className="shrink-0 rounded-full bg-white px-4 py-2 text-xs font-medium text-[#131313]">
+                {preview.type === "track" ? "Play" : "Open"}
+              </span>
+            </button>
+          )}
+
+          {trimmedQuery && (
+            <button
+              type="button"
+              onClick={() => submitQuery(query, false)}
+              className="flex w-full items-center gap-3 rounded-2xl px-1 py-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
+            >
+              <SearchIcon size={18} className="shrink-0 text-[#929292]" />
+              <span className="truncate text-sm font-normal text-white">
+                Search for “{trimmedQuery}”
+              </span>
+            </button>
+          )}
+
+          {suggestions.map((suggestion) => (
+            <button
+              key={suggestion}
+              type="button"
+              onClick={() => submitQuery(suggestion, false)}
+              className="flex w-full items-center gap-3 rounded-2xl px-1 py-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
+            >
+              <SearchIcon size={18} className="shrink-0 text-[#929292]" />
+              <span className="truncate text-sm font-extralight text-[#e7e7e7]">{suggestion}</span>
+            </button>
+          ))}
+
+          {visibleRecentSearches.length > 0 && (
+            <section className="flex flex-col">
+              <h2 className="mb-2 text-2xl font-medium leading-none tracking-normal text-[#e7e7e7]">
+                Recent
+              </h2>
+              {visibleRecentSearches.map((recentSearch) => (
+                <div key={recentSearch} className="flex items-center">
+                  <button
+                    type="button"
+                    onClick={() => submitQuery(recentSearch, false)}
+                    className="flex min-w-0 flex-1 items-center gap-3 rounded-2xl px-1 py-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
+                  >
+                    <ClockIcon size={18} className="shrink-0 text-[#929292]" />
+                    <span className="truncate text-sm font-extralight text-[#e7e7e7]">
+                      {recentSearch}
+                    </span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => removeRecentSearch(recentSearch)}
+                    aria-label={`Remove ${recentSearch}`}
+                    className="grid size-10 shrink-0 place-items-center rounded-full text-[#929292] transition-transform active:scale-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
+                  >
+                    <CloseIcon size={14} />
+                  </button>
+                </div>
+              ))}
+            </section>
+          )}
+
+          {!trimmedQuery && visibleRecentSearches.length === 0 && (
+            <p className="mt-16 text-center text-sm font-light text-[#929292]">
+              Search for songs, artists, albums and playlists.
+            </p>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="fixed inset-0 z-[70] flex justify-center bg-muted/40 pt-[12vh] backdrop-blur-sm" onMouseDown={onDismiss ?? onClose}>

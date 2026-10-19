@@ -5,6 +5,9 @@ import { AlbumCard } from "./AlbumCard";
 import { TrackArtwork } from "./TrackArtwork";
 import { TrackRow } from "./TrackRow";
 import { useNowPlaying } from "../hooks/useNowPlaying";
+import { useCompactViewport } from "../hooks/useCompactViewport";
+import { CoverCard, ShelfRow } from "./phone/CoverCard";
+import { PhoneArtistBubble, PhoneScroller, PhoneSection, PhoneSongRow } from "./phone/PhoneParts";
 import { usePlaylistContextMenu } from "./PlaylistContextMenu";
 import { useTrackContextMenu } from "./TrackContextMenu";
 
@@ -79,10 +82,96 @@ export function BrowseShelves({
   const { currentTrackId, isPlaying } = useNowPlaying();
   const { openTrackMenu, openPlaylistPicker } = useTrackContextMenu();
   const { openPlaylistMenu, openAlbumMenu } = usePlaylistContextMenu();
+  const isPhone = useCompactViewport();
 
   const playShelfTrack = (shelfTracks: Track[], track: Track) => {
     void playerController.playTrackById(track.id, shelfTracks);
   };
+
+  if (isPhone) {
+    return (
+      <div className={cn("font-lexend flex flex-col", className)}>
+        {shelves.map((shelf) => (
+          <PhoneSection key={shelf.title} title={shelf.title} className="first:mt-6">
+            {shelf.tracks.length > 0 && (
+              <div className="flex flex-col gap-1">
+                {shelf.tracks.map((track, index) => (
+                  <PhoneSongRow
+                    key={`${track.id}:${index}`}
+                    track={track}
+                    isCurrent={currentTrackId === track.id}
+                    onSelect={() => playShelfTrack(shelf.tracks, track)}
+                    onMenu={(event) => openTrackMenu(event, track)}
+                  />
+                ))}
+              </div>
+            )}
+
+            {onFollowLink && shelf.links.length > 0 && (
+              <PhoneScroller label={`${shelf.title} categories`} className="flex-wrap !overflow-visible !gap-2">
+                {shelf.links.map((link) => (
+                  <button
+                    key={link.browseId}
+                    type="button"
+                    onClick={() => onFollowLink(link)}
+                    className="rounded-full bg-[#1b1b1b] px-5 py-2.5 text-sm font-light text-[#cdcdcd] transition-transform active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
+                  >
+                    {link.title}
+                  </button>
+                ))}
+              </PhoneScroller>
+            )}
+
+            {shelf.albums.length > 0 && (
+              <ShelfRow label={shelf.title}>
+                {shelf.albums.map((album) => (
+                  <CoverCard
+                    key={album.id}
+                    layout="shelf"
+                    variant="album"
+                    title={album.title}
+                    subtitle={album.artist}
+                    artworkUrl={album.artworkUrl}
+                    onOpen={() => onOpenAlbum(album)}
+                    onContextMenu={(event) => openAlbumMenu(event, album)}
+                  />
+                ))}
+              </ShelfRow>
+            )}
+
+            {shelf.playlists.length > 0 && (
+              <ShelfRow label={shelf.title}>
+                {shelf.playlists.map((playlist) => (
+                  <CoverCard
+                    key={playlist.id}
+                    layout="shelf"
+                    variant="playlist"
+                    title={playlist.title}
+                    subtitle={playlist.owner}
+                    artworkUrl={playlist.artworkUrl}
+                    onOpen={() => onOpenPlaylist(playlist)}
+                    onContextMenu={(event) => openPlaylistMenu(event, playlist)}
+                  />
+                ))}
+              </ShelfRow>
+            )}
+
+            {shelf.artists.length > 0 && (
+              <PhoneScroller label={shelf.title}>
+                {shelf.artists.map((artist) => (
+                  <PhoneArtistBubble
+                    key={artist.id}
+                    artist={artist}
+                    onOpen={() => onOpenArtist(artist)}
+                  />
+                ))}
+              </PhoneScroller>
+            )}
+          </PhoneSection>
+        ))}
+      </div>
+    );
+  }
 
   return (
     <div className={cn("flex flex-col gap-8", className)}>
