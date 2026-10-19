@@ -21,6 +21,8 @@ import { isLikedSongsId, likedSongsCover } from "../likedSongsArtwork";
 import { TrackListSkeleton } from "../components/Skeleton";
 import { TrackRow } from "../components/TrackRow";
 import { useNowPlaying } from "../hooks/useNowPlaying";
+import { useCompactViewport } from "../hooks/useCompactViewport";
+import { PHONE_PILL_CLASS, PhoneCollection, type PhoneLoopMode } from "./PhoneCollection";
 import { useKeyboardShortcuts } from "../settings/keyboardShortcuts";
 import { shouldStartPageSearch } from "./pageSearchKeyboard";
 import { collectTrackPages } from "./collectTrackPages";
@@ -108,9 +110,12 @@ function PlaylistLoadingSpinner({ label }: { label: string }) {
 function PlaylistDescription({
   playlist,
   libraryController,
+  phone = false,
 }: {
   playlist: Playlist;
   libraryController: LibraryController;
+  /** Draws it for the phone page: centred, on `#131313`, with white and `#1b1b1b` controls. */
+  phone?: boolean;
 }) {
   const canEdit = Boolean(playlist.isEditable) && !isLocalPlaylist(playlist);
   /*
@@ -149,11 +154,46 @@ function PlaylistDescription({
 
   if (!description && !canEdit) return null;
 
+  /*
+   * Class strings per layout. The behaviour below is shared; only the skin differs, and the
+   * phone's skin cannot lean on `bg-primary` — that is lime on a phone, and this page is white.
+   */
+  const ui = phone
+    ? {
+      editor: "flex flex-col gap-3",
+      textarea:
+        "min-h-24 w-full resize-y rounded-2xl bg-[#1b1b1b] px-4 py-3 text-sm font-light text-white outline-none placeholder:text-[#929292] focus-visible:ring-2 focus-visible:ring-white/30",
+      editorActions: "flex items-center justify-center gap-2",
+      save:
+        "rounded-full bg-white px-5 py-2 text-sm font-medium text-[#131313] transition-transform active:scale-95 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40",
+      cancel:
+        "rounded-full bg-[#1b1b1b] px-5 py-2 text-sm font-light text-[#cdcdcd] transition-transform active:scale-95 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40",
+      row: "flex flex-col items-center gap-3",
+      text: "w-full whitespace-pre-wrap text-center text-sm font-extralight text-[#929292]",
+      empty: "w-full text-center text-sm font-extralight italic text-[#929292]",
+      edit: PHONE_PILL_CLASS,
+    }
+    : {
+      editor: "flex flex-col gap-2",
+      textarea:
+        "min-h-20 w-full resize-y rounded-xl bg-white/[0.04] px-3 py-2 text-sm text-foreground outline-none ring-1 ring-white/10 placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring",
+      editorActions: "flex items-center gap-2",
+      save:
+        "rounded-full bg-primary px-4 py-1.5 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+      cancel:
+        "rounded-full px-4 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+      row: "flex items-start gap-2",
+      text: "min-w-0 flex-1 whitespace-pre-wrap text-sm text-muted-foreground",
+      empty: "min-w-0 flex-1 text-sm italic text-muted-foreground",
+      edit:
+        "shrink-0 rounded-full px-3 py-1 text-sm font-medium text-muted-foreground transition-colors hover:bg-white/[0.06] hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+    };
+
   if (isEditing) {
     return (
-      <div className="flex flex-col gap-2">
+      <div className={ui.editor}>
         <textarea
-          className="min-h-20 w-full resize-y rounded-xl bg-white/[0.04] px-3 py-2 text-sm text-foreground outline-none ring-1 ring-white/10 placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring"
+          className={ui.textarea}
           value={draft}
           autoFocus
           maxLength={5000}
@@ -161,10 +201,10 @@ function PlaylistDescription({
           onChange={(event) => setDraft(event.target.value)}
           aria-label="Playlist description"
         />
-        <div className="flex items-center gap-2">
+        <div className={ui.editorActions}>
           <button
             type="button"
-            className="rounded-full bg-primary px-4 py-1.5 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className={ui.save}
             disabled={isSaving}
             onClick={() => {
               setIsSaving(true);
@@ -183,7 +223,7 @@ function PlaylistDescription({
           </button>
           <button
             type="button"
-            className="rounded-full px-4 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className={ui.cancel}
             disabled={isSaving}
             onClick={() => {
               setDraft(description);
@@ -198,24 +238,21 @@ function PlaylistDescription({
   }
 
   return (
-    <div className="flex items-start gap-2">
+    <div className={ui.row}>
       {description ? (
         <p
-          className={cn(
-            "min-w-0 flex-1 whitespace-pre-wrap text-sm text-muted-foreground",
-            !expanded && "line-clamp-3",
-          )}
+          className={cn(ui.text, !expanded && "line-clamp-3")}
           onClick={() => setExpanded((previous) => !previous)}
         >
           {description}
         </p>
       ) : (
-        <p className="min-w-0 flex-1 text-sm italic text-muted-foreground">No description yet.</p>
+        <p className={ui.empty}>No description yet.</p>
       )}
       {canEdit && (
         <button
           type="button"
-          className="shrink-0 rounded-full px-3 py-1 text-sm font-medium text-muted-foreground transition-colors hover:bg-white/[0.06] hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className={ui.edit}
           onClick={() => setIsEditing(true)}
         >
           {description ? "Edit" : "Add description"}
@@ -226,6 +263,7 @@ function PlaylistDescription({
 }
 
 export function PlaylistView({ playlist, playerController, libraryController }: PlaylistViewProps) {
+  const isPhone = useCompactViewport();
   const { openPlaylistPicker, openTrackMenu } = useTrackContextMenu();
   const { openPlaylistMenu } = usePlaylistContextMenu();
   const keyboardShortcuts = useKeyboardShortcuts();
@@ -463,7 +501,9 @@ export function PlaylistView({ playlist, playerController, libraryController }: 
 
     observer.observe(sentinel);
     return () => observer.disconnect();
-  }, [hasMoreTracks, loadMoreTracks, tracks.length]);
+    // `isPhone`: turning the phone sideways swaps the layout, and with it the sentinel element
+    // this observer is attached to.
+  }, [hasMoreTracks, isPhone, loadMoreTracks, tracks.length]);
 
   useEffect(() => {
     if (!playlist || isLoading || error || tracks.length === 0) return;
@@ -721,6 +761,123 @@ export function PlaylistView({ playlist, playerController, libraryController }: 
       isDragging: false,
     };
   };
+
+  /*
+   * The phone draws the same playlist with its own layout. Everything above — paging, sorting,
+   * search, playback — is shared, so the two cannot drift apart in behaviour, only in how they
+   * look.
+   *
+   * Two desktop affordances are not carried over, and neither was reachable on a touch screen:
+   * drag-to-reorder (the browser claims a vertical touch drag for scrolling and cancels the
+   * pointer before the 6px threshold matters) and multi-select (its checkbox only appears on
+   * hover or with a modifier key). Both stay on the desktop layout.
+   */
+  if (isPhone) {
+    const loopMode: PhoneLoopMode = isCurrentCollection ? playbackOrderMode : "in-order";
+    const isEmpty = !isLoading && !error && !hasMoreTracks && tracks.length === 0;
+    return (
+      <PhoneCollection
+        kind="playlist"
+        title={playlist.title}
+        subtitle={playlist.owner}
+        meta={formatCollectionMeta(tracks, hasMoreTracks)}
+        artworkUrl={playlist.artworkUrl}
+        artworkSlot={isLikedSongs ? (
+          <img className="size-full object-cover" src={likedSongsCover} alt="" />
+        ) : undefined}
+        onHeaderContextMenu={(event) => openPlaylistMenu(event, playlist)}
+        isLoading={isLoading}
+        error={error}
+        emptyMessage={isEmpty
+          ? (isLocalPlaylistView
+            ? "No music yet — use the folder button above to add one."
+            : "This playlist is empty.")
+          : null}
+        actionsDisabled={isLoading || Boolean(error) || tracks.length === 0}
+        isCollectionPlaying={isCurrentCollection && isPlaying}
+        isCollectionLoading={isCurrentCollection && isPlayerLoading}
+        onTogglePlay={() => void togglePlayCollection()}
+        onShuffle={() => void playShuffled()}
+        /*
+         * Whole-collection actions page in the rest of the playlist first, exactly as the
+         * desktop header does: acting on the loaded `tracks` alone would quietly cover only
+         * what had scrolled into view.
+         */
+        onAddToQueue={() => {
+          void collectAllTracks().then((all) => playerController.addTracksToQueue(all));
+        }}
+        onAddToPlaylist={() => {
+          void collectAllTracks().then((all) => openPlaylistPicker(all[0], all));
+        }}
+        loopMode={loopMode}
+        onLoop={loopMode !== "in-order"
+          ? () => playerController.setPlaybackOrderMode(
+            playbackOrderMode === "repeat-all" ? "repeat-one" : "in-order",
+          )
+          : () => void playInLoop()}
+        download={{
+          onStart: () => {
+            void collectAllTracks().then(queueDownloads);
+          },
+          counts: downloadCounts,
+          isBusy: isCollectingAll,
+        }}
+        onMore={(event) => openPlaylistMenu(event, playlist)}
+        extraActions={isLocalPlaylistView ? (
+          <button
+            type="button"
+            onClick={() => void handleAddLocalFolder()}
+            disabled={isChoosingFolder}
+            className={PHONE_PILL_CLASS}
+          >
+            {isChoosingFolder ? (
+              <SpinnerSteps size={18} color="currentColor" />
+            ) : (
+              <FolderAddIcon size={18} aria-hidden="true" />
+            )}
+            Add folder
+          </button>
+        ) : undefined}
+        description={<PlaylistDescription playlist={playlist} libraryController={libraryController} phone />}
+        showTools={isLoading || tracks.length > 0 || hasMoreTracks}
+        searchLabel="Search playlist"
+        searchQuery={playlistSearchQuery}
+        onSearchChange={setPlaylistSearchQuery}
+        searchInputRef={playlistSearchInputRef}
+        sort={{
+          options: playlistSorts,
+          value: sort,
+          direction: sortDirection,
+          directionLabel: getDirectionLabel(sort, sortDirection),
+          onSelect: (value) => {
+            const match = playlistSorts.find((item) => item.value === value);
+            if (match) selectSort(match.value);
+          },
+        }}
+        tracks={visibleTracks}
+        getTrackKey={getTrackRenderKey}
+        showTrackArtwork
+        currentTrackId={currentTrackId}
+        isPlaying={isPlaying}
+        onSelectTrack={(track) => void playPlaylistTrack(track)}
+        onTrackMenu={(event, track) => openTrackMenu(event, track, {
+          playlist,
+          onRemove: removeTrackFromList,
+        })}
+        listFooter={!isLoading ? (
+          <div
+            ref={loadMoreRef}
+            className="px-2 py-4 text-center text-sm font-light text-[#929292]"
+            aria-live="polite"
+          >
+            {isLoadingMore ? (
+              <PlaylistLoadingSpinner label="Loading more songs" />
+            ) : loadMoreError ?? ""}
+          </div>
+        ) : undefined}
+      />
+    );
+  }
 
   return (
     <div className="flex flex-col gap-8">
