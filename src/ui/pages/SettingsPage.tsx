@@ -52,10 +52,6 @@ import {
 } from "@/ui/icons";
 import { motion } from "motion/react";
 import { cn } from "@/lib/utils";
-import {
-  setThemePreference,
-  useThemePreference,
-} from "../settings/theme";
 import { invoke } from "@tauri-apps/api/core";
 import { open as openDialog } from "@tauri-apps/plugin-dialog";
 import { relaunch } from "@tauri-apps/plugin-process";
@@ -624,7 +620,6 @@ export function SettingsPage({
   const [lastFmError, setLastFmError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<SettingsTab>("about");
   const [settingsQuery, setSettingsQuery] = useState("");
-  const themePreference = useThemePreference();
   const [listeningShortcut, setListeningShortcut] = useState<KeyboardShortcutAction | null>(null);
   const keyboardShortcuts = useKeyboardShortcuts();
   const miniPlayerEnabled = useMiniPlayerEnabled();
