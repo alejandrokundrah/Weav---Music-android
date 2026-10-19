@@ -30,6 +30,7 @@ import {
   SelectValue,
 } from "@/components/motion/select";
 import {
+  ArrowLeftIcon,
   BugIcon,
   DownloadIcon,
   EqualizerIcon,
@@ -96,6 +97,7 @@ import {
 } from "../components/SettingsSearch";
 import { GoogleSignInButton } from "../components/GoogleSignInButton";
 import { ExternalLinkButton } from "../components/ExternalLinkButton";
+import { useCompactViewport } from "../hooks/useCompactViewport";
 import {
   AUTO_LYRICS_SOURCE,
   setPreferredLyricsSourceId,
@@ -204,6 +206,7 @@ import {
   isLinux,
   isTilingWindowManager,
   subscribeTilingWindowManager,
+  isMobile,
 } from "../platform";
 import { GITHUB_NEW_ISSUE_URL, GITHUB_REPOSITORY_URL } from "../links";
 import { AccountAvatar, AccountSwitcher, AddGoogleAccountButton, GoogleAccountSwitcher } from "../components/AccountSwitcher";
@@ -619,6 +622,9 @@ export function SettingsPage({
   const [lastFmBusy, setLastFmBusy] = useState(false);
   const [lastFmError, setLastFmError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<SettingsTab>("about");
+  const isPhone = useCompactViewport();
+  /** Phone only: null shows the category menu, a tab shows that category on its own screen. */
+  const [phoneTab, setPhoneTab] = useState<SettingsTab | null>(null);
   const [settingsQuery, setSettingsQuery] = useState("");
   const [listeningShortcut, setListeningShortcut] = useState<KeyboardShortcutAction | null>(null);
   const keyboardShortcuts = useKeyboardShortcuts();
@@ -1006,6 +1012,21 @@ export function SettingsPage({
 
   return (
     <main className="@container/settings flex min-h-0 flex-1 flex-col gap-7 max-md:font-lexend max-md:gap-5 max-md:pb-8">
+      {isPhone && phoneTab && !settingsQuery.trim() ? (
+        <header className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => setPhoneTab(null)}
+            aria-label="Back to settings"
+            className="grid size-11 shrink-0 place-items-center rounded-full bg-[#1b1b1b] text-[#e7e7e7] transition-transform active:scale-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
+          >
+            <ArrowLeftIcon size={20} aria-hidden="true" />
+          </button>
+          <h1 className="text-[26px] font-semibold leading-8 tracking-normal text-white">
+            {SETTINGS_TABS.find((tab) => tab.id === phoneTab)?.label}
+          </h1>
+        </header>
+      ) : (
       <header className="flex flex-wrap items-start justify-between gap-x-6 gap-y-3 @max-4xl/settings:flex-col @max-4xl/settings:items-stretch">
         <div className="flex flex-col gap-1.5">
           <h1 className="max-md:text-[26px] max-md:font-semibold max-md:leading-8 max-md:tracking-normal">Settings</h1>
@@ -1023,24 +1044,72 @@ export function SettingsPage({
           <div className="w-72 max-w-full @max-4xl/settings:w-full">
             <SettingsSearch query={settingsQuery} onQueryChange={setSettingsQuery} />
           </div>
-          <ExternalLinkButton
-            icon={<StarIcon size={16} aria-hidden="true" />}
-            label="Star on GitHub"
-            url={GITHUB_REPOSITORY_URL}
-          />
-          <ExternalLinkButton
-            icon={<BugIcon size={16} aria-hidden="true" />}
-            label="Report an issue"
-            url={GITHUB_NEW_ISSUE_URL}
-          />
+          <div className="contents max-md:hidden">
+            <ExternalLinkButton
+              icon={<StarIcon size={16} aria-hidden="true" />}
+              label="Star on GitHub"
+              url={GITHUB_REPOSITORY_URL}
+            />
+            <ExternalLinkButton
+              icon={<BugIcon size={16} aria-hidden="true" />}
+              label="Report an issue"
+              url={GITHUB_NEW_ISSUE_URL}
+            />
+          </div>
         </div>
       </header>
+      )}
 
       {/* The category rail follows this pane's width, not the application viewport: an embedded
           or scaled Settings pane can be narrow even on a wide desktop window. */}
       <div className="flex min-h-0 flex-1 items-start gap-10 @max-4xl/settings:flex-col @max-4xl/settings:gap-4">
+        {isPhone && !phoneTab && !settingsQuery.trim() && (
+          <div className="flex w-full flex-col gap-3">
+            {SETTINGS_TABS.filter((tab) => !isMobile || (tab.id !== "window" && tab.id !== "shortcuts")).map(
+              (tab) => {
+                const Icon = tab.icon;
+                return (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    onClick={() => {
+                      setActiveTab(tab.id);
+                      setPhoneTab(tab.id);
+                    }}
+                    className="flex items-center gap-4 rounded-3xl bg-[#1b1b1b] p-4 text-left transition-transform active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
+                  >
+                    <span className="grid size-12 shrink-0 place-items-center rounded-full bg-[#131313] text-[#e7e7e7]">
+                      <Icon size={22} aria-hidden="true" />
+                    </span>
+                    <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+                      <span className="text-base font-normal text-white">{tab.label}</span>
+                      <span className="truncate text-xs font-extralight text-[#929292]">
+                        {tab.description}
+                      </span>
+                    </span>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true" className="shrink-0 text-[#929292]">
+                      <path d="M9 5l7 7-7 7" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  </button>
+                );
+              },
+            )}
+            <div className="mt-2 flex flex-wrap gap-2">
+              <ExternalLinkButton
+                icon={<StarIcon size={16} aria-hidden="true" />}
+                label="Star on GitHub"
+                url={GITHUB_REPOSITORY_URL}
+              />
+              <ExternalLinkButton
+                icon={<BugIcon size={16} aria-hidden="true" />}
+                label="Report an issue"
+                url={GITHUB_NEW_ISSUE_URL}
+              />
+            </div>
+          </div>
+        )}
         <nav
-          className="sticky top-0 flex w-56 shrink-0 flex-col gap-0.5 @max-4xl/settings:relative @max-4xl/settings:w-full @max-4xl/settings:flex-row @max-4xl/settings:overflow-x-auto @max-4xl/settings:rounded-xl @max-4xl/settings:bg-card/50 @max-4xl/settings:p-1 max-md:items-baseline max-md:gap-6 max-md:rounded-none max-md:bg-transparent max-md:p-0 max-md:[scrollbar-width:none] max-md:[&::-webkit-scrollbar]:hidden"
+          className="max-md:hidden sticky top-0 flex w-56 shrink-0 flex-col gap-0.5 @max-4xl/settings:relative @max-4xl/settings:w-full @max-4xl/settings:flex-row @max-4xl/settings:overflow-x-auto @max-4xl/settings:rounded-xl @max-4xl/settings:bg-card/50 @max-4xl/settings:p-1 max-md:items-baseline max-md:gap-6 max-md:rounded-none max-md:bg-transparent max-md:p-0 max-md:[scrollbar-width:none] max-md:[&::-webkit-scrollbar]:hidden"
           role="tablist"
           aria-label="Settings categories"
         >
@@ -1086,12 +1155,18 @@ export function SettingsPage({
           })}
         </nav>
 
-        <div className="flex min-h-0 w-full min-w-0 max-w-2xl flex-1 flex-col @max-4xl/settings:max-w-none">
+        <div
+          className={cn(
+            "flex min-h-0 w-full min-w-0 max-w-2xl flex-1 flex-col @max-4xl/settings:max-w-none",
+            isPhone && !phoneTab && !settingsQuery.trim() && "hidden",
+          )}
+        >
           {settingsQuery.trim() ? (
             <SettingsSearchResults
               query={settingsQuery}
               onSelect={(tab) => {
                 setActiveTab(tab);
+                setPhoneTab(tab);
                 setSettingsQuery("");
               }}
             />
