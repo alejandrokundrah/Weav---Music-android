@@ -8,8 +8,8 @@ import { getDownloadQuality, type AudioQuality } from "../internal/audioQuality"
 import { artworkIdentity, getArtworkUrlCandidates } from "../datasource/youtube/artwork";
 import { isOnline, onReconnect, useOnline } from "../internal/connectivity";
 
-const MANIFEST_KEY = "zuno.offline-manifest.v1";
-const MAX_BYTES_KEY = "zuno.offline-max-bytes.v1";
+const MANIFEST_KEY = "weav.offline-manifest.v1";
+const MAX_BYTES_KEY = "weav.offline-max-bytes.v1";
 
 /** Default ceiling for downloaded audio. Roughly 1,500 songs at typical bitrates. */
 export const DEFAULT_OFFLINE_MAX_BYTES = 8 * 1024 * 1024 * 1024;

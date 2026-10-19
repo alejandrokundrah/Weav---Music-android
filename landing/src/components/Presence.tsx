@@ -13,7 +13,7 @@ export function Presence() {
       <div className={cn("rounded-2xl bg-background/80 p-4 transition-opacity duration-500", playing ? "opacity-100" : "opacity-55")}>
         <p className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">
           <BrandIcon icon={SERVICE_ICON.discord} width={14} height={11} />
-          {playing ? "Listening to Zuno" : "Paused"}
+          {playing ? "Listening to WEAV" : "Paused"}
         </p>
         <div className="mt-3 flex items-center gap-3">
           <img src={TRACK.cover} alt="" className="size-14 shrink-0 rounded-xl bg-card p-1.5" />

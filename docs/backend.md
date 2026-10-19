@@ -426,8 +426,7 @@ Defense in depth that *is* in place:
 "plugins": { "updater": {
   "pubkey": "<minisign public key>",
   "endpoints": [
-    "https://github.com/noFAYZ/zuno/releases/latest/download/latest.json",
-    "https://raw.githubusercontent.com/noFAYZ/zuno/updater-channel/latest.json"
+    "https://github.com/weav-app/weav/releases/latest/download/latest.json"
   ]}}
 ```
 

@@ -32,7 +32,7 @@ import { FloatingPanel } from "./FloatingPanel";
 import { NotificationsPanel } from "./NotificationsPanel";
 import { useToolbarItemVisible } from "../settings/toolbarItems";
 import { motion } from "motion/react";
-import appIcon from "../../../assets/img/Logo.png";
+import appIcon from "../../../assets/img/logo.svg";
 
 interface TitleBarProps {
   tabs: Tab[];
@@ -219,7 +219,7 @@ export function TitleBar({
           src={appIcon}
           alt=""
         /> 
-        {!hideHomeText && <h3 >zuno_</h3>}
+        {!hideHomeText && <h3>WEAV</h3>}
       </button>
 
       <MusicTabs

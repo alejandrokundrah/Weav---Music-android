@@ -83,7 +83,7 @@ function trackKey(track: Track, payload: LastFmTrackPayload) {
  * Scrobbles made offline, sent when the connection is back. Last.fm accepts timestamps up to
  * two weeks old, so an offline listen still counts instead of being dropped.
  */
-const PENDING_SCROBBLES_KEY = "zuno.lastfm-pending-scrobbles.v1";
+const PENDING_SCROBBLES_KEY = "weav.lastfm-pending-scrobbles.v1";
 const MAX_PENDING_SCROBBLES = 500;
 
 function readPendingScrobbles(): LastFmScrobblePayload[] {

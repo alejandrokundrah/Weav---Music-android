@@ -128,7 +128,7 @@ export function togglePlayback() {
     navigator.mediaSession.metadata = new MediaMetadata({
       title: TRACK.title,
       artist: TRACK.artist,
-      album: "zuno_",
+      album: "WEAV",
       artwork: [{ src: TRACK.cover, sizes: "256x256", type: "image/webp" }],
     });
   }

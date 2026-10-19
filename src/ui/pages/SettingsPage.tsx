@@ -1551,7 +1551,7 @@ export function SettingsPage({
               title="Storage"
               titleId="library-storage-title"
               icon={<DownloadIcon size={18} aria-hidden="true" />}
-              description="How much disk Zuno is allowed to use."
+              description="How much disk WEAV is allowed to use."
             />
 
             <div className="flex flex-wrap items-end justify-between gap-4 py-2">
@@ -1812,12 +1812,12 @@ export function SettingsPage({
               title="System"
               titleId="library-system-title"
               icon={<SettingsIcon size={18} aria-hidden="true" />}
-              description="How Zuno behaves outside the window."
+              description="How WEAV behaves outside the window."
             />
 
             <SettingToggle
               title="Launch at startup"
-              description="Start Zuno when your computer starts."
+              description="Start WEAV when your computer starts."
               checked={autostartEnabled}
               disabled={autostartLoading}
               onCheckedChange={(checked) => void handleAutostartChange(checked)}
@@ -1828,7 +1828,7 @@ export function SettingsPage({
 
             <SettingToggle
               title="Minimize to tray"
-              description="Closing the window hides Zuno to the system tray and keeps playing. When off, no tray icon is shown."
+              description="Closing the window hides WEAV to the system tray and keeps playing. When off, no tray icon is shown."
               checked={minimizeToTray}
               onCheckedChange={setMinimizeToTray}
             />
@@ -2138,7 +2138,7 @@ export function SettingsPage({
               title="Playback method"
               description={
                 audioEngineMode === "native"
-                  ? "Zuno plays each track itself. About 90 MB lighter, slower to start, no gapless or crossfade."
+                  ? "WEAV plays each track itself. About 90 MB lighter, slower to start, no gapless or crossfade."
                   : "A hidden YouTube frame plays each track. Costs about 90 MB, starts faster, required for gapless and crossfade."
               }
             >
@@ -2251,7 +2251,7 @@ export function SettingsPage({
               title="Session"
               titleId="session-settings-title"
               icon={<QueuePanelIcon size={18} aria-hidden="true" />}
-              description="What comes back when you reopen Zuno."
+              description="What comes back when you reopen WEAV."
             />
 
             <SettingToggle
@@ -2271,7 +2271,7 @@ export function SettingsPage({
               title="Theme"
               titleId="theme-settings-title"
               icon={<PaletteIcon size={18} aria-hidden="true" />}
-              description="Zuno is crafted exclusively with a dedicated dark theme."
+              description="WEAV is crafted exclusively with a dedicated dark theme."
             />
 
             <div

@@ -9,7 +9,7 @@ export function ThemeCompare() {
     <div className="group relative aspect-[1405/1014] overflow-hidden rounded-2xl bg-background">
       <img
         src="./theme-dark.webp"
-        alt="Zuno's home screen in the dark theme"
+        alt="WEAV's home screen in the dark theme"
         width={1405}
         height={1014}
         loading="lazy"

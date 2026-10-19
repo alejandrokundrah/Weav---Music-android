@@ -34,7 +34,7 @@ export function Footer() {
             Close the tab. Keep the music<span className="text-primary">_</span>
           </p>
           <div className="mt-7 flex flex-wrap gap-3">
-            <LinkButton href="#download">Download Zuno</LinkButton>
+            <LinkButton href="#download">Download WEAV</LinkButton>
             <LinkButton href={GITHUB_REPO} rel="noopener" variant="ghost">
               View the source
             </LinkButton>
@@ -56,7 +56,7 @@ export function Footer() {
       </div>
 
       <div className="relative mt-16 select-none overflow-hidden" aria-hidden="true">
-        <p className="wordmark-xl text-center font-semibold">zuno</p>
+        <p className="wordmark-xl text-center font-semibold">WEAV</p>
         <div className="screen-ghost absolute bottom-0 right-[6%] w-[17%] max-w-52">
           <video className="float aspect-square w-full object-cover" src="./zuno-character.mp4" autoPlay={!reduced} muted loop playsInline />
         </div>

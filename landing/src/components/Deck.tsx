@@ -31,13 +31,13 @@ function Record() {
           <path id="deck-label-ring" d="M50 50m-23.5 0a23.5 23.5 0 1 1 47 0a23.5 23.5 0 1 1-47 0" fill="none" />
           <text>
             <textPath href="#deck-label-ring">
-              LOW TIDE · TOM RHODES · HUSTLE STANDARD · ZUNO_ · LOW TIDE · TOM RHODES · HUSTLE STANDARD ·
+              LOW TIDE · TOM RHODES · HUSTLE STANDARD · WEAV · LOW TIDE · TOM RHODES · HUSTLE STANDARD ·
             </textPath>
           </text>
         </svg>
         {/* Text above and below the spindle, the way a real label keeps clear of the hole. */}
         <div className="record-label">
-          <span className="text-[19cqi] font-bold leading-none tracking-[-0.04em]">zuno_</span>
+          <span className="text-[19cqi] font-bold leading-none tracking-[-0.04em]">WEAV</span>
           <span className="spindle" />
           <span className="font-mono text-[6.5cqi] uppercase tracking-[0.16em] opacity-80">side a · 33 rpm</span>
         </div>

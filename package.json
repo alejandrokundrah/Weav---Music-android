@@ -1,10 +1,11 @@
 {
-  "name": "zuno",
+  "name": "weav",
   "private": true,
   "version": "1.4.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:web": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
@@ -23,6 +24,7 @@
     "@tauri-apps/plugin-process": "^2.3.1",
     "@tauri-apps/plugin-updater": "^2.10.1",
     "bgutils-js": "^4.0.2",
+    "ci": "^2.3.0",
     "clsx": "^2.1.1",
     "googlevideo": "^4.1.1",
     "motion": "^12.42.2",

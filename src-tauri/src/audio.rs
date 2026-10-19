@@ -321,7 +321,7 @@ impl NativeAudio {
                 .map_err(|_| "native audio lock poisoned".to_string())?
                 .clone();
             std::thread::Builder::new()
-                .name("zuno-audio".into())
+                .name("weav-audio".into())
                 .spawn(move || run(app, rx, commands, ready_tx, device))
                 .map_err(|error| format!("audio thread failed to start: {error}"))?;
 

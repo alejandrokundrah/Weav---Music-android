@@ -1,41 +1,26 @@
 <p align="center">
-  <img width="120px" src="assets/img/Logo.png" alt="Zuno" />
+  <img width="120px" src="Weav logo.svg" alt="WEAV" />
 </p>
 
-<h1 align="center">Zuno</h1>
+<h1 align="center">WEAV</h1>
 
 <p align="center">
-  A fast, native-feeling desktop client for YouTube Music.<br />
+  A modern social music platform — discover, stream, and connect through music.<br />
   Built with Tauri, React and TypeScript for <b>Windows, macOS and Linux</b>.
 </p>
 
-<p align="center">
-  <a href="https://github.com/noFAYZ/zuno/releases/latest"><img src="https://img.shields.io/github/downloads/noFAYZ/zuno/total?style=for-the-badge&color=ff0033&label=downloads" alt="Downloads"></a>
-  <a href="https://github.com/noFAYZ/zuno/releases/latest"><img src="https://img.shields.io/github/package-json/v/noFAYZ/zuno?style=for-the-badge&color=ff3d00&label=version" alt="Version"></a>
-  <a href="https://github.com/noFAYZ/zuno/blob/main/LICENSE"><img src="https://img.shields.io/github/license/noFAYZ/zuno?style=for-the-badge&color=ff6900" alt="License"></a>
-  <a href="https://github.com/noFAYZ/zuno/stargazers"><img src="https://img.shields.io/github/stars/noFAYZ/zuno?style=for-the-badge&color=ff9700&label=stars" alt="Stars"></a>
-  <a href="https://aur.archlinux.org/packages/zuno"><img src="https://img.shields.io/aur/version/zuno?style=for-the-badge&color=ffc300&label=AUR" alt="AUR"></a>
-</p>
-
-<p align="center">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="assets/img/zuno-d1-1.2.PNG" />
-    <source media="(prefers-color-scheme: light)" srcset="assets/img/zuno-l4-1.2.PNG" />
-    <img src="assets/img/zuno-d1-1.2.PNG" alt="Zuno home view" width="900" />
-  </picture>
-</p>
 
 > [!IMPORTANT]
-> Zuno is an independent, unofficial project. It is not affiliated with, authorized by,
+> WEAV is an independent, unofficial project. It is not affiliated with, authorized by,
 > sponsored by, or endorsed by YouTube or Google.
 
 <br />
 
 ## About
 
-Zuno brings YouTube Music to the desktop as its own application, not a browser tab. There is
-no official desktop client, so the goal is a fast, native-feeling one that holds up with large
-libraries.
+WEAV is a modern music platform built around the idea of connection — connecting listeners,
+artists, sounds, and moments through music. It brings YouTube Music to the desktop as a
+fast, native-feeling application with a social experience layer on top.
 
 If you find it useful, **starring the repo** genuinely helps.
 
@@ -49,8 +34,8 @@ If you find it useful, **starring the repo** genuinely helps.
     <td width="50%"><b>Artist page</b></td>
   </tr>
   <tr>
-    <td><img src="assets/img/zuno-d-1.2.PNG" alt="Synced lyrics following the current line" /></td>
-    <td><img src="assets/img/zuno-d4-1.2.PNG" alt="An artist page showing popular songs and releases" /></td>
+    <td><em>Screenshot coming soon</em></td>
+    <td><em>Screenshot coming soon</em></td>
   </tr>
   <tr>
     <td><sub>Click a line to seek, nudge the timing if a match is off, and see which source the words came from.</sub></td>
@@ -64,8 +49,8 @@ If you find it useful, **starring the repo** genuinely helps.
     <td width="50%"><b>Library</b></td>
   </tr>
   <tr>
-    <td><img src="assets/img/zuno-d3-1.2.PNG" alt="The queue panel open beside the home view" /></td>
-    <td><img src="assets/img/zuno-l5-1.2.PNG" alt="The library songs list, with explicit badges and the now-playing meter" /></td>
+    <td><em>Screenshot coming soon</em></td>
+    <td><em>Screenshot coming soon</em></td>
   </tr>
   <tr>
     <td><sub>Separates what you added by hand from what came next on its own.</sub></td>
@@ -74,8 +59,6 @@ If you find it useful, **starring the repo** genuinely helps.
 </table>
 
 <p align="center">
-  <img src="assets/img/zuno-set-1.2.PNG" alt="Zuno settings, showing the library and lyrics options" width="860" />
-  <br />
   <sub>Settings — quality, lyrics source, translation and text size, downloads and the disk cap.</sub>
 </p>
 
@@ -109,13 +92,13 @@ If you find it useful, **starring the repo** genuinely helps.
 
 ## Download
 
-Grab the newest installer from the **[latest release](https://github.com/noFAYZ/zuno/releases/latest)**
+Grab the newest installer from the **latest releases**
 for Windows, macOS or Linux.
 
 On Arch and derivatives, install from the AUR instead:
 
 ```bash
-yay -S zuno     # or: paru -S zuno
+yay -S weav     # or: paru -S weav
 ```
 
 <br />
@@ -128,7 +111,7 @@ yay -S zuno     # or: paru -S zuno
 
 ### Linux notes
 
-Install the `.deb` or `.rpm`, or `zuno` from the AUR on Arch. All three run on your system's
+Install the `.deb` or `.rpm`, or `weav` from the AUR on Arch. All three run on your system's
 WebKitGTK (rendering) and GStreamer (playback) rather than bundling their own.
 
 <details>
@@ -279,7 +262,7 @@ theming and interface additions.
 Zuno interacts with YouTube and YouTube Music. Access to those services remains governed by
 their own terms, policies, availability and regional restrictions.
 
-Zuno does not host or claim ownership of music, videos, artwork, metadata, or any other
+WEAV does not host or claim ownership of music, videos, artwork, metadata, or any other
 content supplied by third parties. Rights in that content remain with their respective
 owners.
 
@@ -294,9 +277,3 @@ integration only.
 - [YouTube Terms of Service](https://www.youtube.com/static?template=terms)
 - [YouTube API Services Terms of Service](https://developers.google.com/youtube/terms/api-services-terms-of-service)
 - [YouTube API Services Developer Policies](https://developers.google.com/youtube/terms/developer-policies)
-
-## Thanks to our contributors
-
-<a href="https://github.com/noFAYZ/zuno/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=noFAYZ/zuno" />
-</a>

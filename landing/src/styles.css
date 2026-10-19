@@ -13,8 +13,8 @@
   --color-muted: oklch(0.269 0 0);
   --color-muted-foreground: oklch(0.708 0 0);
 
-  --color-primary: #ff0033;
-  --color-primary-foreground: oklch(0.985 0 0);
+  --color-primary: #92D906;
+  --color-primary-foreground: #0e1a00;
 
   --color-secondary: oklch(0.269 0 0);
   --color-secondary-foreground: oklch(0.985 0 0);
@@ -24,7 +24,7 @@
 
   --color-border: oklch(1 0 0 / 10%);
   --color-input: oklch(1 0 0 / 15%);
-  --color-ring: #ff0033;
+  --color-ring: #92D906;
 
   /* The mascot's palette and the record on the hero deck. */
   --color-ghost: oklch(0.985 0.012 95);

@@ -2,7 +2,7 @@ import { useSyncExternalStore } from "react";
 import { setAppSetting } from "../../internal/appSettings";
 
 /**
- * Colour theme. Zuno is exclusively designed with a dark theme.
+ * Colour theme. WEAV is exclusively designed with a dark theme.
  */
 export type ThemePreference = "dark";
 export type ResolvedTheme = "dark";

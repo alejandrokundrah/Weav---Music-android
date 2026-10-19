@@ -20,7 +20,7 @@
 
 /*
  * Design tokens consumed by the vendored beUI components.
- * Neutral shadcn surfaces, with the app's #ff0033 kept as `primary` (accent only).
+ * Neutral shadcn surfaces, with the app's #92D906 WEAV green kept as `primary` (accent only).
  *
  * The UI is borderless: surfaces are separated by background contrast, not outlines.
  * `--color-border` / `--color-input` are kept only because beUI component internals
@@ -38,9 +38,9 @@
   --color-muted: oklch(0.269 0 0);
   --color-muted-foreground: oklch(0.708 0 0);
 
-  /* Brand accent — the one colour carried over from the old identity. */
-  --color-primary: #ff0033;
-  --color-primary-foreground: oklch(0.985 0 0);
+  /* Brand accent — WEAV green from the logo mark. */
+  --color-primary: #92D906;
+  --color-primary-foreground: #0e1a00;
 
   --color-secondary: oklch(0.269 0 0);
   --color-secondary-foreground: oklch(0.985 0 0);
@@ -50,7 +50,7 @@
 
   --color-border: oklch(1 0 0 / 10%);
   --color-input: oklch(1 0 0 / 15%);
-  --color-ring: #ff0033;
+  --color-ring: #92D906;
  
 }
 
@@ -76,7 +76,7 @@
  * Light theme. The @theme block above is the dark default; this flips the same token
  * names, so every component follows without knowing a theme exists.
  *
- * `--color-primary` stays #ff0033 in both — it is the brand accent, not a surface.
+ * `--color-primary` stays #92D906 in both — it is the WEAV brand accent, not a surface.
 html,
 html[data-theme="dark"] {
   color-scheme: dark;
@@ -675,9 +675,9 @@ html[data-fx-off~="marquee"] .animate-marquee-vertical {
     --color-popover: #1b1b1b;
     --color-muted: #222222;
     --color-secondary: #222222;
-    --color-primary: #cfe86a;
-    --color-primary-foreground: #14130a;
-    --color-ring: #cfe86a;
+    --color-primary: #92D906;
+    --color-primary-foreground: #0e1a00;
+    --color-ring: #92D906;
   }
 }
 

@@ -6,7 +6,7 @@ import { GITHUB_REPO, type LatestRelease } from "../releases";
 
 const PRINCIPLES = [
   { icon: ShieldIcon, label: "No telemetry" },
-  { icon: UserIcon, label: "No Zuno account" },
+  { icon: UserIcon, label: "No WEAV account" },
   { icon: CodeIcon, label: "Apache-2.0" },
 ] as const;
 
@@ -23,7 +23,7 @@ export function OpenSource({ repo, release }: { repo: RepoStats | null; release:
   return (
     <section id="open-source">
       <div className="mx-auto max-w-6xl px-6 py-20 lg:py-28">
-        <SectionHeading index="02" label="open source" title="Zuno collects nothing." />
+        <SectionHeading index="02" label="open source" title="WEAV collects nothing." />
 
         <ul className="mt-8 flex flex-wrap gap-2">
           {PRINCIPLES.map(({ icon: Icon, label }) => (
@@ -42,7 +42,7 @@ export function OpenSource({ repo, release }: { repo: RepoStats | null; release:
               className={cn("flex w-fit items-center gap-3 rounded-xl text-lg font-semibold tracking-[-0.01em] hover:text-primary", FOCUS_RING)}
             >
               <BrandIcon icon={SERVICE_ICON.github} width={26} height={26} />
-              noFAYZ/zuno
+              weav-app/weav
             </a>
 
             <div className="grid grid-cols-3 gap-4">
@@ -88,7 +88,7 @@ export function OpenSource({ repo, release }: { repo: RepoStats | null; release:
             </div>
             <CopyBlock
               label="build commands"
-              lines={["git clone https://github.com/noFAYZ/zuno", "cd zuno && npm install", "npm run tauri dev"]}
+              lines={["git clone https://github.com/weav-app/weav", "cd weav && npm install", "npm run tauri dev"]}
             />
           </div>
         </div>

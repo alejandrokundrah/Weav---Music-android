@@ -1,11 +1,10 @@
-# Maintainer: Faizan Asad <m.faizanasad97@gmail.com>
-
-pkgname=zuno
-pkgver=1.2.1
+# Maintainer: WEAV Team
+pkgname=weav
+pkgver=1.4.0
 pkgrel=1
-pkgdesc="YouTube Music as a focused desktop app — tabs, offline downloads, synced lyrics"
+pkgdesc="WEAV - a social music platform"
 arch=('x86_64')
-url="https://github.com/noFAYZ/zuno"
+url="https://github.com/weav-app/weav"
 license=('Apache-2.0')
 
 # Mapped from the .deb's own Depends: libwebkit2gtk-4.1-0, libgtk-3-0,

@@ -6,9 +6,9 @@ import { isAndroid } from "../ui/platform";
 
 const RELEASE_TAG_PREFIX = "v";
 const RELEASES_URL =
-  "https://github.com/noFAYZ/zuno/releases/tag";
+  "https://github.com/weav-app/weav/releases/tag";
 const RELEASES_API_URL =
-  "https://api.github.com/repos/noFAYZ/zuno/releases/latest";
+  "https://api.github.com/repos/weav-app/weav/releases/latest";
 const SNOOZE_PREFIX = "just-another-music-client:update-snooze:";
 const SNOOZE_DURATION_MS = 24 * 60 * 60 * 1000;
 

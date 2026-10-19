@@ -112,7 +112,7 @@ function isSignInCancellation(error: unknown): boolean {
 }
 
 /** Local mirror of dislikes: YouTube stores the rating but exposes no list to read it back. */
-const DISLIKED_TRACKS_STORAGE_KEY = "zuno:disliked-tracks-v1";
+const DISLIKED_TRACKS_STORAGE_KEY = "weav:disliked-tracks-v1";
 
 function readDislikedTrackIds(): Set<string> {
   try {
@@ -1105,7 +1105,7 @@ export class LibraryController {
       status: "error",
       // recoverConnection retries on reconnect, so offline this is a wait, not a failure.
       error: !isOnline()
-        ? "You're offline. Zuno will retry when you reconnect."
+        ? "You're offline. WEAV will retry when you reconnect."
         : detail && detail !== "[object Object]" ? `${message}\n\n${detail}` : message,
       authPrompt: null,
     });

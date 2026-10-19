@@ -143,7 +143,7 @@ export function Downloads({ release, platform }: { release: LatestRelease | null
         <SectionHeading
           index="03"
           label="download"
-          title="Get Zuno."
+          title="Get WEAV."
           lede="Updates install themselves."
         />
 
@@ -166,7 +166,7 @@ export function Downloads({ release, platform }: { release: LatestRelease | null
           <div className="flex flex-col gap-3 rounded-3xl bg-card/35 p-5 sm:flex-row sm:items-center sm:gap-5">
             <span className="shrink-0 pl-1 text-[15px] font-medium">On Arch?</span>
             <div className="min-w-0 flex-1">
-              <CopyBlock label="the AUR install command" lines={["yay -S zuno"]} />
+              <CopyBlock label="the AUR install command" lines={["yay -S weav"]} />
             </div>
           </div>
           <a

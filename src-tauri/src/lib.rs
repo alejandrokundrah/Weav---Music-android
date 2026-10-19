@@ -114,7 +114,7 @@ fn copy_dir_contents(from: &std::path::Path, to: &std::path::Path) -> std::io::R
     Ok(())
 }
 
-/// Bundle identifier used before the rename to Zuno.
+/// Bundle identifier used before the rename to WEAV.
 ///
 /// Tauri derives the app-data directory from the identifier, so changing it points the app
 /// at an empty folder and strands every stored preference — including user-created local
@@ -1699,15 +1699,15 @@ fn build_tray(app: &tauri::AppHandle) -> tauri::Result<()> {
     use tauri::menu::{Menu, MenuItem};
     use tauri::tray::{TrayIconBuilder, TrayIconEvent};
 
-    let show = MenuItem::with_id(app, "tray-show", "Show Zuno", true, None::<&str>)?;
-    let quit = MenuItem::with_id(app, "tray-quit", "Quit Zuno", true, None::<&str>)?;
+    let show = MenuItem::with_id(app, "tray-show", "Show WEAV", true, None::<&str>)?;
+    let quit = MenuItem::with_id(app, "tray-quit", "Quit WEAV", true, None::<&str>)?;
     let menu = Menu::with_items(app, &[&show, &quit])?;
 
     TrayIconBuilder::with_id("main-tray")
         .icon(app.default_window_icon().cloned().ok_or_else(|| {
             tauri::Error::AssetNotFound("default window icon".to_string())
         })?)
-        .tooltip("Zuno")
+        .tooltip("WEAV")
         .menu(&menu)
         // The menu is for the right-click; a left click should just bring the window back.
         .show_menu_on_left_click(false)
@@ -5629,7 +5629,7 @@ mod tests {
     // Replacing must not depend on deleting the old file first, or a failed save loses it (#155).
     #[test]
     fn write_json_file_replaces_an_existing_file() {
-        let dir = std::env::temp_dir().join(format!("zuno-write-json-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("weav-write-json-{}", std::process::id()));
         let path = dir.join("settings-v1.json");
         assert!(super::write_json_file(&path, &HashMap::from([("minimize-to-tray", false)])).is_ok());
         assert!(super::write_json_file(&path, &HashMap::from([("minimize-to-tray", true)])).is_ok());

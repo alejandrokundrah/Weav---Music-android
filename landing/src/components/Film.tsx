@@ -7,7 +7,7 @@ export function Film() {
   const reduced = useReducedMotion();
 
   return (
-    <section aria-label="Zuno, recorded" className="film-stage">
+    <section aria-label="WEAV, recorded" className="film-stage">
       <div className="film-sticky">
         <div className="film-glow" aria-hidden="true" />
         <div className="film-frame">

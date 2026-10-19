@@ -1,8 +1,8 @@
-pkgbase = zuno
-	pkgdesc = YouTube Music as a focused desktop app — tabs, offline downloads, synced lyrics
-	pkgver = 1.2.1
+pkgbase = weav
+	pkgdesc = WEAV - a social music platform
+	pkgver = 1.4.0
 	pkgrel = 1
-	url = https://github.com/noFAYZ/zuno
+	url = https://github.com/weav-app/weav
 	arch = x86_64
 	license = Apache-2.0
 	depends = webkit2gtk-4.1
@@ -15,10 +15,10 @@ pkgbase = zuno
 	optdepends = gst-plugins-ugly: extra codec support
 	optdepends = xdg-utils: opening links and the log file from inside the app
 	optdepends = libnotify: desktop notifications
-	conflicts = zuno-bin
+	conflicts = weav-bin
 	options = !strip
 	options = !emptydirs
-	source = zuno-1.2.1.deb::https://github.com/noFAYZ/zuno/releases/download/v1.2.1/Zuno_1.2.1_amd64.deb
+	source = weav-1.4.0.deb::https://github.com/weav-app/weav/releases/download/v1.4.0/WEAV_1.4.0_amd64.deb
 	sha256sums = 3abc57c1accaaf3ef68a0aa37d3b9e6e81ad9ae1a5a8216a739efeb8578c05da
 
-pkgname = zuno
+pkgname = weav

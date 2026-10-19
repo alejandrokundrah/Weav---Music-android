@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 
-const REPO_API = "https://api.github.com/repos/noFAYZ/zuno";
+const REPO_API = "https://api.github.com/repos/weav-app/weav";
 
 export interface Contributor {
   login: string;

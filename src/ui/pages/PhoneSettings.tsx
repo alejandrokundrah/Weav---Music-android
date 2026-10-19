@@ -665,7 +665,7 @@ export function PhoneSettings({
         <section className="flex flex-col gap-4 rounded-3xl bg-[#1b1b1b] p-5 shadow-lg">
           <div className="flex items-center justify-between">
             <div className="flex flex-col">
-              <span className="text-base font-semibold text-white">Zuno</span>
+              <span className="text-base font-semibold text-white">WEAV</span>
               <span className="text-xs font-light text-[#929292]">
                 Version {installedVersion || "1.0.0"}
               </span>

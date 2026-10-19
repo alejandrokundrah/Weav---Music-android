@@ -19,7 +19,7 @@ export function Header({ stars }: { stars: number | null }) {
         >
           <img src="./ghost.webp" alt="" width={30} height={30} className="size-[30px]" />
           <span>
-            zuno<span className="text-primary">_</span>
+            WEAV<span className="text-primary">_</span>
           </span>
           <PlayingBars className="now-bars h-3" />
         </a>
@@ -43,7 +43,7 @@ export function Header({ stars }: { stars: number | null }) {
           <a
             href={GITHUB_REPO}
             rel="noopener"
-            aria-label={stars === null ? "Zuno on GitHub" : `Zuno on GitHub, ${stars} stars`}
+            aria-label={stars === null ? "WEAV on GitHub" : `WEAV on GitHub, ${stars} stars`}
             className={cn(
               "hidden h-9 items-center gap-2 rounded-full px-3 text-sm text-muted-foreground transition-colors hover:text-foreground sm:flex",
               FOCUS_RING,

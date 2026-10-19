@@ -343,8 +343,8 @@ jobs:
     needs: [prepare, release]
     runs-on: ubuntu-latest
     # `winget-releaser` only *bumps* a package that already exists in microsoft/winget-pkgs; it
-    # cannot create one. `noFAYZ.Zuno` has never been submitted, so every run so far has stopped
-    # at "Package noFAYZ.Zuno does not exist in the winget-pkgs repository" — nothing to do with
+    # cannot create one. `WEAV.App` has never been submitted, so every run so far has stopped
+    # at "Package WEAV.App does not exist in the winget-pkgs repository" — nothing to do with
     # the release itself, which published fine each time.
     #
     # The initial submission is a one-off PR to microsoft/winget-pkgs; the manifest for it lives
@@ -372,7 +372,7 @@ jobs:
       - uses: vedantmgoyal9/winget-releaser@main
         if: steps.release_metadata.outputs.prerelease == 'false'
         with:
-          identifier: noFAYZ.Zuno
+          identifier: WEAV.App
           release-tag: ${{ env.RELEASE_TAG }}
           installers-regex: '_x64-setup\.exe$'
           token: ${{ secrets.WINGET_TOKEN }}
