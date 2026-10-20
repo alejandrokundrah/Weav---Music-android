@@ -752,6 +752,17 @@ html[data-fx-off~="marquee"] .animate-marquee-vertical {
   }
 }
 
+/*
+ * TV build: there is no pointer, so the remote's D-pad moves keyboard focus and the focused
+ * control has to be unmistakable from across a room. `!important` because many controls
+ * carry `outline-none`.
+ */
+:root[data-tv] :focus-visible {
+  outline: 3px solid var(--color-primary) !important;
+  outline-offset: 3px !important;
+  border-radius: 0.5rem;
+}
+
 @theme {
   /* The phone Home's face. Opt in with `font-lexend`; everything else stays on Inter. */
   --font-lexend: "Lexend Variable", ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto,

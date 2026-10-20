@@ -1,4 +1,5 @@
 import { useSyncExternalStore } from "react";
+import { isTV } from "../platform";
 
 /**
  * True on a phone held upright: narrower than Tailwind's `md` breakpoint (768px).
@@ -12,13 +13,15 @@ import { useSyncExternalStore } from "react";
 const QUERY = "(max-width: 767px)";
 
 function subscribe(callback: () => void) {
-  if (typeof window === "undefined" || !window.matchMedia) return () => {};
+  // The TV build never switches to the phone layout, whatever its CSS width turns out to be.
+  if (isTV || typeof window === "undefined" || !window.matchMedia) return () => {};
   const query = window.matchMedia(QUERY);
   query.addEventListener("change", callback);
   return () => query.removeEventListener("change", callback);
 }
 
 function read() {
+  if (isTV) return false;
   return typeof window !== "undefined" && window.matchMedia
     ? window.matchMedia(QUERY).matches
     : false;
