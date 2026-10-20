@@ -2406,49 +2406,52 @@ fn build_login_window(
     }
 
     #[cfg(not(target_os = "android"))]
-    if let Some(existing) = app.get_webview_window(YOUTUBE_LOGIN_WINDOW) {
-        let _ = existing.close();
-    }
-
-    let blank_url = "about:blank".parse().map_err(|error| CommandError {
-        message: format!("invalid blank login URL: {error}"),
-    })?;
-    let window_builder = tauri::WebviewWindowBuilder::new(
-        app,
-        YOUTUBE_LOGIN_WINDOW,
-        tauri::WebviewUrl::External(blank_url),
-    )
-    .title("Sign in to YouTube Music")
-    .visible(visible)
-    .inner_size(520.0, 760.0)
-    .on_page_load(move |_window, payload| {
-        if payload.event() == tauri::webview::PageLoadEvent::Finished {
-            loaded.store(true, Ordering::Relaxed);
+    {
+        if let Some(existing) = app.get_webview_window(YOUTUBE_LOGIN_WINDOW) {
+            let _ = existing.close();
         }
-    });
-    // No taskbar on Android, and the builder has no such method there.
-    #[cfg(not(target_os = "android"))]
-    let window_builder = window_builder.skip_taskbar(!visible);
-    // See YOUTUBE_LOGIN_DATA_DIR: without its own partition, clearing this window's data
-    // clears the main window's storage too.
-    #[cfg(not(target_os = "macos"))]
-    let window_builder = window_builder.data_directory(
-        app.path()
-            .app_local_data_dir()
-            .map_err(|error| CommandError {
-                message: format!("sign-in data directory unavailable: {error}"),
-            })?
-            .join(login_partition_directory_name(slot_id)),
-    );
-    #[cfg(target_os = "macos")]
-    let window_builder = window_builder
-        .user_agent(MACOS_LOGIN_USER_AGENT)
-        // macOS 14+ only; older versions fall back to the shared store, as they did before.
-        .data_store_identifier(login_partition_store_id(slot_id));
 
-    window_builder.build().map_err(|error| CommandError {
-        message: format!("unable to open YouTube Music sign-in: {error}"),
-    })
+        let blank_url = "about:blank".parse().map_err(|error| CommandError {
+            message: format!("invalid blank login URL: {error}"),
+        })?;
+
+        let window_builder = tauri::WebviewWindowBuilder::new(
+            app,
+            YOUTUBE_LOGIN_WINDOW,
+            tauri::WebviewUrl::External(blank_url),
+        )
+        .title("Sign in to YouTube Music")
+        .visible(visible)
+        .inner_size(520.0, 760.0)
+        .on_page_load(move |_window, payload| {
+            if payload.event() == tauri::webview::PageLoadEvent::Finished {
+                loaded.store(true, Ordering::Relaxed);
+            }
+        });
+
+        // No taskbar on Android, and the builder has no such method there.
+        let window_builder = window_builder.skip_taskbar(!visible);
+        // See YOUTUBE_LOGIN_DATA_DIR: without its own partition, clearing this window's data
+        // clears the main window's storage too.
+        #[cfg(not(target_os = "macos"))]
+        let window_builder = window_builder.data_directory(
+            app.path()
+                .app_local_data_dir()
+                .map_err(|error| CommandError {
+                    message: format!("sign-in data directory unavailable: {error}"),
+                })?
+                .join(login_partition_directory_name(slot_id)),
+        );
+        #[cfg(target_os = "macos")]
+        let window_builder = window_builder
+            .user_agent(MACOS_LOGIN_USER_AGENT)
+            // macOS 14+ only; older versions fall back to the shared store, as they did before.
+            .data_store_identifier(login_partition_store_id(slot_id));
+
+        window_builder.build().map_err(|error| CommandError {
+            message: format!("unable to open YouTube Music sign-in: {error}"),
+        })
+    }
 }
 
 /// Clears a stored account's own webview partition, e.g. when it is removed or when an
@@ -2578,7 +2581,7 @@ async fn sign_in_youtube_music(
         append_log_line(format_args!("[internal][tauri][info] android sign-in: return url remembered: {}", return_url));
         
         // Try to navigate with detailed error logging
-        let login_url = YOUTUBE_LOGIN_URL.parse().map_err(|error| CommandError {
+        let login_url = url::Url::parse(YOUTUBE_LOGIN_URL).map_err(|error| CommandError {
             message: format!("invalid YouTube Music sign-in URL: {error}"),
         })?;
         append_log_line(format_args!("[internal][tauri][info] android sign-in: attempting navigation to {}", login_url));
@@ -2589,6 +2592,7 @@ async fn sign_in_youtube_music(
             }
             Err(error) => {
                 append_log_line(format_args!("[internal][tauri][error] android sign-in: navigation failed: {}", error));
+                let _ = window.navigate(return_url.clone());
                 return Err(CommandError {
                     message: format!("navigation to sign-in page failed: {error}"),
                 });
@@ -2730,7 +2734,7 @@ fn poll_for_sign_in(
 #[tauri::command]
 async fn refresh_youtube_music_cookie(
     app: tauri::AppHandle,
-    jar: tauri::State<'_, YoutubeCookieJar>,
+    _jar: tauri::State<'_, YoutubeCookieJar>,
     account_lock: tauri::State<'_, AccountStoreLock>,
 ) -> Result<Option<String>, CommandError> {
     eprintln!("[internal][tauri][info] refresh_youtube_music_cookie start");
@@ -2753,17 +2757,19 @@ async fn refresh_youtube_music_cookie(
         return Ok(None);
     }
 
-    let loaded = Arc::new(AtomicBool::new(false));
-    let window = build_login_window(&app, false, loaded.clone(), &active_slot_id)?;
+    #[cfg(not(target_os = "android"))]
+    {
+        let loaded = Arc::new(AtomicBool::new(false));
+        let window = build_login_window(&app, false, loaded.clone(), &active_slot_id)?;
 
-    // Closed on every exit: an early error used to leave the hidden window running.
-    let result = (|| {
-        let login_url = YOUTUBE_LOGIN_URL.parse().map_err(|error| CommandError {
-            message: format!("invalid YouTube Music sign-in URL: {error}"),
-        })?;
-        window.navigate(login_url).map_err(|error| CommandError {
-            message: format!("unable to renew the YouTube Music session silently: {error}"),
-        })?;
+        // Closed on every exit: an early error used to leave the hidden window running.
+        let result = (|| {
+            let login_url = url::Url::parse(YOUTUBE_LOGIN_URL).map_err(|error| CommandError {
+                message: format!("invalid YouTube Music sign-in URL: {error}"),
+            })?;
+            window.navigate(login_url).map_err(|error| CommandError {
+                message: format!("unable to renew the YouTube Music session silently: {error}"),
+            })?;
 
         for poll in 1..=YOUTUBE_SILENT_REFRESH_POLLS {
             // Only after a load: harvesting early returns the same stale cookie we came in with,
@@ -2787,6 +2793,7 @@ async fn refresh_youtube_music_cookie(
     })();
     let _ = window.close();
     result
+    }
 }
 
 /// Signs out of whichever account is currently active — today's one-account "sign out".
