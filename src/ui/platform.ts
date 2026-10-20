@@ -14,6 +14,19 @@ export const isAndroid =
 /** True where there is no desktop window to manage: no title bar, tray, second window or updater. */
 export const isMobile = isAndroid;
 
+/**
+ * The Android TV build. It is still the Android app (so every `isAndroid` gate stays in force),
+ * but it always gets the desktop layout: a TV is a wide, remote-driven screen, and on boxes that
+ * report a high density its CSS width can fall under the phone breakpoint.
+ *
+ * Set at build time (`VITE_TV=1`, done by the "tv" variant of the Android workflow) rather than
+ * sniffed from the user agent, because the user agent is also sent to YouTube and must not change.
+ */
+export const isTV = isAndroid && import.meta.env.VITE_TV === "1";
+
+/** Width the TV build lays itself out at, in CSS pixels. Comfortably above the 768px phone breakpoint. */
+const TV_LAYOUT_WIDTH = 1280;
+
 export const isLinux =
   typeof navigator !== "undefined" && /Linux/.test(navigator.userAgent) && !isAndroid;
 
@@ -62,6 +75,14 @@ export function applyPlatformAttributes() {
   document.documentElement.toggleAttribute("data-platform-linux", isLinux);
   document.documentElement.toggleAttribute("data-platform-android", isAndroid);
   document.documentElement.toggleAttribute("data-mobile", isMobile);
+  document.documentElement.toggleAttribute("data-tv", isTV);
+  if (isTV) {
+    // Best effort: ask the WebView for a desktop-wide layout viewport so the width-based phone
+    // styles (Tailwind `max-md:` and the phone palette) do not apply on a low-resolution TV.
+    document
+      .querySelector('meta[name="viewport"]')
+      ?.setAttribute("content", `width=${TV_LAYOUT_WIDTH}, initial-scale=1.0`);
+  }
 }
 
 export function hasPrimaryModifierOnly(event: KeyboardEvent): boolean {
