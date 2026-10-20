@@ -23,6 +23,9 @@ const RelatedPage = lazy(() =>
   import("./pages/RelatedPage").then((m) => ({ default: m.RelatedPage })));
 const SearchResultsPage = lazy(() =>
   import("./pages/SearchResultsPage").then((m) => ({ default: m.SearchResultsPage })));
+const SamplesPage = lazy(() =>
+  import("./pages/SamplesPage").then((m) => ({ default: m.SamplesPage })),
+);
 const LibraryPage = lazy(() =>
   import("./pages/LibraryPage").then((m) => ({ default: m.LibraryPage })),
 );
@@ -210,6 +213,8 @@ function getNavigationKey(state: TabViewState): string {
       return "browse";
     case "library":
       return "library";
+    case "samples":
+      return "samples";
   }
 }
 
@@ -1241,6 +1246,19 @@ export default function App() {
     setNextTabId((currentId) => currentId + 1);
   };
 
+  const handleOpenSamples = () => {
+    playerUIStore.setLyricsOpen(false);
+    const existing = tabs.find((tab) => tab.view === "samples");
+    if (existing) {
+      setActiveTabId(existing.id);
+      return;
+    }
+    const newId = nextTabId.toString();
+    setTabs((prevTabs) => [...prevTabs, { id: newId, view: "samples", title: "Samples" }]);
+    setActiveTabId(newId);
+    setNextTabId((currentId) => currentId + 1);
+  };
+
   const handleOpenBrowse = (browseTab?: string) => {
     playerUIStore.setLyricsOpen(false);
     const existing = tabs.find((tab) => tab.view === "browse");
@@ -2089,18 +2107,19 @@ useEffect(() => {
           onNavigatePlaylist={handleNavigatePlaylist}
           showSearchBar={
             activeTab?.view !== "settings"
+            && activeTab?.view !== "samples"
             && !playerUIState.isLyricsOpen
             // The phone Home carries its own search button in the header.
             && !(isPhone && activeTab?.view === "home")
           }
           onOpenSearch={() => setIsSearchOpen(true)}
           // The phone Home bleeds to the screen edges and supplies its own gutters.
-          edgeToEdge={isPhone && activeTab?.view === "home"}
+          edgeToEdge={isPhone && (activeTab?.view === "home" || activeTab?.view === "samples")}
           canGoBack={canNavigateBack}
           canGoForward={canNavigateForward}
           onNavigateBack={handleNavigateBack}
           onNavigateForward={handleNavigateForward}
-          fullBleedContent={playerUIState.isLyricsOpen}
+          fullBleedContent={playerUIState.isLyricsOpen || activeTab?.view === "samples"}
           hideSidebar={playerUIState.isLyricsFullscreen}
           showTransientScrollbar={
             !playerUIState.isLyricsOpen
@@ -2171,6 +2190,7 @@ useEffect(() => {
                   onOpenBrowse: () => handleOpenBrowse(),
                   onOpenHistory: handleOpenHistory,
                   onOpenDownloads: () => handleOpenBrowse("downloads"),
+                  onOpenSamples: handleOpenSamples,
                 }}
               />
             )}
@@ -2230,6 +2250,14 @@ useEffect(() => {
                 onOpenAlbum={handleNavigateAlbum}
                 onOpenArtist={(artist) => handleNavigateArtist(artist)}
                 onOpenPlaylist={handleNavigatePlaylist}
+              />
+            )}
+            {activeTab?.view === "samples" && (
+              <SamplesPage
+                onOpenArtist={(artist) => handleNavigateArtist(artist)}
+                onOpenFullPlayer={() => {
+                  if (isPhone) setIsExpandedPlayerBar(true);
+                }}
               />
             )}
             {activeTab?.view === "browse" && (
@@ -2306,6 +2334,7 @@ useEffect(() => {
           onHome={handleNavigateHome}
           onLibrary={handleOpenLibrary}
           onBrowse={() => handleOpenBrowse()}
+          onSamples={handleOpenSamples}
           onSettings={handleOpenSettings}
         />
       )}

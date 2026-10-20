@@ -114,6 +114,21 @@ export function NavPlayIcon({ active = false, ...props }: IconProps & { active?:
   );
 }
 
+/** Samples: a swipeable card stack, which is what the page is. */
+export function NavSamplesIcon({ active = false, ...props }: IconProps & { active?: boolean }) {
+  return (
+    <NavGlyph box={[0, 0]} active={active} {...props}>
+      {(stroke, round) => (
+        <>
+          <rect x="6" y="3" width="12" height="18" rx="3" strokeWidth="2" stroke={stroke} {...round} fill="none" />
+          <path d="M3 8v8M21 8v8" strokeWidth="2" stroke={stroke} {...round} />
+          <path d="M10.5 10.5v3.5l3-1.75z" strokeWidth="1.6" stroke={stroke} {...round} fill="none" />
+        </>
+      )}
+    </NavGlyph>
+  );
+}
+
 export function NavUserIcon({ active = false, ...props }: IconProps & { active?: boolean }) {
   return (
     <NavGlyph box={[310, 756]} active={active} {...props}>

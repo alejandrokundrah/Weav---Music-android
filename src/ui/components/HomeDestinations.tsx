@@ -1,6 +1,6 @@
 import { motion } from "motion/react";
 import { cn } from "@/lib/utils";
-import { AlbumIcon, ClockIcon, CompassIcon, DownloadIcon } from "@/ui/icons";
+import { AlbumIcon, ClockIcon, CompassIcon, DownloadIcon, ShuffleIcon } from "@/ui/icons";
 import { useOfflineState } from "../../player/offlineStore";
 import { usePlayHistory } from "../../player/playHistory";
 import { useLibraryState } from "../../player/playerStore";
@@ -10,6 +10,7 @@ export interface HomeDestinationHandlers {
   onOpenBrowse: () => void;
   onOpenHistory: () => void;
   onOpenDownloads: () => void;
+  onOpenSamples?: () => void;
 }
 
 /**
@@ -25,6 +26,7 @@ export function HomeDestinations({
   onOpenBrowse,
   onOpenHistory,
   onOpenDownloads,
+  onOpenSamples,
 }: HomeDestinationHandlers) {
   const libraryState = useLibraryState();
   const offline = useOfflineState();
@@ -66,6 +68,15 @@ export function HomeDestinations({
       onClick: onOpenHistory,
       badge: history.length > 0 ? `${history.length} plays` : undefined,
     },
+    ...(onOpenSamples
+      ? [{
+          key: "samples",
+          label: "Samples",
+          hint: "Swipe to discover music",
+          icon: ShuffleIcon,
+          onClick: onOpenSamples,
+        }]
+      : []),
     {
       key: "downloads",
       label: "Downloads",

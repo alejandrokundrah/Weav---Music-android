@@ -1,13 +1,14 @@
 import type { ComponentType } from "react";
 import { cn } from "@/lib/utils";
 import type { TabView } from "../types/tab";
-import { NavExploreIcon, NavHomeIcon, NavPlayIcon, NavUserIcon } from "./phone/PhoneIcons";
+import { NavExploreIcon, NavHomeIcon, NavPlayIcon, NavSamplesIcon, NavUserIcon } from "./phone/PhoneIcons";
 
 interface MobileNavProps {
   activeView: TabView | undefined;
   onHome: () => void;
   onLibrary: () => void;
   onBrowse: () => void;
+  onSamples: () => void;
   onSettings: () => void;
 }
 
@@ -26,10 +27,11 @@ interface NavItem {
  * hanging from the top edge above it. Search is not here — it lives in the Home header — and
  * the account page is reached through the person icon, which opens Settings.
  */
-export function MobileNav({ activeView, onHome, onLibrary, onBrowse, onSettings }: MobileNavProps) {
+export function MobileNav({ activeView, onHome, onLibrary, onBrowse, onSamples, onSettings }: MobileNavProps) {
   const items: NavItem[] = [
     { key: "home", label: "Home", Icon: NavHomeIcon, active: activeView === "home", onPress: onHome },
     { key: "browse", label: "Browse", Icon: NavExploreIcon, active: activeView === "browse", onPress: onBrowse },
+    { key: "samples", label: "Samples", Icon: NavSamplesIcon, active: activeView === "samples", onPress: onSamples },
     { key: "library", label: "Library", Icon: NavPlayIcon, active: activeView === "library", onPress: onLibrary },
     { key: "settings", label: "Settings", Icon: NavUserIcon, active: activeView === "settings", onPress: onSettings },
   ];
@@ -48,7 +50,7 @@ export function MobileNav({ activeView, onHome, onLibrary, onBrowse, onSettings 
           style={{ left: `calc(0.625rem + (100% - 1.25rem) * ${(activeIndex + 0.5) / items.length} - 29px)` }}
         />
       )}
-      <div className="grid grid-cols-4 px-2.5 pt-[11px]">
+      <div className="grid grid-cols-5 px-2.5 pt-[11px]">
         {items.map(({ key, label, Icon, active, onPress }) => (
           <button
             key={key}
