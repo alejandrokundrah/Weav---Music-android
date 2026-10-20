@@ -50,6 +50,11 @@ export function ArtistNavigationProvider({
   );
 }
 
+/** Opens an artist page, for callers that make a whole row clickable rather than a name. */
+export function useNavigateArtist(): NavigateArtist | null {
+  return useContext(ArtistNavigationContext);
+}
+
 export function ArtistLinks({
   artists,
   fallback,

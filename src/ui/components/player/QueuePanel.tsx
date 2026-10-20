@@ -1,6 +1,7 @@
 import { memo, useEffect, useMemo, useRef, useState, type RefObject } from "react";
 import { cn } from "@/lib/utils";
 import { LyricsCard } from "./LyricsCard";
+import { DiscoverRail } from "./DiscoverRail";
 import { Tooltip } from "@/components/motion/tooltip";
 import {
   CheckIcon,
@@ -793,6 +794,9 @@ export function QueuePanel({ onClose, onOpenLyrics }: QueuePanelProps) {
           </div>
         </div>
       )}
+
+      {/* Recommended + Top Artists. Scrolls with the queue so the list keeps its room. */}
+      {!collapsed && <DiscoverRail />}
 
       {/* The track playing right now, pinned above the list. Without it the panel opens on a
           list of songs with no anchor — you can see what is next but not what it follows. */}
