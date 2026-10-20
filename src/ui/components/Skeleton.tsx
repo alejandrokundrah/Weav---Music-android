@@ -88,14 +88,13 @@ export function TrackListSkeleton({
 /**
  * One `AlbumCard`'s worth of nothing.
  *
- * `flex w-full flex-col gap-2 p-2` and the artwork's `rounded-none` are `AlbumCard`'s own
- * classes, copied rather than approximated — the card's corners are square, not the rounded
- * guess a generic "image placeholder" would reach for.
+ * `flex w-full flex-col gap-2 p-2` and the artwork's `rounded-xl` are `AlbumCard`'s own
+ * classes, copied rather than approximated.
  */
 export function AlbumCardSkeleton({ delayMs = 0 }: { delayMs?: number }) {
   return (
     <div className="flex w-full flex-col gap-2 p-2">
-      <SkeletonBlock className="aspect-square w-full rounded-none" delayMs={delayMs} />
+      <SkeletonBlock className="aspect-square w-full rounded-xl" delayMs={delayMs} />
       <SkeletonBlock className="h-3.5 w-[78%]" delayMs={delayMs} />
       <SkeletonBlock className="h-3 w-[48%]" delayMs={delayMs} />
     </div>
@@ -124,16 +123,15 @@ export function AlbumGridSkeleton({
 }
 
 /**
- * One `PickCard`'s worth of nothing — a slot for `CylinderCarousel` itself, not a replacement
- * for it.
- *
- * The carousel measures its own container and fits its curve, taper and item count to it (see
- * its `ResizeObserver`); a hand-built row of skeleton cards next to it would need to duplicate
- * all three and would still drift the moment either changed. Handing it these as `children`
- * instead means the loading state is exactly as responsive as the real one, because it *is* the
- * real one — only what fills each slot differs. `h-full` and `rounded-2xl` match the space the
- * carousel gives every child and `PickCard`'s own outer corner.
+ * One `PickCard`'s worth of nothing: `w-40` and the `p-2` square-plus-two-lines stack are the
+ * card's own, so the shelf does not shift when the real picks arrive.
  */
-export function PickCardSkeleton() {
-  return <SkeletonBlock className="h-full w-full rounded-2xl" />;
+export function PickCardSkeleton({ delayMs = 0 }: { delayMs?: number }) {
+  return (
+    <div className="flex w-40 shrink-0 flex-col gap-2 p-2" aria-hidden="true">
+      <SkeletonBlock className="aspect-square w-full rounded-xl" delayMs={delayMs} />
+      <SkeletonBlock className="h-3.5 w-[74%]" delayMs={delayMs} />
+      <SkeletonBlock className="h-3 w-[46%]" delayMs={delayMs} />
+    </div>
+  );
 }

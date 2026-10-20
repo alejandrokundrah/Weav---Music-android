@@ -251,7 +251,7 @@ export function MediaHeader({
             {/* Long titles otherwise push the actions off the row entirely. */}
             <h1
               className={cn(
-                "line-clamp-2 font-display font-semibold leading-none tracking-[0.005em] text-white",
+                "line-clamp-2 font-display font-semibold leading-[1.12] tracking-[0.005em] text-white",
                 isBanner ? "text-5xl" : "text-6xl",
               )}
             >
