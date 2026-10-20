@@ -27,7 +27,6 @@ interface HomeHeroProps {
   onSurprise: () => void;
   onSignIn: () => void;
   /** Opens the swipe-to-discover feed; hidden when the build has none. */
-  onOpenSamples?: () => void;
 }
 
 /**
@@ -36,7 +35,7 @@ interface HomeHeroProps {
  * It is built around one real recommendation: that song's cover, blown up and blurred, tints the
  * whole banner, and the sharp cover sits on the right. A greeting would otherwise be a heading
  * over an empty strip; this way the first thing on the page is something to play. The actions
- * are the three ways in — play it, let the app choose, or swipe through the Samples feed.
+ * are the three ways in — play it, let the app choose, or sign in.
  */
 export function HomeHero({
   name,
@@ -48,7 +47,6 @@ export function HomeHero({
   onPlayPick,
   onSurprise,
   onSignIn,
-  onOpenSamples,
 }: HomeHeroProps) {
   const greeting = isSignedOut ? "Welcome to WEAV" : `${greetingFor(new Date())}${name ? `, ${name}` : ""}`;
 
@@ -118,11 +116,6 @@ export function HomeHero({
               />
               Surprise me
             </button>
-            {onOpenSamples ? (
-              <button type="button" onClick={onOpenSamples} className={HERO_PILL}>
-                Samples
-              </button>
-            ) : null}
             {isSignedOut ? (
               <button
                 type="button"

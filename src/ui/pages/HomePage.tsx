@@ -56,7 +56,6 @@ export interface HomeDestinationHandlers {
   onOpenBrowse: () => void;
   onOpenHistory: () => void;
   onOpenDownloads: () => void;
-  onOpenSamples?: () => void;
 }
 
 /*
@@ -457,7 +456,6 @@ export function HomePage({
         onPlayPick={() => heroPick && playTrack(heroPick, suggestions)}
         onSurprise={playSurprise}
         onSignIn={() => void onSignIn()}
-        onOpenSamples={destinations.onOpenSamples}
       />
 
       {showMadeForYou && madeForYouSection}
