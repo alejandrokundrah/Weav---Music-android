@@ -2734,7 +2734,7 @@ fn poll_for_sign_in(
 #[tauri::command]
 async fn refresh_youtube_music_cookie(
     app: tauri::AppHandle,
-    _jar: tauri::State<'_, YoutubeCookieJar>,
+    jar: tauri::State<'_, YoutubeCookieJar>,
     account_lock: tauri::State<'_, AccountStoreLock>,
 ) -> Result<Option<String>, CommandError> {
     eprintln!("[internal][tauri][info] refresh_youtube_music_cookie start");
@@ -2753,7 +2753,7 @@ async fn refresh_youtube_music_cookie(
     // caller treats None as "sign in again", which is the honest answer there.
     #[cfg(target_os = "android")]
     {
-        let _ = &active_slot_id;
+        let _ = (&active_slot_id, &jar);
         return Ok(None);
     }
 
