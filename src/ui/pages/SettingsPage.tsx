@@ -1052,13 +1052,6 @@ export function SettingsPage({
           <div className="w-72 max-w-full @max-4xl/settings:w-full">
             <SettingsSearch query={settingsQuery} onQueryChange={setSettingsQuery} />
           </div>
-          <div className="contents max-md:hidden">
-            <ExternalLinkButton
-              icon={<BugIcon size={16} aria-hidden="true" />}
-              label="Report an issue"
-              url={GITHUB_NEW_ISSUE_URL}
-            />
-          </div>
         </div>
       </header>
       )}
