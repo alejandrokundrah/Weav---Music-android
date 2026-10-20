@@ -1,7 +1,7 @@
 import { cn } from "@/lib/utils";
 import { Tooltip } from "@/components/motion/tooltip";
 import { SpinnerSteps } from "@/components/motion/loader";
-import { CheckActiveIcon, DownloadIcon } from "@/ui/icons";
+import { CheckActiveIcon, DesktopDownloadIcon, DownloadIcon } from "@/ui/icons";
 import { usePlayerSelector } from "../../../player/playerStore";
 import {
   cancelDownload,
@@ -21,8 +21,10 @@ const RING_CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS;
  * and gave them no way to act on it. One control, bound to the now-playing track, that both
  * reports and does something — the same download / cancel / remove contract as the track
  * context menu, so the two can never disagree about what a click means.
+ *
+ * `desktop` picks the desktop player bar's glyph; the phone bar keeps the Solar one.
  */
-export function DownloadButton() {
+export function DownloadButton({ desktop = false }: { desktop?: boolean }) {
   const track = usePlayerSelector((state) => state.currentTrack);
   const offline = useOfflineState();
 
@@ -34,6 +36,7 @@ export function DownloadButton() {
   const queuePosition = offline.queued.indexOf(track.id);
   const isQueued = queuePosition >= 0;
   const progress = isDownloading ? offline.progress : null;
+  const Glyph = desktop ? DesktopDownloadIcon : DownloadIcon;
 
   const label = isReady
     ? "Remove download"
@@ -76,7 +79,7 @@ export function DownloadButton() {
              determinate ring would have to invent a number, so it spins instead. */
           <SpinnerSteps size={17} />
         ) : (
-          <DownloadIcon
+          <Glyph
             size={19}
             aria-hidden="true"
             className={cn(isQueued && "opacity-60")}

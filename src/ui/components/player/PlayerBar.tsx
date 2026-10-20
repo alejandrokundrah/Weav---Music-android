@@ -270,7 +270,7 @@ export function PlayerBar({ onToggleLyrics, onToggleQueue, isQueueOpen, onConnec
               </button>
             </div>
 
-            <DownloadButton />
+            <DownloadButton desktop />
             <PlaybackOptions />
             <VolumeControl />
           </div>
