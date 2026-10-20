@@ -5564,6 +5564,11 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init());
 
+    #[cfg(any(target_os = "android", target_os = "ios"))]
+    {
+        builder = builder.plugin(tauri_plugin_media_session::init());
+    }
+
     #[cfg(not(target_os = "android"))]
     {
         builder = builder
