@@ -4,8 +4,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { cn } from "@/lib/utils";
 import { Tooltip } from "@/components/motion/tooltip";
-import { DiscordIcon, GitHubIcon, LastFmIcon, LoginIcon, SettingsIcon, YouTubeMusicIcon } from "@/ui/icons";
-import { GITHUB_REPOSITORY_URL } from "../links";
+import { DiscordIcon, LastFmIcon, LoginIcon, SettingsIcon, YouTubeMusicIcon } from "@/ui/icons";
 import { DiscordRpcService } from "../../player/DiscordRPC";
 import { useDiscordPresenceEnabled } from "../settings/discord";
 import { setLastFmScrobblingEnabled, useLastFmScrobblingEnabled } from "../settings/lastfm";
@@ -111,7 +110,6 @@ export function TitleBar({
   const discordVisible = useToolbarItemVisible("discord");
   const lastFmVisible = useToolbarItemVisible("lastfm");
   const ytMusicVisible = useToolbarItemVisible("ytmusic");
-  const githubVisible = useToolbarItemVisible("github");
   const homePointerRef = useRef<{
     pointerId: number;
     startX: number;
@@ -349,18 +347,6 @@ export function TitleBar({
         </Tooltip>
         )}
 
-        {githubVisible && (
-        <Tooltip side="bottom" content="Source on GitHub">
-          <Button
-            variant='ghost'
-          size='icon'
-            onClick={() => void openUrl(GITHUB_REPOSITORY_URL)}
-            aria-label="Open the project on GitHub"
-          >
-            <GitHubIcon size={16} aria-hidden="true"  />
-          </Button>
-        </Tooltip>
-        )}
         <Tooltip side="bottom" content="Settings">
         <Button
             variant='ghost'
