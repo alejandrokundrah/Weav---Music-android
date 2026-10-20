@@ -246,7 +246,7 @@ const SETTING_LABEL =
   "flex flex-col gap-0.5 text-sm text-muted-foreground [&>strong]:text-sm [&>strong]:font-medium [&>strong]:text-foreground";
 
 /** Section card. One shape for every group so the page reads as a single system. */
-const SETTINGS_CARD = "flex flex-col gap-5 rounded-2xl bg-card/50 p-6 [[data-mobile]_&]:p-4 max-md:rounded-3xl max-md:bg-[#1b1b1b]";
+const SETTINGS_CARD = "flex flex-col gap-5 rounded-3xl bg-white/[0.04] p-6 ring-1 ring-inset ring-white/10 [[data-mobile]_&]:p-4 max-md:bg-[#1b1b1b] max-md:ring-0";
 
 /** A card that only means something on a desktop window (tray, mini player, Rust EQ, ...). */
 const DESKTOP_ONLY_CARD = cn(SETTINGS_CARD, "[[data-mobile]_&]:hidden");
@@ -539,12 +539,12 @@ function SettingsCardHeader({
   return (
     <div className="flex items-center justify-between gap-3">
       {icon ? (
-        <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-primary/15 text-primary">
+        <span className="grid size-10 shrink-0 place-items-center rounded-2xl bg-primary/15 text-primary ring-1 ring-inset ring-primary/25 max-md:size-9 max-md:rounded-lg max-md:ring-0">
           {icon}
         </span>
       ) : null}
       <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-        <h2 id={titleId} className="text-lg font-semibold text-foreground max-md:text-xl max-md:font-medium max-md:tracking-normal">
+        <h2 id={titleId} className="font-lexend text-xl font-light tracking-wide text-foreground max-md:font-medium max-md:tracking-normal">
           {title}
         </h2>
         <p className="text-sm text-muted-foreground max-md:text-xs max-md:font-extralight max-md:text-[#929292]">{description}</p>
@@ -1034,9 +1034,10 @@ export function SettingsPage({
           </h1>
         </header>
       ) : (
-      <header className="flex flex-wrap items-start justify-between gap-x-6 gap-y-3 @max-4xl/settings:flex-col @max-4xl/settings:items-stretch">
-        <div className="flex flex-col gap-1.5">
-          <h1 className="max-md:text-[26px] max-md:font-semibold max-md:leading-8 max-md:tracking-normal">Settings</h1>
+      <header className="relative isolate flex flex-wrap items-end justify-between gap-x-6 gap-y-4 overflow-hidden rounded-3xl bg-black/20 p-8 ring-1 ring-inset ring-white/10 @max-4xl/settings:flex-col @max-4xl/settings:items-stretch max-md:overflow-visible max-md:rounded-none max-md:bg-transparent max-md:p-0 max-md:ring-0">
+        <div className="pointer-events-none absolute inset-0 -z-10 bg-gradient-to-br from-primary/25 via-primary/5 to-transparent max-md:hidden" aria-hidden="true" />
+        <div className="flex flex-col gap-2">
+          <h1 className="font-lexend text-4xl font-light tracking-wide max-md:text-[26px] max-md:font-semibold max-md:leading-8 max-md:tracking-normal">Settings</h1>
           <p className="text-sm text-muted-foreground max-md:hidden">
             Manage your account, library, appearance, and window behaviour.
           </p>
@@ -1047,7 +1048,7 @@ export function SettingsPage({
           part of the description above and were routinely missed. They stay unfilled so they
           still sit below the category nav in the hierarchy.
         */}
-        <div className="flex flex-wrap items-center justify-end gap-2 @max-4xl/settings:justify-start max-md:[&_a]:bg-[#1b1b1b] max-md:[&_button]:bg-[#1b1b1b]">
+        <div className="flex flex-wrap items-center justify-end gap-2 @max-4xl/settings:justify-start max-md:[&_a]:bg-[#1b1b1b] max-md:[&_button]:bg-[#1b1b1b] [&_button]:bg-black/25 [&_button]:ring-1 [&_button]:ring-inset [&_button]:ring-white/20 [&_button]:backdrop-blur-sm [&_button:hover]:bg-black/40">
           <div className="w-72 max-w-full @max-4xl/settings:w-full">
             <SettingsSearch query={settingsQuery} onQueryChange={setSettingsQuery} />
           </div>
@@ -1116,7 +1117,7 @@ export function SettingsPage({
           </div>
         )}
         <nav
-          className="max-md:hidden sticky top-0 flex w-56 shrink-0 flex-col gap-0.5 @max-4xl/settings:relative @max-4xl/settings:w-full @max-4xl/settings:flex-row @max-4xl/settings:overflow-x-auto @max-4xl/settings:rounded-xl @max-4xl/settings:bg-card/50 @max-4xl/settings:p-1 max-md:items-baseline max-md:gap-6 max-md:rounded-none max-md:bg-transparent max-md:p-0 max-md:[scrollbar-width:none] max-md:[&::-webkit-scrollbar]:hidden"
+          className="max-md:hidden sticky top-0 flex w-60 shrink-0 flex-col gap-1 rounded-3xl bg-black/20 p-2 ring-1 ring-inset ring-white/10 @max-4xl/settings:relative @max-4xl/settings:w-full @max-4xl/settings:flex-row @max-4xl/settings:overflow-x-auto @max-4xl/settings:p-1.5 max-md:items-baseline max-md:gap-6 max-md:rounded-none max-md:bg-transparent max-md:p-0 max-md:[scrollbar-width:none] max-md:[&::-webkit-scrollbar]:hidden"
           role="tablist"
           aria-label="Settings categories"
         >
@@ -1131,22 +1132,22 @@ export function SettingsPage({
                 aria-selected={isActive}
                 onClick={() => setActiveTab(tab.id)}
                 className={cn(
-                  "group/tab relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-colors @max-4xl/settings:shrink-0 @max-4xl/settings:px-2.5 @max-4xl/settings:py-2 max-md:rounded-none max-md:px-0 max-md:py-1 max-md:hover:bg-transparent",
+                  "group/tab relative flex items-center gap-3 rounded-2xl px-3 py-2.5 text-left transition-colors @max-4xl/settings:shrink-0 @max-4xl/settings:px-2.5 @max-4xl/settings:py-2 max-md:rounded-none max-md:px-0 max-md:py-1 max-md:hover:bg-transparent",
                   "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
-                  isActive ? "text-foreground max-md:text-xl max-md:font-semibold max-md:text-[#e7e7e7]" : "text-muted-foreground hover:bg-card/60 hover:text-foreground max-md:text-base max-md:font-extralight max-md:text-[#929292]",
+                  isActive ? "text-foreground max-md:text-xl max-md:font-semibold max-md:text-[#e7e7e7]" : "text-muted-foreground hover:bg-white/[0.06] hover:text-foreground max-md:text-base max-md:font-extralight max-md:text-[#929292]",
                 )}
               >
                 {isActive && (
                   <motion.span
                     layoutId="settings-tab-active"
                     transition={{ type: "spring", stiffness: 520, damping: 42 }}
-                    className="absolute inset-0 -z-10 rounded-xl bg-card max-md:hidden"
+                    className="absolute inset-0 -z-10 rounded-2xl bg-white/[0.09] ring-1 ring-inset ring-white/15 max-md:hidden"
                   />
                 )}
                 <span
                   className={cn(
-                    "grid size-8 shrink-0 place-items-center rounded-lg transition-colors max-md:hidden",
-                    isActive ? "bg-primary/15 text-primary" : "bg-card/70 text-muted-foreground",
+                    "grid size-8 shrink-0 place-items-center rounded-xl transition-colors max-md:hidden",
+                    isActive ? "bg-primary/20 text-primary" : "bg-white/[0.06] text-muted-foreground",
                   )}
                 >
                   <Icon size={17} aria-hidden="true" />

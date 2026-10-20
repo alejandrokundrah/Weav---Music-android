@@ -15,7 +15,7 @@ export function SettingsSearch({
   const active = query.trim().length > 0;
 
   return (
-    <label className="flex h-10 min-w-0 items-center gap-2 rounded-xl border border-border bg-card/70 px-3 text-muted-foreground transition-colors focus-within:border-ring focus-within:ring-2 focus-within:ring-ring/20">
+    <label className="flex h-10 min-w-0 items-center gap-2 rounded-full bg-black/25 px-4 ring-1 ring-inset ring-white/20 backdrop-blur-sm text-muted-foreground transition-colors focus-within:ring-2 focus-within:ring-primary/60 max-md:bg-[#1b1b1b] max-md:ring-0">
       <SearchIcon size={18} aria-hidden="true" />
       <input
         type="search"
@@ -43,13 +43,13 @@ export function SettingsSearchResults({
   const results = useMemo(() => searchSettings(query), [query]);
 
   return (
-    <section className="flex flex-col gap-1 rounded-xl border border-border bg-card/50 p-1.5" aria-label="Setting search results">
+    <section className="flex flex-col gap-1 rounded-3xl bg-white/[0.04] p-2 ring-1 ring-inset ring-white/10" aria-label="Setting search results">
       {results.length > 0 ? results.map((result) => (
         <button
           key={`${result.tab}-${result.title}`}
           type="button"
           onClick={() => onSelect(result.tab)}
-          className="flex flex-col gap-0.5 rounded-lg px-3 py-2 text-left transition-colors hover:bg-card focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+          className="flex flex-col gap-0.5 rounded-2xl px-3 py-2 text-left transition-colors hover:bg-white/[0.08] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
         >
           <span className="flex items-baseline justify-between gap-3">
             <strong className="text-sm font-medium text-foreground">{result.title}</strong>
