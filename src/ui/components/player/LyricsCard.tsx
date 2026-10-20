@@ -12,7 +12,7 @@ const VISIBLE_LINES = 9;
 const SAMPLE_MS = 300;
 
 /**
- * The mint card at the foot of the queue rail: the song's lyrics as a small, glanceable window.
+ * The lime card at the foot of the queue rail: the song's lyrics as a small, glanceable window.
  *
  * A read-only echo of the full lyrics page — same lookup (`playerController.getLyrics`, which
  * the page also goes through, so the result is shared rather than fetched twice), same line
