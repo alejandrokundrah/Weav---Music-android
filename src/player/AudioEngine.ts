@@ -222,6 +222,30 @@ function loadYouTubeIframeApi(): Promise<void> {
   return iframeApiPromise;
 }
 
+/*
+ * One `<audio>` element for the whole process, reused for every track.
+ *
+ * A fresh `new Audio()` per track has to win the webview's autoplay policy on its own, and on
+ * Android it does not: the first track plays because the person tapped something, then the
+ * next one, created by the end of the last with no gesture in sight, loads and sits there
+ * silent until they press pause and play. An element that has already been played by a gesture
+ * stays allowed to play, so keeping the same one and only swapping its source is what lets a
+ * queue run on its own.
+ */
+let sharedAudio: HTMLAudioElement | null = null;
+let sharedAudioOwner: AudioEngine | null = null;
+
+function acquireSharedAudio(owner: AudioEngine): HTMLAudioElement {
+  // Another engine (a different tab) may still hold it; it lets go before this one takes over,
+  // so its `ended` listener cannot fire for a track that is not its own.
+  if (sharedAudioOwner && sharedAudioOwner !== owner) {
+    (sharedAudioOwner as unknown as { releaseNativeAudio(): void }).releaseNativeAudio();
+  }
+  sharedAudio ??= new Audio();
+  sharedAudioOwner = owner;
+  return sharedAudio;
+}
+
 export class AudioEngine {
   /*
    * A getter, not a field captured in the constructor: engines are built once per tab and live
@@ -290,6 +314,7 @@ export class AudioEngine {
   private fadeIntervalId: number | null = null;
   private muted = false;
   private playbackRate = 1;
+  private nativeAudioListeners: { handleEnded: () => void; handleError: () => void } | null = null;
   private onEnded: (() => void) | null = null;
   private endedAt: { positionSec: number; durationSec: number } | null = null;
   private loadRequestId = 0;
@@ -1066,17 +1091,20 @@ export class AudioEngine {
     const objectUrl = sourceUrl ?? URL.createObjectURL(new Blob([bytes ?? new Uint8Array()], {
       type: detectedMimeType,
     }));
-    const audio = new Audio();
+    const audio = acquireSharedAudio(this);
     audio.preload = "auto";
     audio.src = objectUrl;
-    audio.addEventListener("ended", () => this.emitEnded());
-    audio.addEventListener("error", () => {
+    const handleEnded = () => this.emitEnded();
+    const handleError = () => {
       logInternalError(
         "AudioEngine native audio error",
         new Error(`Native audio failed with media error ${audio.error?.code ?? "unknown"}.`),
         { videoId },
       );
-    });
+    };
+    audio.addEventListener("ended", handleEnded);
+    audio.addEventListener("error", handleError);
+    this.nativeAudioListeners = { handleEnded, handleError };
     this.audio = audio;
     this.audioObjectUrl = sourceUrl ? null : objectUrl;
     this.currentVideoId = videoId;
@@ -1166,10 +1194,17 @@ export class AudioEngine {
 
   private releaseNativeAudio(): void {
     if (this.audio) {
+      if (this.nativeAudioListeners) {
+        this.audio.removeEventListener("ended", this.nativeAudioListeners.handleEnded);
+        this.audio.removeEventListener("error", this.nativeAudioListeners.handleError);
+        this.nativeAudioListeners = null;
+      }
       this.audio.pause();
       this.audio.removeAttribute("src");
       this.audio.load();
+      // The element itself is kept (see `acquireSharedAudio`); only this engine lets go of it.
       this.audio = null;
+      if (sharedAudioOwner === this) sharedAudioOwner = null;
     }
     if (this.audioObjectUrl) {
       URL.revokeObjectURL(this.audioObjectUrl);
