@@ -2,8 +2,8 @@ import { memo } from "react";
 import { cn } from "@/lib/utils";
 
 /**
- * The scenery behind the glass window: a dusk valley — teal sky, layered ridgelines, a lake,
- * dark foreground foliage. Original illustration, drawn as one static SVG so it costs nothing
+ * The scenery behind the glass window: a dusk valley — sage sky, layered ridgelines, a lake,
+ * dark foreground foliage — in the logo's palette: WEAV lime on charcoal. Original illustration, drawn as one static SVG so it costs nothing
  * to ship and nothing to repaint.
  *
  * `blurred` renders the same picture softened, for the *inside* of the shell. That is the whole
@@ -30,29 +30,29 @@ export const SceneBackdrop = memo(function SceneBackdrop({
       >
         <defs>
           <linearGradient id="sc-sky" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0" stopColor="#7fb3b4" />
-            <stop offset="0.45" stopColor="#4f8c93" />
-            <stop offset="1" stopColor="#2b5f6b" />
+            <stop offset="0" stopColor="#6c7860" />
+            <stop offset="0.45" stopColor="#454c3f" />
+            <stop offset="1" stopColor="#2a2d26" />
           </linearGradient>
           <linearGradient id="sc-ridge-far" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0" stopColor="#5f8fa3" />
-            <stop offset="1" stopColor="#3b6a7f" />
+            <stop offset="0" stopColor="#7b8576" />
+            <stop offset="1" stopColor="#565d51" />
           </linearGradient>
           <linearGradient id="sc-ridge-mid" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0" stopColor="#2f6b6f" />
-            <stop offset="1" stopColor="#1f4d58" />
+            <stop offset="0" stopColor="#474c44" />
+            <stop offset="1" stopColor="#2f332d" />
           </linearGradient>
           <linearGradient id="sc-hill" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0" stopColor="#3f9a4e" />
-            <stop offset="1" stopColor="#1f6a3d" />
+            <stop offset="0" stopColor="#92D906" />
+            <stop offset="1" stopColor="#46474C" />
           </linearGradient>
           <linearGradient id="sc-lake" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0" stopColor="#3f7f8a" />
-            <stop offset="1" stopColor="#173f4a" />
+            <stop offset="0" stopColor="#5a6a55" />
+            <stop offset="1" stopColor="#23261f" />
           </linearGradient>
           <radialGradient id="sc-glow" cx="0.5" cy="0.15" r="0.6">
-            <stop offset="0" stopColor="#e4f4e6" stopOpacity="0.55" />
-            <stop offset="1" stopColor="#e4f4e6" stopOpacity="0" />
+            <stop offset="0" stopColor="#f1f8d4" stopOpacity="0.28" />
+            <stop offset="1" stopColor="#f1f8d4" stopOpacity="0" />
           </radialGradient>
         </defs>
 
@@ -60,7 +60,7 @@ export const SceneBackdrop = memo(function SceneBackdrop({
         <rect width="1600" height="700" fill="url(#sc-glow)" />
 
         {/* Cloud banks */}
-        <g fill="#e9f3ee" opacity="0.5">
+        <g fill="#eef2e0" opacity="0.3">
           <ellipse cx="260" cy="150" rx="260" ry="46" />
           <ellipse cx="470" cy="190" rx="190" ry="34" />
           <ellipse cx="1180" cy="120" rx="300" ry="42" />
@@ -90,7 +90,7 @@ export const SceneBackdrop = memo(function SceneBackdrop({
           d="M420 760 C 560 700 760 690 960 705 C 1180 722 1400 700 1600 730 L1600 1000 L380 1000 Z"
           fill="url(#sc-lake)"
         />
-        <g stroke="#a9d6d2" strokeOpacity="0.28" strokeWidth="2" strokeLinecap="round">
+        <g stroke="#cfe39a" strokeOpacity="0.28" strokeWidth="2" strokeLinecap="round">
           <path d="M700 790 h140" />
           <path d="M920 830 h200" />
           <path d="M1180 780 h120" />
@@ -99,16 +99,16 @@ export const SceneBackdrop = memo(function SceneBackdrop({
         {/* Right bank */}
         <path
           d="M1180 700 C 1300 660 1460 650 1600 690 L1600 1000 L1130 1000 C 1150 880 1150 780 1180 700 Z"
-          fill="#1e5a45"
+          fill="#2e3b17"
         />
         {/* Foreground foliage */}
-        <g fill="#0d2a2e">
+        <g fill="#15170f">
           <path d="M0 1000 L0 780 C 60 800 90 850 150 860 C 130 910 160 960 120 1000 Z" />
           <path d="M60 1000 C 80 900 150 850 230 880 C 300 910 330 960 320 1000 Z" />
           <path d="M1600 1000 L1600 760 C 1540 790 1500 840 1440 850 C 1470 910 1440 960 1480 1000 Z" />
           <path d="M1380 1000 C 1390 920 1450 880 1520 900 C 1580 920 1600 960 1600 1000 Z" />
         </g>
-        <g fill="#14403f" opacity="0.9">
+        <g fill="#1f2417" opacity="0.9">
           <path d="M200 1000 C 220 940 280 920 340 950 C 380 970 400 990 410 1000 Z" />
           <path d="M1250 1000 C 1270 950 1330 930 1380 960 C 1410 975 1420 990 1425 1000 Z" />
         </g>

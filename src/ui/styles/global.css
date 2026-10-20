@@ -232,33 +232,33 @@ textarea:focus-visible {
  * window with its own palettes — never receives translucent surfaces it has nothing to sit on.
  * The tokens keep their names, so every component follows without knowing the skin exists:
  * `bg-background` is now the frosted fill of the whole window shell, `bg-card` a light veil
- * that lifts hovered rows and chips, and `primary` the mint accent from the Soundbeats design.
+ * that lifts hovered rows and chips, and `primary` the WEAV lime from the logo, over charcoal surfaces.
  *
  * Specificity (0,1,1) beats `:root` and the @theme block, and sits *before* the Potato PC
  * block below, which must win — an opaque palette is the entire point of that mode.
  */
 @media (min-width: 768px) {
   html[data-glass] {
-    --color-background: oklch(0.24 0.04 212 / 0.42);
-    --color-foreground: oklch(0.985 0.004 200);
+    --color-background: oklch(0.22 0.006 280 / 0.5);
+    --color-foreground: oklch(0.985 0 0);
 
     --color-card: oklch(1 0 0 / 0.08);
-    --color-card-foreground: oklch(0.985 0.004 200);
-    --color-popover: oklch(0.27 0.04 212 / 0.96);
-    --color-popover-foreground: oklch(0.985 0.004 200);
+    --color-card-foreground: oklch(0.985 0 0);
+    --color-popover: oklch(0.25 0.008 280 / 0.97);
+    --color-popover-foreground: oklch(0.985 0 0);
 
     --color-muted: oklch(1 0 0 / 0.14);
-    --color-muted-foreground: oklch(0.95 0.01 200 / 0.62);
+    --color-muted-foreground: oklch(0.96 0.004 280 / 0.64);
 
-    --color-primary: #6fd98f;
-    --color-primary-foreground: #05220f;
+    --color-primary: #92D906;
+    --color-primary-foreground: #0e1a00;
 
     --color-secondary: oklch(1 0 0 / 0.12);
-    --color-secondary-foreground: oklch(0.985 0.004 200);
+    --color-secondary-foreground: oklch(0.985 0 0);
 
     --color-border: oklch(1 0 0 / 11%);
     --color-input: oklch(1 0 0 / 16%);
-    --color-ring: #6fd98f;
+    --color-ring: #92D906;
 
     --window-edge: oklch(1 0 0 / 10%);
     --window-edge-highlight: oklch(1 0 0 / 30%);
@@ -266,9 +266,9 @@ textarea:focus-visible {
     /* Seek bar: a white fill with a resting thumb, as in the design (the phone keeps its accent). */
     --seek-fill: var(--color-foreground);
     --seek-thumb: 1;
-    /* The lyrics card — a flat mint panel, deliberately not a token anything else borrows. */
-    --glass-lyrics: oklch(0.76 0.075 168);
-    --glass-lyrics-ink: oklch(0.2 0.03 180);
+    /* The lyrics card — a flat lime panel, deliberately not a token anything else borrows. */
+    --glass-lyrics: #92D906;
+    --glass-lyrics-ink: #0e1a00;
   }
 }
 
@@ -281,7 +281,7 @@ textarea:focus-visible {
  */
 .glass-shell {
   background:
-    linear-gradient(155deg, oklch(1 0 0 / 0.17) 0%, oklch(1 0 0 / 0.05) 38%, oklch(0.18 0.04 215 / 0.2) 100%),
+    linear-gradient(155deg, oklch(1 0 0 / 0.17) 0%, oklch(1 0 0 / 0.05) 38%, oklch(0.15 0.008 280 / 0.25) 100%),
     var(--color-background);
   box-shadow:
     inset 0 1px 0 oklch(1 0 0 / 0.3),
