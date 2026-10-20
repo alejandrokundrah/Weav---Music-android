@@ -53,6 +53,7 @@ import { useNativeWindowControls } from "./settings/windowControls";
 /** Wide enough for a 44px cover plus breathing room, matching the sidebar rail's feel. */
 const COLLAPSED_QUEUE_WIDTH = 62;
 import { Layout } from "./components/Layout";
+import { SceneBackdrop } from "./components/SceneBackdrop";
 import type { Tab, TabViewState } from "./types/tab";
 import {
   libraryController,
@@ -1979,6 +1980,20 @@ useEffect(() => {
   return () => { cleanup.then(fn => fn()); };
 }, []);
 
+  // Its own boundary: the player bar is the one region whose loss ends the session —
+  // audio keeps playing but nothing can pause or skip it.
+  const playerBarNode = (
+    <ErrorBoundary label="Playback controls">
+      <PlayerBar
+        onToggleLyrics={handleToggleLyrics}
+        onToggleQueue={handleToggleQueue}
+        isQueueOpen={isQueuePanelOpen}
+        onConnectionRestored={handleConnectionRestored}
+        handlePlayerBarClick={handlePlayerBarClick}
+      />
+    </ErrorBoundary>
+  );
+
   return (
     <MotionConfig reducedMotion={reduceMotion ? "always" : "user"}>
     <ArtistNavigationProvider onNavigate={handleNavigateArtist}>
@@ -2002,6 +2017,35 @@ useEffect(() => {
         nativeWindowControls ? "" : "border border-border ring-1 ring-inset ring-[var(--window-edge)]"
       }`}
     >
+      {/*
+        The scenery the glass window floats over. Desktop only: a phone has no desktop to show
+        through, so it keeps its opaque, edge-to-edge layout.
+      */}
+      {!isPhone && <SceneBackdrop className="absolute inset-0" />}
+      {/*
+        The shell. Everything the app draws lives in this one rounded pane; the sidebar, page and
+        queue are columns of it, separated by hairlines rather than boxes. Edge to edge when the
+        lyrics go fullscreen, where the window is real OS fullscreen and a floating pane would
+        just leave a scenic border around the words.
+      */}
+      <div
+        className={cn(
+          "relative flex min-h-0 flex-1 flex-col",
+          !isPhone && "glass-shell overflow-hidden",
+          !isPhone && (playerUIState.isLyricsFullscreen ? "m-0 rounded-none" : "m-3.5 rounded-[28px]"),
+        )}
+      >
+      {!isPhone && (
+        // Same picture as the backdrop, softened — the "frost" without a live backdrop-filter.
+        // Offset by the shell's margin so the two line up; it is blurred, so exactness is moot.
+        <SceneBackdrop
+          blurred
+          className={cn(
+            "absolute",
+            playerUIState.isLyricsFullscreen ? "inset-0" : "-inset-3.5",
+          )}
+        />
+      )}
  {/*    {!paperPcMode && <StarField />}
     <span
       className="pointer-events-none absolute inset-x-0 top-0 z-50 h-px bg-linear-to-r from-transparent via-[var(--window-edge-highlight)] to-transparent"
@@ -2065,6 +2109,18 @@ useEffect(() => {
           rightPanelWidth={isQueuePanelCollapsed ? COLLAPSED_QUEUE_WIDTH : queuePanelWidth}
           onRightPanelWidthChange={isQueuePanelCollapsed ? undefined : setQueuePanelWidth}
           scrollKey={activeViewKey}
+          onOpenSearchFromSidebar={() => setIsSearchOpen(true)}
+          nav={{
+            activeView: activeTab?.view,
+            activeBrowseTab: activeTab?.browseTab,
+            onHome: handleNavigateHome,
+            onBrowse: () => handleOpenBrowse(),
+            onLibrary: handleOpenLibrary,
+            onHistory: handleOpenHistory,
+            onDownloads: () => handleOpenBrowse("downloads"),
+            onSettings: handleOpenSettings,
+          }}
+          footer={isPhone || playerUIState.isLyricsFullscreen ? undefined : playerBarNode}
           /*
             Bound straight to `isQueuePanelOpen`, not a delayed mirror of it: `AnimatePresence`
             in Layout already keeps the last-rendered panel mounted for the whole exit
@@ -2074,7 +2130,7 @@ useEffect(() => {
             spring on top of it. Removing the mirror is what makes closing start immediately.
           */
           rightPanel={isQueuePanelOpen ? (
-            <QueuePanel onClose={() => setIsQueuePanelOpen(false)} />
+            <QueuePanel onClose={() => setIsQueuePanelOpen(false)} onOpenLyrics={handleToggleLyrics} />
           ) : undefined}
         >
 {/* <ExpandedPlayerBar 
@@ -2215,6 +2271,7 @@ useEffect(() => {
         different name than PlayerBar's own `group/playerbar` (used internally for its icon
         fade-in), so nesting them here doesn't make PlayerBar's hover styling fire early.
       */}
+      {(isPhone || playerUIState.isLyricsFullscreen) && (
       <div
         className={cn(
           "group/immersive-playerbar",
@@ -2239,19 +2296,10 @@ useEffect(() => {
               "translate-y-full transition-transform duration-300 ease-out group-hover/immersive-playerbar:translate-y-0 group-focus-within/immersive-playerbar:translate-y-0",
           )}
         >
-          {/* Its own boundary: the player bar is the one region whose loss ends the session —
-              audio keeps playing but nothing can pause or skip it. */}
-          <ErrorBoundary label="Playback controls">
-            <PlayerBar
-              onToggleLyrics={handleToggleLyrics}
-              onToggleQueue={handleToggleQueue}
-              isQueueOpen={isQueuePanelOpen}
-              onConnectionRestored={handleConnectionRestored}
-              handlePlayerBarClick={handlePlayerBarClick}
-            />
-          </ErrorBoundary>
+          {playerBarNode}
         </div>
       </div>
+      )}
       {isPhone && !playerUIState.isLyricsFullscreen && (
         <MobileNav
           activeView={activeTab?.view}
@@ -2264,6 +2312,7 @@ useEffect(() => {
       {isPhone && isExpandedPlayerBar && (
         <NowPlayingScreen onClose={() => setIsExpandedPlayerBar(false)} />
       )}
+      </div>
       <SearchOverlay
         isOpen={isSearchOpen && activeTab?.view !== "settings"}
         activeTabId={activeTabId}

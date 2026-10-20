@@ -222,12 +222,12 @@ export function PlayerBar({ onToggleLyrics, onToggleQueue, isQueueOpen, onConnec
         </div>
       ) : (
       <div
-        className="group/playerbar flex shrink-0 flex-col gap-1 bg-background px-4 pb-3 pt-2"
+        // A floating capsule, not a docked strip: it rounds, darkens and lifts off the page, and
+        // the page's own column gives it the margin — so the queue rail beside it runs the full
+        // height of the window instead of ending at the bar.
+        className="group/playerbar flex shrink-0 flex-col gap-2 rounded-[26px] bg-black/25 px-5 py-3.5 shadow-lg shadow-black/20 ring-1 ring-inset ring-white/10"
         onClick={handlePlayerBarClick}
       >
-        {/* Expanded: the seek bar spans the full bar above everything. */}
-        {!compactPlayerBar && <SeekBar />}
-
         <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-4">
           <div className="min-w-0">
             <TrackInfo />
@@ -275,6 +275,10 @@ export function PlayerBar({ onToggleLyrics, onToggleQueue, isQueueOpen, onConnec
             <VolumeControl />
           </div>
         </div>
+
+        {/* Expanded: the seek bar runs the full width of the capsule, under the transport —
+            the design's arrangement. Compact tucks it inside the centre column above. */}
+        {!compactPlayerBar && <SeekBar />}
       </div>
       )}
     </>

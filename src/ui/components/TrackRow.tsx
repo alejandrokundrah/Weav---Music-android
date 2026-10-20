@@ -426,8 +426,8 @@ export const TrackRow = memo(function TrackRow({
       onContextMenu={onContextMenu ? handleContextMenu : undefined}
       aria-current={isCurrent ? "true" : undefined}
       className={cn(
-        "group/row relative flex w-full items-center gap-3  px-2 py-1.5 text-left",
-        "transition-colors hover:bg-card focus-visible:outline-none focus-visible:ring-2",
+        "group/row relative flex w-full items-center gap-3 rounded-xl px-3 py-1.5 text-left",
+        "transition-colors hover:bg-white/[0.07] focus-visible:outline-none focus-visible:ring-2",
         "focus-visible:ring-inset focus-visible:ring-ring",
         /*
          * Off-screen rows skip layout, paint and compositing.
@@ -443,7 +443,7 @@ export const TrackRow = memo(function TrackRow({
          * `w-full` states it outright rather than deriving it from content.
          */
         "[content-visibility:auto] [contain-intrinsic-size:auto_52px]",
-        isCurrent && "bg-primary/5",
+        isCurrent && "bg-white/[0.06]",
         isSelected && "bg-primary/10",
         unavailableOffline && "opacity-40",
         className,
@@ -516,7 +516,7 @@ export const TrackRow = memo(function TrackRow({
 
       {showArtwork ? (
         <TrackArtwork
-          className="size-10 shrink-0 max-md:size-14 max-md:rounded-2xl"
+          className="size-10 shrink-0 rounded-lg max-md:size-14 max-md:rounded-2xl"
           size={40}
           artworkUrl={track.artworkUrl}
           iconSize={18}

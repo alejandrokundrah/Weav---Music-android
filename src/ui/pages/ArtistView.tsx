@@ -22,9 +22,8 @@ import type { PlayerControllerActions } from "../../player/playerStore";
 import { shuffleTracks } from "../../player/shuffleTracks";
 import { AlbumCard } from "../components/AlbumCard";
 import { ArtistLinks } from "../components/ArtistLinks";
-import { MediaHeader } from "../components/MediaHeader";
+import { HERO_PILL, MediaHeader } from "../components/MediaHeader";
 import { AlbumGridSkeleton, TrackListSkeleton } from "../components/Skeleton";
-import { TrackArtwork } from "../components/TrackArtwork";
 import { TrackRow } from "../components/TrackRow";
 import { useNowPlaying } from "../hooks/useNowPlaying";
 import { useCompactViewport } from "../hooks/useCompactViewport";
@@ -380,29 +379,9 @@ export function ArtistView({
         /* Supplied even though artworkSlot draws the image: MediaHeader publishes this to
            the ambient store, which is what tints the chrome above the page. */
         artworkUrl={displayedArtist.artworkUrl}
-        /*
-         * The same component every other cover in the app uses. Its own ladder ends by
-         * refetching the image through Tauri and painting the bytes, which is what rescues a
-         * url the webview refuses to load directly — the hand-rolled <img> here had no such
-         * step, and looped back to the first candidate forever once they had all failed.
-         *
-         * preferProxy: an artist portrait is a googleusercontent URL far more often than not,
-         * and those routinely refuse the webview's own referer. The direct ladder stays as a
-         * live fallback either way — this only starts the Rust proxy racing it immediately
-         * instead of waiting for the (likely) direct failures first, so switching away mid
-         * resolution no longer meant the avatar was still mid-walk whenever you came back.
-         */
-        artworkSlot={
-          <TrackArtwork
-            className="size-44 shrink-0 rounded-full bg-card shadow-2xl ring-1 ring-white/10"
-            size={176}
-            artworkUrl={displayedArtist.artworkUrl}
-            iconSize={72}
-            variant="artist"
-            loading="eager"
-            preferProxy
-          />
-        }
+        /* The banner draws the photo itself (MediaHeader → TrackArtwork with preferProxy: an artist
+           portrait is a googleusercontent URL far more often than not, and those routinely refuse
+           the webview's own referer, so the Rust proxy races the direct ladder from the start). */
         actionsDisabled={isLoading || Boolean(error) || !page?.allSongs.length}
         playback={{
           onToggle: togglePlayCollection,
@@ -418,7 +397,7 @@ export function ArtistView({
         actions={
           <div className="flex items-center gap-2">
             <button
-              className="flex items-center gap-2 rounded-full bg-card px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-muted disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              className={HERO_PILL}
               type="button"
               disabled={isLoading || Boolean(error) || isSubscribing}
               onClick={() => void toggleArtistSubscription()}
@@ -433,7 +412,7 @@ export function ArtistView({
               <span>
                 {isSubscribing
                   ? isSubscribed ? "Unsubscribing..." : "Subscribing..."
-                  : isSubscribed ? "Subscribed" : "Subscribe"}
+                  : isSubscribed ? "Following" : "Follow"}
               </span>
             </button>
 

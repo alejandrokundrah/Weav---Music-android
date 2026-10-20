@@ -35,6 +35,16 @@ export function formatCollectionMeta(
   return `${countLabel} · ${durationLabel}`;
 }
 
+/**
+ * Controls that sit on the hero image. The image can be anything, so these carry their own dark
+ * veil and a hairline instead of borrowing the page's `bg-card`, which is a faint white that
+ * disappears over a bright photo.
+ */
+export const HERO_PILL =
+  "flex items-center gap-2 rounded-full bg-black/25 px-5 py-2.5 text-sm font-medium text-white ring-1 ring-inset ring-white/35 backdrop-blur-sm transition-colors hover:bg-black/40 disabled:pointer-events-none disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white";
+export const HERO_ICON_BUTTON =
+  "flex size-11 items-center justify-center rounded-full bg-black/25 text-white ring-1 ring-inset ring-white/35 backdrop-blur-sm transition-colors hover:bg-black/40 disabled:pointer-events-none disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white";
+
 interface MediaHeaderProps {
   /** Small uppercase kicker: PLAYLIST, ALBUM, ARTIST. */
   eyebrow: string;
@@ -107,6 +117,19 @@ interface MediaHeaderProps {
   actions?: ReactNode;
 }
 
+/** The blue check beside "Artist" — the design's verified-artist mark, drawn inline. */
+function VerifiedMark() {
+  return (
+    <svg viewBox="0 0 24 24" className="size-4 shrink-0" aria-hidden="true">
+      <path
+        fill="#4fb3ff"
+        d="M12 1.8l2.4 1.7 2.9-.2 1.2 2.7 2.6 1.4-.3 2.9L22.4 12l-1.6 2.4.3 2.9-2.6 1.4-1.2 2.7-2.9-.2L12 22.9l-2.4-1.7-2.9.2-1.2-2.7-2.6-1.4.3-2.9L1.6 12l1.6-2.4-.3-2.9 2.6-1.4 1.2-2.7 2.9.2z"
+      />
+      <path fill="none" stroke="#fff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" d="M8 12.2l2.6 2.6L16 9.4" />
+    </svg>
+  );
+}
+
 /**
  * Shared hero for the playlist, album and artist pages.
  *
@@ -157,40 +180,89 @@ export function MediaHeader({
     return () => setAmbientArtwork(null);
   }, [artworkUrl]);
 
+  const isBanner = circularArtwork;
+
   return (
-    <header className="relative flex flex-wrap items-end gap-6 px-1 pb-6 pt-2">
-      {artworkSlot ?? (
-        <TrackArtwork
-          className={cn(
-            "size-44 shrink-0 shadow-2xl ring-1 ring-white/10",
-            circularArtwork ? "rounded-full" : "rounded-none",
-          )}
-          artworkUrl={artworkUrl}
-          iconSize={72}
-          loading="eager"
-          /*
-           * `size-44` is 176 CSS px. Without this the component skips size bucketing and keeps
-           * the original URL — and the stored `artworkUrl` is deliberately the *largest*
-           * candidate the source offered (see `selectArtworkUrl`), so this slot was decoding a
-           * full-size cover into a 176px box, eagerly, on every album, playlist and artist page.
-           */
-          size={176}
-          variant={artworkVariant}
-        />
-      )}
+    <header className="relative isolate overflow-hidden rounded-3xl bg-black/20">
+      {/*
+        The hero image. An artist's photo runs full-bleed as the banner itself; an album or
+        playlist cover is too square to stretch across the width, so it is blown up and blurred
+        into a colour wash behind the sharp cover instead. Both sit under the same two scrims,
+        which are what keep white text legible whatever the picture turns out to be.
+      */}
+      <div className="absolute inset-0 -z-10" aria-hidden="true">
+        {artworkUrl ? (
+          isBanner ? (
+            <TrackArtwork
+              className="size-full object-cover object-[50%_20%]"
+              artworkUrl={artworkUrl}
+              size={640}
+              iconSize={0}
+              loading="eager"
+              variant="artist"
+              preferProxy
+            />
+          ) : (
+            <div className="absolute inset-0 scale-125 opacity-80 blur-3xl saturate-150">
+              <TrackArtwork
+                className="size-full"
+                artworkUrl={artworkUrl}
+                size={120}
+                iconSize={0}
+                loading="eager"
+                variant={artworkVariant}
+              />
+            </div>
+          )
+        ) : null}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-black/5" />
+        <div className="absolute inset-0 bg-gradient-to-r from-black/50 via-black/10 to-transparent" />
+      </div>
 
-      <div className="flex min-w-0 flex-1 flex-col gap-2">
-        <span className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-          {eyebrow}
-        </span>
-        {/* Long album titles otherwise push the actions off the row entirely. */}
-        <h1 className="line-clamp-2 text-4xl font-bold tracking-[-0.03em] text-foreground">
-          {title}
-        </h1>
-        {subtitle ? <div className="text-sm text-foreground/80">{subtitle}</div> : null}
-        {meta ? <p className="text-xs text-muted-foreground">{meta}</p> : null}
+      <div
+        className={cn(
+          "relative flex flex-wrap items-end gap-x-6 gap-y-4 p-6",
+          // Artist banner: a short, wide strip like the Soundbeats hero — title, listener count and
+          // actions share one baseline instead of stacking into a tall card.
+          isBanner ? "min-h-[15.5rem] pt-24" : "pt-12",
+        )}
+      >
+        {!isBanner && (
+          artworkSlot ?? (
+            <TrackArtwork
+              className="size-40 shrink-0 rounded-2xl shadow-2xl shadow-black/40 ring-1 ring-white/15"
+              artworkUrl={artworkUrl}
+              iconSize={64}
+              loading="eager"
+              /* 160 CSS px — without it the full-size cover decodes into a 160px box. */
+              size={160}
+              variant={artworkVariant}
+            />
+          )
+        )}
 
-        <div className="mt-2 flex flex-wrap items-center gap-2">
+        <div className="flex min-w-0 flex-1 basis-72 flex-col gap-1">
+          <span className="flex items-center gap-1.5 font-lexend text-sm font-light text-white/90">
+            {isBanner && <VerifiedMark />}
+            {eyebrow}
+          </span>
+          {/* Banner: the listener count sits on the title's baseline. Elsewhere it stacks below. */}
+          <div className={cn(isBanner ? "flex flex-wrap items-baseline gap-x-3 gap-y-1" : "contents")}>
+            {/* Long titles otherwise push the actions off the row entirely. */}
+            <h1
+              className={cn(
+                "line-clamp-2 font-display font-semibold leading-none tracking-[0.005em] text-white",
+                isBanner ? "text-5xl" : "text-6xl",
+              )}
+            >
+              {title}
+            </h1>
+            {subtitle ? <div className="text-sm text-white/85">{subtitle}</div> : null}
+            {meta ? <p className="text-sm text-white/75">{meta}</p> : null}
+          </div>
+        </div>
+
+        <div className={cn("flex flex-wrap items-center gap-2", isBanner && "ml-auto")}>
           {playback ? (
             /*
              * Reflects this collection's own state, not the player's: it only becomes a
@@ -206,7 +278,7 @@ export function MediaHeader({
                 /* size-13 against the siblings' size-11: the primary action reads as primary
                    through size and fill, so it does not need a word as well. Fixed width also
                    drops the `min-w` that existed to stop Play/Pause/Loading jumping. */
-                className="flex size-13 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground transition-transform hover:scale-[1.03] active:scale-95 disabled:pointer-events-none disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                className="flex size-12 shrink-0 items-center justify-center rounded-full bg-white text-neutral-900 shadow-lg shadow-black/30 transition-transform hover:scale-[1.05] active:scale-95 disabled:pointer-events-none disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-black/40"
               >
                 {isLoading ? (
                   <SpinnerSteps size={22} color="currentColor" />
@@ -224,7 +296,7 @@ export function MediaHeader({
               type="button"
               disabled={actionsDisabled}
               onClick={onShuffle}
-              className="flex items-center gap-2 rounded-full bg-card px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-muted disabled:pointer-events-none disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              className={HERO_PILL}
             >
               <ShuffleActiveIcon size={18} aria-hidden="true" />
               Shuffle
@@ -240,12 +312,8 @@ export function MediaHeader({
                 aria-pressed={isLooping}
                 aria-label={loopMode === "repeat-one" ? "Loop current song" : loopMode === "repeat-all" ? "Loop queue" : "Play in loop"}
                 className={cn(
-                  "flex items-center gap-2 rounded-full px-4 py-2.5 text-sm font-medium transition-colors",
-                  "disabled:pointer-events-none disabled:opacity-50",
-                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                  isLooping
-                    ? "bg-primary/15 text-primary"
-                    : "bg-card text-foreground hover:bg-muted",
+                  HERO_PILL,
+                  isLooping && "bg-primary/25 text-primary ring-primary/60",
                 )}
               >
                 {loopMode === "repeat-one" ? (
@@ -265,7 +333,7 @@ export function MediaHeader({
                 disabled={actionsDisabled}
                 onClick={onAddToPlaylist}
                 aria-label="Add to playlist"
-                className="flex size-11 items-center justify-center rounded-full bg-card text-foreground transition-colors hover:bg-muted disabled:pointer-events-none disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                className={HERO_ICON_BUTTON}
               >
                 <PlaylistAddIcon size={18} aria-hidden="true" />
               </button>
@@ -279,7 +347,7 @@ export function MediaHeader({
                 disabled={actionsDisabled}
                 onClick={onAddToQueue}
                 aria-label="Add to queue"
-                className="flex size-11 items-center justify-center rounded-full bg-card text-foreground transition-colors hover:bg-muted disabled:pointer-events-none disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                className={HERO_ICON_BUTTON}
               >
                 <ListIcon size={18} aria-hidden="true" />
               </button>
@@ -316,7 +384,7 @@ export function MediaHeader({
                   onClick={download.onStart}
                   aria-busy={downloadBusy}
                   aria-label={allDownloaded ? "Already downloaded" : "Download for offline"}
-                  className="relative flex size-11 items-center justify-center rounded-full bg-card text-foreground transition-colors hover:bg-muted disabled:pointer-events-none disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  className={cn(HERO_ICON_BUTTON, "relative")}
                 >
                   {downloadBusy ? (
                     <SpinnerSteps size={18} color="currentColor" />
