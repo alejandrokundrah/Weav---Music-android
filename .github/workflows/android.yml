@@ -60,6 +60,16 @@ jobs:
       - name: Generate the Android project
         run: npx tauri android init --ci
 
+      - name: Apply the app launcher icons
+        # `tauri android init` leaves its own placeholder icon in the generated project, so the
+        # real ones in src-tauri/icons/android are copied over it explicitly.
+        run: |
+          res=src-tauri/gen/android/app/src/main/res
+          test -d src-tauri/icons/android || { echo "src-tauri/icons/android is missing"; exit 1; }
+          rm -f "$res"/mipmap-*/ic_launcher*.png "$res"/mipmap-anydpi-v26/ic_launcher*.xml
+          cp -r src-tauri/icons/android/. "$res/"
+          ls -R "$res" | grep -i launcher
+
       - name: Patch the Android manifest
         run: |
           app=src-tauri/gen/android/app/src/main
