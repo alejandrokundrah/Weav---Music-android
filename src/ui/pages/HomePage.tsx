@@ -1,6 +1,6 @@
 import { type MouseEvent, useEffect, useMemo, useRef, useState } from "react";
-import { CylinderCarousel } from "@/components/motion/cylinder-carousel";
 import { PlayActiveIcon } from "@/ui/icons";
+import { SquareAltArrowLeftIcon, SquareAltArrowRightIcon } from "@solar-icons/react/linear";
 import type { Album, Playlist, Track } from "../../datasource/types";
 import type { LibraryController, LibraryState } from "../../player/LibraryController";
 import type { PlayerControllerActions } from "../../player/playerStore";
@@ -10,7 +10,8 @@ import { DiceCard } from "../components/DiceCard";
 import { PickCard } from "../components/PickCard";
 import { TrackArtwork } from "../components/TrackArtwork";
 import { useTrackContextMenu } from "../components/TrackContextMenu";
-import { HomeDestinations, type HomeDestinationHandlers } from "../components/HomeDestinations";
+import { HomeHero } from "../components/HomeHero";
+import { HomeSection } from "../components/HomeSection";
 import { ArtistLinks } from "../components/ArtistLinks";
 import { usePlayHistory } from "../../player/playHistory";
 import {
@@ -25,6 +26,7 @@ import { TrackRow } from "../components/TrackRow";
 import { useNowPlaying } from "../hooks/useNowPlaying";
 import { useCompactViewport } from "../hooks/useCompactViewport";
 import { PhoneHome } from "./PhoneHome";
+import { cn } from "@/lib/utils";
 import { isOnline, useOnline } from "../../internal/connectivity";
 import { useOfflineEntries } from "../../player/offlineStore";
 
@@ -43,39 +45,19 @@ const FALLBACK_QUERIES = [
   "discover weekly",
 ];
 
-/*
- * The carousel hands each item a square slot; PickCard is portrait and centres itself inside
- * it, so PICKS_ITEM_SIZE is the card's *height* and the width follows from PICKS_ASPECT.
- * Telling the carousel that aspect (see `itemAspect`) is what lets the cards grow this
- * large: without it the fit rule reserves width for a square the card never fills.
- */
-const PICKS_ASPECT = 3 / 4;
-const PICKS_VISIBLE_ITEMS = 5;
-const PICKS_ITEM_SIZE = 250;
-/** How far the carousel shrinks its edge cards. */
-const PICKS_MIN_SCALE = 0.72;
-
-/*
- * Skeleton slots to feed the carousel while suggestions load. Unlike the other loading counts on
- * this page, there is no real count to match here — `topSuggestions` does not exist yet — so
- * this is just enough for the wraparound to feel like a shelf rather than three cards rattling
- * around an empty drum.
- */
+/** Skeleton cards shown on the "Made for you" shelf while suggestions load. */
 const PICKS_SKELETON_COUNT = 8;
+/** How far the shelf's arrow buttons scroll it, as a fraction of its visible width. */
+const SHELF_SCROLL_FRACTION = 0.85;
 
-/*
- * Curve depth. The default is 35% of the item size, which on cards this large lifts the
- * centre ones ~38px above the midline — past the stage's clip-path, so their tops get cut.
- * A flatter arc keeps the cylinder legible and the row inside its box.
- */
-const PICKS_ARC = 68;
-
-/*
- * Stage height must clear the tallest thing that can happen: the card, plus half the arc
- * (convex raises the centre cards), plus the hover lift. Sized so nothing reaches the clip
- * edge rather than exactly hugging the card.
- */
-const PICKS_STAGE_HEIGHT = PICKS_ITEM_SIZE + PICKS_ARC ;
+/** Where the desktop Home sends the person; the sidebar owns the rest of the navigation. */
+export interface HomeDestinationHandlers {
+  onOpenLibrary: () => void;
+  onOpenBrowse: () => void;
+  onOpenHistory: () => void;
+  onOpenDownloads: () => void;
+  onOpenSamples?: () => void;
+}
 
 /*
  * How each section is sliced from the underlying lists — named rather than left as the literal
@@ -185,6 +167,7 @@ export function HomePage({
     () => !suggestionCache.has(suggestionCacheKey),
   );
   const [isSurpriseSpinning, setIsSurpriseSpinning] = useState(false);
+  const shelfRef = useRef<HTMLDivElement>(null);
   const loadIdRef = useRef(0);
   /*
    * What is shown as "Recently played": this session's plays first, then YouTube's history.
@@ -332,12 +315,17 @@ export function HomePage({
     () => recentPlays.slice(RECENT_COMPACT_COUNT, RECENT_COMPACT_COUNT + RECENT_LARGE_COUNT),
     [recentPlays],
   );
-  const topSuggestions = suggestions.slice(0, TOP_SUGGESTIONS_COUNT);
-  const moreSuggestions = suggestions.slice(
+  /* The hero is built around the top recommendation, so every shelf continues after it rather
+     than showing the same song twice. */
+  const heroPick: Track | undefined = suggestions[0];
+  const shelfSuggestions = suggestions.slice(1);
+  const topSuggestions = shelfSuggestions.slice(0, TOP_SUGGESTIONS_COUNT);
+  const moreSuggestions = shelfSuggestions.slice(
     TOP_SUGGESTIONS_COUNT,
     TOP_SUGGESTIONS_COUNT + MORE_SUGGESTIONS_COUNT,
   );
-  const surpriseSuggestions = suggestions.slice(TOP_SUGGESTIONS_COUNT);
+  const surpriseSuggestions = shelfSuggestions.slice(TOP_SUGGESTIONS_COUNT);
+  const accountName = libraryState.library?.account?.name?.trim().split(/\s+/)[0];
 
   const playTrack = (track: Track, queue: readonly Track[]) => {
     void playerController.playTrackById(track.id, queue, true);
@@ -355,80 +343,67 @@ export function HomePage({
     }, 720);
   };
 
+  const scrollShelf = (direction: 1 | -1) => {
+    const shelf = shelfRef.current;
+    if (!shelf) return;
+    shelf.scrollBy({ left: direction * shelf.clientWidth * SHELF_SCROLL_FRACTION, behavior: "smooth" });
+  };
+  const shelfArrow =
+    "flex size-8 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-white/10 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
+
   const madeForYouSection = (
-    <section
-      className={`${"flex flex-col gap-3 overflow-y-visible"} ${
-        isLoadingSuggestions ? "opacity-60" : "opacity-100 transition-opacity"
-      }`}
+    <HomeSection
+      title="Made for you"
+      dimmed={isLoadingSuggestions}
+      action={
+        isLoadingSuggestions ? undefined : (
+          <div className="flex items-center gap-0.5">
+            <button type="button" className={shelfArrow} onClick={() => scrollShelf(-1)}>
+              <SquareAltArrowLeftIcon size={20} aria-hidden="true" />
+              <span className="sr-only">Scroll left</span>
+            </button>
+            <button type="button" className={shelfArrow} onClick={() => scrollShelf(1)}>
+              <SquareAltArrowRightIcon size={20} aria-hidden="true" />
+              <span className="sr-only">Scroll right</span>
+            </button>
+          </div>
+        )
+      }
     >
-        
-      <div className="flex items-center justify-between gap-3">
-        <h3>Made for you</h3>
-      </div>
       {/*
-        The picks ride the inside of a cylinder instead of sitting in a grid: the row recedes
-        toward the middle and grows at the edges, so a shelf of recommendations reads as
-        something you roll through rather than a wall you scan. Drag, wheel or arrow-key it.
-
-        `key` forces a fresh mount on the swap from skeleton to real cards, rather than handing
-        one live instance a whole new set of children — `CylinderCarousel` keys its slides on
-        position ("slides are positional and stable", see its own render) because it is built
-        for a fixed deck, not one that gets replaced under it; reusing the instance carried the
-        skeleton's scroll position and measurements into the real carousel. A fresh mount still
-        gets the same `ResizeObserver`-driven sizing, curve and taper — just measured for the
-        content that is actually there.
+        A plain scrolling shelf: drag-free, wheel- or arrow-scrollable, with the scrollbar hidden
+        because the arrows in the heading do that job. Snapping is `proximity` so a slow scroll
+        is never fought, but a flick still settles on a card edge.
       */}
-      <CylinderCarousel
-        key={isLoadingSuggestions ? "skeleton" : "content"}
-        itemSize={PICKS_ITEM_SIZE}
-        height={PICKS_STAGE_HEIGHT}
-        visibleItems={PICKS_VISIBLE_ITEMS}
-        itemAspect={PICKS_ASPECT}
-        arc={PICKS_ARC}
-        /*
-          Convex, not the default concave: a shelf of picks wants its hero in the middle
-          where the eye already is. Concave puts the *largest* cards at the container edge,
-          which is exactly where they get clipped — the biggest, loudest items end up half
-          cut off while the centre of attention holds the smallest one.
-        */
-        minScale={PICKS_MIN_SCALE}
-        variant="convex"
-        className="-mx-4 cursor-grab active:cursor-grabbing overflow-x-clip overflow-y-visible"
+      <div
+        ref={shelfRef}
+        className="-mx-1 flex snap-x snap-proximity gap-1 overflow-x-auto px-1 pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden [&>*]:snap-start"
       >
-        {isLoadingSuggestions ? (
-          Array.from({ length: PICKS_SKELETON_COUNT }, (_, index) => (
-            <PickCardSkeleton key={index} />
-          ))
-        ) : (
-          /*
-           * A real array, not a `<>Fragment</>` — `CylinderCarousel` walks its children with
-           * `Children.toArray`, which flattens an array but does not reach inside a Fragment.
-           * A Fragment here counted as a single slide holding all twelve cards, which block-
-           * flowed vertically inside that one slot instead of taking one slide each.
-           */
-          [
-            <DiceCard
-              key="dice"
-              tracks={surpriseSuggestions}
-              isSpinning={isSurpriseSpinning}
-              onClick={playSurprise}
-            />,
-            ...topSuggestions.map((track) => (
-              <PickCard
-                key={track.id}
-                artworkUrl={track.artworkUrl}
-                title={track.title}
-                subtitle={track.artist}
-                onContextMenu={(event) => openTrackMenu(event, track)}
-                onSelect={() => playTrack(track, suggestions)}
-              />
-            )),
-          ]
-        )}
-      </CylinderCarousel>
+        {isLoadingSuggestions
+          ? Array.from({ length: PICKS_SKELETON_COUNT }, (_, index) => (
+              <PickCardSkeleton key={index} delayMs={index * 60} />
+            ))
+          : [
+              <DiceCard
+                key="dice"
+                tracks={surpriseSuggestions}
+                isSpinning={isSurpriseSpinning}
+                onClick={playSurprise}
+              />,
+              ...topSuggestions.map((track) => (
+                <PickCard
+                  key={track.id}
+                  artworkUrl={track.artworkUrl}
+                  title={track.title}
+                  subtitle={track.artist}
+                  onContextMenu={(event) => openTrackMenu(event, track)}
+                  onSelect={() => playTrack(track, suggestions)}
+                />
+              )),
+            ]}
+      </div>
       {isLoadingSuggestions && <span className="sr-only" role="status">Loading suggestions</span>}
-
-    </section>
+    </HomeSection>
   );
 
   if (!online) {
@@ -466,31 +441,31 @@ export function HomePage({
     );
   }
 
+  const isSignedOut = libraryState.status === "signed-out";
+  const recentPanel =
+    "rounded-3xl bg-white/[0.06] p-2 ring-1 ring-inset ring-white/10";
+
   return (
-    <div className="flex flex-col gap-8">
-      {libraryState.status === "signed-out" && (
-        <section className="flex items-center justify-between gap-4 rounded-xl bg-card/60 px-4 py-3 text-sm text-muted-foreground">
-          <div>
-            <h1>You&apos;re not signed in</h1>
-            <p>Sign in to access your history, playlists, and albums.</p>
-          </div>
-          <button type="button" onClick={() => void onSignIn()}>
-            Sign in
-          </button>
-        </section>
-      )}
+    <div className="flex flex-col gap-8 pb-4">
+      <HomeHero
+        name={accountName}
+        isSignedOut={isSignedOut}
+        pick={heroPick}
+        isLoading={isLoadingSuggestions || isWaitingForLibrary}
+        isSurpriseDisabled={surpriseSuggestions.length === 0 || isSurpriseSpinning}
+        isSurpriseSpinning={isSurpriseSpinning}
+        onPlayPick={() => heroPick && playTrack(heroPick, suggestions)}
+        onSurprise={playSurprise}
+        onSignIn={() => void onSignIn()}
+        onOpenSamples={destinations.onOpenSamples}
+      />
 
       {showMadeForYou && madeForYouSection}
 
-      {/* Directly under the carousel: the picks are what you came for, these are where you
-          go when none of them appeal. */}
-      <HomeDestinations {...destinations} />
-
       {compactRecent.length === 0 && isWaitingForLibrary && (
-        <section className="flex flex-col gap-3">
-          <h2 className="text-xl font-semibold text-foreground">Recently played</h2>
+        <HomeSection title="Recently played">
           <div
-            className="grid gap-1.5 [grid-template-columns:repeat(auto-fill,minmax(16rem,1fr))]"
+            className={cn("grid gap-1 [grid-template-columns:repeat(auto-fill,minmax(17rem,1fr))]", recentPanel)}
             role="status"
             aria-label="Loading recently played"
           >
@@ -498,23 +473,22 @@ export function HomePage({
               <TrackRowSkeleton key={index} delayMs={index * 60} />
             ))}
           </div>
-        </section>
+        </HomeSection>
       )}
 
       {compactRecent.length > 0 && (
-        <section className="flex flex-col gap-3">
-          <h2 className="text-xl font-semibold text-foreground">Recently played</h2>
-          <div className="grid gap-1.5 [grid-template-columns:repeat(auto-fill,minmax(16rem,1fr))]">
+        <HomeSection title="Recently played">
+          <div className={cn("grid gap-1 [grid-template-columns:repeat(auto-fill,minmax(17rem,1fr))]", recentPanel)}>
             {compactRecent.map((track) => (
               <button
                 key={track.id}
                 type="button"
-                className="group/row flex w-full items-center gap-3   px-2 py-1.5 text-left transition-colors hover:bg-card focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+                className="group/row flex w-full items-center gap-3 rounded-2xl px-2 py-1.5 text-left transition-colors hover:bg-white/[0.08] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
                 onContextMenu={(event) => openTrackMenu(event, track)}
                 onClick={() => playTrack(track, recentPlays)}
               >
                 <TrackArtwork
-                  className="size-11 shrink-0   object-cover"
+                  className="size-11 shrink-0 rounded-lg object-cover"
                   size={44}
                   artworkUrl={track.artworkUrl}
                   iconSize={24}
@@ -523,23 +497,23 @@ export function HomePage({
                   <strong>{track.title}</strong>
                   <ArtistLinks artists={track.artists} fallback={track.artist} />
                 </span>
-                <PlayActiveIcon size={18} />
+                <span className="grid size-8 shrink-0 place-items-center rounded-full bg-primary text-primary-foreground opacity-0 transition-opacity group-hover/row:opacity-100 group-focus-visible/row:opacity-100">
+                  <PlayActiveIcon size={16} />
+                </span>
               </button>
             ))}
           </div>
-        </section>
+        </HomeSection>
       )}
 
       {moreSuggestions.length === 0 && isLoadingSuggestions && (
-        <section className="flex flex-col gap-3">
-          <h2 className="text-xl font-semibold text-foreground">More recommendations</h2>
+        <HomeSection title="More recommendations">
           <AlbumGridSkeleton count={MORE_SUGGESTIONS_COUNT} label="Loading more recommendations" />
-        </section>
+        </HomeSection>
       )}
 
       {moreSuggestions.length > 0 && (
-        <section className="flex flex-col gap-3">
-          <h2 className="text-xl font-semibold text-foreground">More recommendations</h2>
+        <HomeSection title="More recommendations">
           <div className="grid gap-3 [grid-template-columns:repeat(auto-fill,minmax(9.5rem,1fr))]">
             {moreSuggestions.map((track) => (
               <AlbumCard
@@ -552,19 +526,17 @@ export function HomePage({
               />
             ))}
           </div>
-        </section>
+        </HomeSection>
       )}
 
       {largeRecent.length === 0 && isWaitingForLibrary && (
-        <section className="flex flex-col gap-3">
-          <h2 className="text-xl font-semibold text-foreground">Listen again</h2>
+        <HomeSection title="Listen again">
           <AlbumGridSkeleton count={RECENT_LARGE_COUNT} label="Loading listen again" />
-        </section>
+        </HomeSection>
       )}
 
       {largeRecent.length > 0 && (
-        <section className="flex flex-col gap-3">
-          <h2 className="text-xl font-semibold text-foreground">Listen again</h2>
+        <HomeSection title="Listen again">
           <div className="grid gap-3 [grid-template-columns:repeat(auto-fill,minmax(9.5rem,1fr))]">
             {largeRecent.map((track) => (
               <AlbumCard
@@ -577,14 +549,18 @@ export function HomePage({
               />
             ))}
           </div>
-        </section>
+        </HomeSection>
       )}
 
       {!isLoadingSuggestions && suggestions.length === 0 && (
-        <div className="px-2 py-10 text-center text-sm text-muted-foreground">
+        <div className="flex flex-col items-center gap-3 rounded-3xl bg-white/[0.06] px-4 py-10 text-center text-sm text-muted-foreground ring-1 ring-inset ring-white/10">
           <p>Recommendations could not be loaded.</p>
-          {libraryState.status === "signed-out" && (
-            <button onClick={() => void onSignIn()}>
+          {isSignedOut && (
+            <button
+              type="button"
+              className="rounded-full bg-primary px-5 py-2 text-sm font-semibold text-primary-foreground transition-transform hover:scale-[1.03] active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              onClick={() => void onSignIn()}
+            >
               Sign in with YouTube Music
             </button>
           )}
@@ -619,7 +595,7 @@ function OfflineHome({
   return (
     <div className="flex flex-col gap-6">
       <header className="flex flex-col gap-1" role="status">
-        <h1 className="text-3xl font-bold tracking-[-0.02em] text-foreground">You&apos;re offline</h1>
+        <h1 className="font-display text-5xl font-semibold leading-[1.12] tracking-[0.005em] text-foreground">You&apos;re offline</h1>
         <p className="text-sm text-muted-foreground">
           {downloads.length > 0
             ? "Your downloaded songs play without a connection."
@@ -628,19 +604,20 @@ function OfflineHome({
       </header>
 
       {downloads.length > 0 && (
-        <section className="flex flex-col gap-3">
-          <div className="flex items-center justify-between gap-3">
-            <h2 className="text-xl font-semibold text-foreground">Downloads</h2>
-            {downloads.length > OFFLINE_HOME_LIMIT && (
+        <HomeSection
+          title="Downloads"
+          action={
+            downloads.length > OFFLINE_HOME_LIMIT ? (
               <button
                 type="button"
-                className="rounded-full px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-card hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                className="rounded-full px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-white/10 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 onClick={onOpenDownloads}
               >
                 See all {downloads.length}
               </button>
-            )}
-          </div>
+            ) : undefined
+          }
+        >
           <div className="flex flex-col gap-0.5">
             {downloads.slice(0, OFFLINE_HOME_LIMIT).map((track, index) => (
               <TrackRow
@@ -654,7 +631,7 @@ function OfflineHome({
               />
             ))}
           </div>
-        </section>
+        </HomeSection>
       )}
     </div>
   );
