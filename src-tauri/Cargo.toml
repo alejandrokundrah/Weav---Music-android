@@ -59,6 +59,10 @@ portpicker = "0.1"
 keyring = { version = "3.6", features = ["apple-native", "windows-native", "sync-secret-service"] }
 discord-rich-presence = "0.2"
 
+# Mobile-only: media session for background playback and notification controls
+[target.'cfg(any(target_os = "android", target_os = "ios"))'.dependencies]
+tauri-plugin-media-session = "0.2"
+
 # Android only: reads the WebView's cookie jar for sign-in (see src/android_cookies.rs). The
 # same jni version wry already links, so this adds no second copy to the APK.
 [target.'cfg(target_os = "android")'.dependencies]
