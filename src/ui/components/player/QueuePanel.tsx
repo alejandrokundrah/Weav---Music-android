@@ -30,6 +30,7 @@ import {
 } from "../../settings/queuePanel";
 import { ArtistLinks } from "../ArtistLinks";
 import { TrackArtwork } from "../TrackArtwork";
+import { formatTrackDuration } from "../../pages/formatTrackDuration";
 import { SquareAltArrowLeftIcon, SquareAltArrowRightIcon } from "@solar-icons/react/linear";
 
 interface QueuePanelProps {
@@ -122,20 +123,30 @@ const QueueRow = memo(function QueueRow({
   ) => void;
 }) {
   const { track, absoluteIndex, position, section } = entry;
+  const duration = formatTrackDuration(track.durationSec);
 
   const row = (
     <div
       data-queue-index={absoluteIndex}
       data-queue-section={section}
       className={cn(
-        "group/queue-item relative flex items-center rounded transition-colors hover:bg-card",
+        "group/queue-item relative flex items-center transition-colors hover:bg-card",
         // The pointer handler writes --drag-translation; this is what renders the lift.
         "[transform:translateY(var(--drag-translation,0px))]",
-        collapsed ? "justify-center" : "gap-1",
+        collapsed
+          ? "justify-center gap-1 rounded"
+          : cn(
+              // The spine: a rule down the left edge of the whole list. Accent where you chose
+              // the song, neutral where autoplay did, so the origin of every row reads at a glance.
+              "rounded-r-lg border-l-2",
+              section === "manual" ? "border-primary/70" : "border-border",
+            ),
         isDragged && "opacity-40",
-        // The stop marker has to read without hovering, so it draws a rule under the row —
-        // the queue visibly ends here.
-        isStopAfter && "after:absolute after:inset-x-2 after:-bottom-px after:h-px after:bg-primary/70",
+        // Expanded draws its own "Queue ends here" break below the row. The rail has no room
+        // for words, so it keeps the rule under the cover.
+        collapsed
+          && isStopAfter
+          && "after:absolute after:inset-x-2 after:-bottom-px after:h-px after:bg-primary/70",
         dropEdge === "before" &&
           "before:absolute before:inset-x-2 before:-top-px before:h-0.5 before:rounded-full before:bg-primary",
         dropEdge === "after" &&
@@ -145,107 +156,143 @@ const QueueRow = memo(function QueueRow({
       <button
         type="button"
         className={cn(
-          "flex min-w-0 items-center rounded text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-          collapsed ? "p-1.5" : "flex-1 gap-2.5 p-1.5",
+          "flex min-w-0 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+          collapsed
+            ? "items-center rounded p-1.5"
+            : "flex-1 items-baseline gap-3 rounded-r-lg py-2 pl-2.5 pr-2",
         )}
         onPointerDown={(event) => onPointerDown(event, absoluteIndex, section)}
         onClick={() => onPlay(absoluteIndex)}
         aria-label={collapsed ? `Play ${track.title}` : undefined}
       >
-        {/* The cover carries the position and the play affordance so the row needs no
-            separate number column — that is what buys back the width when collapsed. */}
-        <span className="relative shrink-0">
-          <TrackArtwork
-            className={cn("rounded", collapsed ? "size-11" : "size-10")}
-            size={collapsed ? 44 : 40}
-            artworkUrl={track.artworkUrl}
-            iconSize={collapsed ? 20 : 18}
-          />
-          <span
-            className={cn(
-              "absolute inset-0 grid place-items-center rounded-lg bg-background/70 text-[11px] font-semibold tabular-nums text-foreground",
-              /*
-               * The blur is applied on hover, not hidden by the opacity. `backdrop-filter` is
-               * what forces an element onto its own compositor layer, and this badge is
-               * mounted on every row in the queue — at `opacity-0` it showed nothing while
-               * still asking for a layer per row.
-               */
-              "opacity-0 transition-opacity group-hover/queue-item:opacity-100 group-hover/queue-item:backdrop-blur-[2px]",
-            )}
-            aria-hidden="true"
-          >
-            {position}
-          </span>
-        </span>
-
-        {!collapsed && (
-          <span className="flex min-w-0 flex-col">
-            <span className="truncate text-sm text-foreground">{track.title}</span>
-            <ArtistLinks
-              className="truncate text-xs text-muted-foreground"
-              artists={track.artists}
-              fallback={track.artist}
+        {collapsed ? (
+          /* The rail has no room for a number column, so the cover carries the position and
+             the play affordance. */
+          <span className="relative shrink-0">
+            <TrackArtwork
+              className="size-11 rounded"
+              size={44}
+              artworkUrl={track.artworkUrl}
+              iconSize={20}
             />
+            <span
+              className={cn(
+                "absolute inset-0 grid place-items-center rounded-lg bg-background/70 text-[11px] font-semibold tabular-nums text-foreground",
+                /*
+                 * The blur is applied on hover, not hidden by the opacity. `backdrop-filter` is
+                 * what forces an element onto its own compositor layer, and this badge is
+                 * mounted on every row in the queue — at `opacity-0` it showed nothing while
+                 * still asking for a layer per row.
+                 */
+                "opacity-0 transition-opacity group-hover/queue-item:opacity-100 group-hover/queue-item:backdrop-blur-[2px]",
+              )}
+              aria-hidden="true"
+            >
+              {position}
+            </span>
           </span>
+        ) : (
+          <>
+            {/* A running order, so the position is real information and gets real weight. It
+                is set on the title's baseline and warms to the accent on hover. */}
+            <span
+              className="w-6 shrink-0 text-right font-display text-lg font-medium leading-none tabular-nums text-muted-foreground transition-colors group-hover/queue-item:text-primary"
+              aria-hidden="true"
+            >
+              {position}
+            </span>
+            <span className="flex min-w-0 flex-1 flex-col">
+              <span className="truncate text-sm text-foreground">{track.title}</span>
+              <ArtistLinks
+                className="truncate text-xs text-muted-foreground"
+                artists={track.artists}
+                fallback={track.artist}
+              />
+            </span>
+          </>
         )}
       </button>
 
       {!collapsed && (
-        <span
-          className={cn(
-            "mr-1 flex shrink-0 items-center transition-opacity",
-            // The stop marker stays visible unhovered — it is state, not an affordance.
-            isStopAfter
-              ? "opacity-100"
-              : "opacity-0 focus-within:opacity-100 group-hover/queue-item:opacity-100",
+        <>
+          {/* Length sits where the actions appear, so hovering swaps one for the other instead
+              of reflowing the title. */}
+          {duration && (
+            <span className="shrink-0 pr-3 text-xs tabular-nums text-muted-foreground transition-opacity group-focus-within/queue-item:opacity-0 group-hover/queue-item:opacity-0">
+              {duration}
+            </span>
           )}
-        >
-          <Tooltip content={isStopAfter ? "Don't end queue here" : "End queue after this"}>
-            <button
-              type="button"
-              className={cn(ICON_BUTTON, isStopAfter && "text-primary")}
-              onClick={() => onStopAfter(absoluteIndex)}
-              aria-pressed={isStopAfter}
-            >
-              <PauseIcon size={15} aria-hidden="true" />
-              <span className="sr-only">
-                {isStopAfter ? "Don't end queue here" : "End queue after this"}
-              </span>
-            </button>
-          </Tooltip>
-          <Tooltip content="Generate a new queue from here">
-            <button
-              type="button"
-              className={cn(ICON_BUTTON, isGenerating && "text-primary")}
-              disabled={isGenerating}
-              onClick={() => onGenerateAfter(absoluteIndex)}
-            >
-              <DiceIcon
-                size={15}
-                aria-hidden="true"
-                className={isGenerating ? "motion-safe:animate-spin" : undefined}
-              />
-              <span className="sr-only">Generate a new queue from here</span>
-            </button>
-          </Tooltip>
-          <Tooltip content="Remove from queue">
-            <button
-              type="button"
-              className={cn(ICON_BUTTON, "hover:text-primary")}
-              onClick={() => onRemove(absoluteIndex)}
-            >
-              <TrashIcon size={15} aria-hidden="true" />
-              <span className="sr-only">{`Remove ${track.title} from queue`}</span>
-            </button>
-          </Tooltip>
-        </span>
+          <span className="absolute right-1.5 top-1/2 flex -translate-y-1/2 items-center rounded-full bg-card pl-1 opacity-0 transition-opacity focus-within:opacity-100 group-hover/queue-item:opacity-100">
+            <Tooltip content={isStopAfter ? "Don't end queue here" : "End queue after this"}>
+              <button
+                type="button"
+                className={cn(ICON_BUTTON, isStopAfter && "text-primary")}
+                onClick={() => onStopAfter(absoluteIndex)}
+                aria-pressed={isStopAfter}
+              >
+                <PauseIcon size={15} aria-hidden="true" />
+                <span className="sr-only">
+                  {isStopAfter ? "Don't end queue here" : "End queue after this"}
+                </span>
+              </button>
+            </Tooltip>
+            <Tooltip content="Generate a new queue from here">
+              <button
+                type="button"
+                className={cn(ICON_BUTTON, isGenerating && "text-primary")}
+                disabled={isGenerating}
+                onClick={() => onGenerateAfter(absoluteIndex)}
+              >
+                <DiceIcon
+                  size={15}
+                  aria-hidden="true"
+                  className={isGenerating ? "motion-safe:animate-spin" : undefined}
+                />
+                <span className="sr-only">Generate a new queue from here</span>
+              </button>
+            </Tooltip>
+            <Tooltip content="Remove from queue">
+              <button
+                type="button"
+                className={cn(ICON_BUTTON, "hover:text-primary")}
+                onClick={() => onRemove(absoluteIndex)}
+              >
+                <TrashIcon size={15} aria-hidden="true" />
+                <span className="sr-only">{`Remove ${track.title} from queue`}</span>
+              </button>
+            </Tooltip>
+          </span>
+        </>
       )}
     </div>
   );
 
+  if (!collapsed) {
+    return (
+      <>
+        {row}
+        {/* Playback stops after this song, so the list visibly ends here. The break is a
+            control too: pressing it takes the stop back. */}
+        {isStopAfter && (
+          <Tooltip content="Don't end queue here">
+            <button
+              type="button"
+              onClick={() => onStopAfter(absoluteIndex)}
+              className="group/stop my-1.5 flex w-full items-center gap-3 rounded px-3 py-0.5 text-xs text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <span className="h-px flex-1 bg-primary/40" aria-hidden="true" />
+              <span>Queue ends here</span>
+              <span className="h-px flex-1 bg-primary/40" aria-hidden="true" />
+              <span className="sr-only">Press to keep playing</span>
+            </button>
+          </Tooltip>
+        )}
+      </>
+    );
+  }
+
   // Collapsed hides the title, so the tooltip is the only way to read the row. Expanded
   // already shows everything, and a tooltip on every row would be noise.
-  if (!collapsed) return row;
   return (
     <Tooltip
       side="left"
@@ -650,11 +697,9 @@ export function QueuePanel({ onClose, onOpenLyrics }: QueuePanelProps) {
         aria-label={label}
       />
     ) : (
-      <div className="flex items-baseline justify-between gap-2 px-2 pb-1.5 pt-1">
-        <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-          {label}
-        </span>
-        <span className="text-[11px] tabular-nums text-muted-foreground">{count}</span>
+      <div className="flex items-baseline justify-between gap-2 px-3 pb-1 pt-3">
+        <span className="text-sm font-medium text-foreground">{label}</span>
+        <span className="text-xs tabular-nums text-muted-foreground">{count}</span>
       </div>
     );
 
@@ -689,18 +734,9 @@ export function QueuePanel({ onClose, onOpenLyrics }: QueuePanelProps) {
         </Tooltip>
 
         {!collapsed && (
-          <div className="flex min-w-0 flex-1 flex-col">
-            <h2 className="font-lexend text-xl font-light tracking-wide text-foreground">Up next</h2>
-            <p className="flex items-center gap-1 truncate text-[11px] text-muted-foreground">
-              <span>{upcomingCount === 0 ? "Nothing queued" : `${upcomingCount} songs`}</span>
-              {remaining && (
-                <>
-                  <ClockIcon size={11} aria-hidden="true" />
-                  <span>{remaining}</span>
-                </>
-              )}
-            </p>
-          </div>
+          <h2 className="min-w-0 flex-1 truncate pl-1 text-sm font-medium text-foreground">
+            Queue
+          </h2>
         )}
 
         {!collapsed && upcomingCount > 0 && (
@@ -795,27 +831,58 @@ export function QueuePanel({ onClose, onOpenLyrics }: QueuePanelProps) {
         </div>
       )}
 
-      {/* Recommended + Top Artists. Scrolls with the queue so the list keeps its room. */}
-      {!collapsed && <DiscoverRail />}
-
-      {/* The track playing right now, pinned above the list. Without it the panel opens on a
-          list of songs with no anchor — you can see what is next but not what it follows. */}
-      {currentTrack && (
-        <div
-          className={cn(
-            "flex shrink-0 items-center rounded-2xl bg-white/[0.08]",
-            collapsed ? "mx-2 mb-1 justify-center p-1.5" : "mx-2 mb-1 gap-2.5 p-2",
-          )}
+      {/* The track playing right now, as the panel's one large gesture: the cover runs the full
+          width and the title is set over it in the display face. Everything below is quiet type,
+          so this is the only thing that competes for the eye. */}
+      {currentTrack && !collapsed && (
+        <section
+          aria-label="Now playing"
+          className="relative mx-2 mb-4 shrink-0 overflow-hidden rounded-2xl bg-card"
         >
+          <TrackArtwork
+            className="aspect-[4/3] max-h-72 w-full"
+            size={480}
+            artworkUrl={currentTrack.artworkUrl}
+            iconSize={48}
+            loading="eager"
+          />
+          {/* Black, not a theme colour: this scrim exists to keep white type legible over any
+              cover in any theme. */}
+          <div className="absolute inset-x-0 bottom-0 flex flex-col gap-1.5 bg-gradient-to-t from-black/90 via-black/55 to-transparent px-4 pb-3.5 pt-20">
+            <h3 className="line-clamp-2 font-display text-[1.75rem] font-semibold leading-[1.05] text-white">
+              {currentTrack.title}
+            </h3>
+            <div className="flex min-w-0 items-center gap-2 text-sm text-white/75">
+              {isPlaying ? (
+                <MusicVisualizer
+                  bars={3}
+                  className="[--music-gap:2px] [--music-height:12px] [--music-width:14px]"
+                />
+              ) : (
+                <span className="shrink-0 text-white/70">
+                  <PauseIcon size={14} aria-hidden="true" />
+                  <span className="sr-only">Paused</span>
+                </span>
+              )}
+              <ArtistLinks
+                className="truncate"
+                artists={currentTrack.artists}
+                fallback={currentTrack.artist}
+              />
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* Rail: a cover and the meter, nothing else fits in 62px. */}
+      {currentTrack && collapsed && (
+        <div className="mx-2 mb-1 flex shrink-0 items-center justify-center rounded-2xl bg-white/[0.08] p-1.5">
           <span className="relative shrink-0">
             <TrackArtwork
-              className={cn(
-                "rounded-lg ring-1 ring-primary/60",
-                collapsed ? "size-11" : "size-10",
-              )}
-              size={collapsed ? 44 : 40}
+              className="size-11 rounded-lg ring-1 ring-primary/60"
+              size={44}
               artworkUrl={currentTrack.artworkUrl}
-              iconSize={collapsed ? 20 : 18}
+              iconSize={20}
             />
             {/*
               The same meter the track rows use — one now-playing indicator across the app,
@@ -823,7 +890,7 @@ export function QueuePanel({ onClose, onOpenLyrics }: QueuePanelProps) {
 
               On a scrim covering the whole cover, not floated over the bottom edge: these are
               accent-tinted bars a few pixels tall, and against a busy album cover they were
-              effectively invisible. Same treatment as the hover position badge below.
+              effectively invisible.
             */}
             {isPlaying && (
               <span
@@ -837,33 +904,34 @@ export function QueuePanel({ onClose, onOpenLyrics }: QueuePanelProps) {
               </span>
             )}
           </span>
+        </div>
+      )}
 
-          {!collapsed && (
-            <span className="flex min-w-0 flex-col">
-              <span className="text-[10px] font-semibold uppercase tracking-wider text-primary">
-                {isPlaying ? "Now playing" : "Paused"}
-              </span>
-              <span className="truncate text-sm font-medium text-foreground">
-                {currentTrack.title}
-              </span>
-              <ArtistLinks
-                className="truncate text-xs text-muted-foreground"
-                artists={currentTrack.artists}
-                fallback={currentTrack.artist}
-              />
-            </span>
+      {!collapsed && (
+        <div className="flex items-baseline justify-between gap-3 px-5 pb-2">
+          <h3 className="font-display text-2xl font-medium leading-none text-foreground">Up next</h3>
+          {upcomingCount > 0 && (
+            <p className="flex shrink-0 items-center gap-1.5 text-xs tabular-nums text-muted-foreground">
+              <span>{upcomingCount === 1 ? "1 song" : `${upcomingCount} songs`}</span>
+              {remaining && (
+                <>
+                  <ClockIcon size={11} aria-hidden="true" />
+                  <span>{remaining}</span>
+                </>
+              )}
+            </p>
           )}
         </div>
       )}
 
       {upcomingCount === 0 ? (
         collapsed ? null : (
-          <p className="px-3 py-8 text-center text-sm text-muted-foreground">
+          <p className="px-5 pb-6 pt-2 text-sm text-muted-foreground">
             Nothing queued. Songs you add with "Play next" land here.
           </p>
         )
       ) : (
-        <div className={cn("flex flex-col gap-0.5 pb-2", collapsed ? "px-1.5" : "px-2")}>
+        <div className={cn("flex flex-col pb-2", collapsed ? "gap-0.5 px-1.5" : "px-2")}>
           {manual.length > 0 && (
             <>
               {sectionLabel("Added by you", manual.length)}
@@ -872,7 +940,7 @@ export function QueuePanel({ onClose, onOpenLyrics }: QueuePanelProps) {
           )}
           {automatic.length > 0 && (
             <>
-              {manual.length > 0 && sectionLabel("Up next", automatic.length)}
+              {manual.length > 0 && sectionLabel("Autoplay", automatic.length)}
               {renderRows(automatic.slice(0, visibleAutomaticCount))}
               {automatic.length > visibleAutomaticCount && (
                 <ShowMoreQueueButton
@@ -886,6 +954,9 @@ export function QueuePanel({ onClose, onOpenLyrics }: QueuePanelProps) {
           )}
         </div>
       )}
+
+      {/* Recommended + Top Artists. After the queue, which is what this panel is for. */}
+      {!collapsed && <DiscoverRail />}
 
       {/* Collapsed has no room for a close button in the header, and the player bar's queue
           button already closes the panel, so this only exists when expanded. */}
