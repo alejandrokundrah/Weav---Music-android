@@ -1054,11 +1054,6 @@ export function SettingsPage({
           </div>
           <div className="contents max-md:hidden">
             <ExternalLinkButton
-              icon={<StarIcon size={16} aria-hidden="true" />}
-              label="Star on GitHub"
-              url={GITHUB_REPOSITORY_URL}
-            />
-            <ExternalLinkButton
               icon={<BugIcon size={16} aria-hidden="true" />}
               label="Report an issue"
               url={GITHUB_NEW_ISSUE_URL}
