@@ -2314,7 +2314,7 @@ fn update_youtube_music_account_profile(
     save_account_store(&app, &store)
 }
 
-#[cfg(any(target_os = "macos", test))]
+#[cfg(any(target_os = "macos", target_os = "android", test))]
 fn cookie_domain_matches(host: &str, cookie_domain: Option<&str>) -> bool {
     let Some(cookie_domain) = cookie_domain else {
         return false;
@@ -2626,6 +2626,7 @@ async fn sign_in_youtube_music(
         return result;
     }
 
+    #[cfg(not(target_os = "android"))]
     {
         let window = build_login_window(&app, true, Arc::new(AtomicBool::new(false)), &candidate_slot_id)?;
         eprintln!("[internal][tauri][info] sign_in_youtube_music login window created");
