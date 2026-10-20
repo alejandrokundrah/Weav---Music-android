@@ -9,6 +9,11 @@ interface SearchBarProps {
   canGoForward: boolean;
   onBack: () => void;
   onForward: () => void;
+  /**
+   * Desktop: only the back / forward arrows. The search field moved into the sidebar, so
+   * rendering it here as well would be two doors to the same room.
+   */
+  navigationOnly?: boolean;
 }
 
 export function SearchBar({
@@ -17,11 +22,12 @@ export function SearchBar({
   canGoForward,
   onBack,
   onForward,
+  navigationOnly = false,
 }: SearchBarProps) {
   const showBackButton = canGoBack || canGoForward;
 
   return (
-    <div className="flex items-center gap-2 max-w-3xl mx-auto">
+    <div className={navigationOnly ? "flex items-center gap-1" : "flex items-center gap-2 max-w-3xl mx-auto"}>
       {showBackButton && (
         <Tooltip content="Back">
           <Button
@@ -50,6 +56,7 @@ export function SearchBar({
         </Tooltip>
       )}
 
+      {!navigationOnly && (
       <button
         type="button"
         onClick={onOpen}
@@ -63,6 +70,7 @@ export function SearchBar({
           {primaryModifierLabel} Space
         </kbd>
       </button>
+      )}
     </div>
   );
 }

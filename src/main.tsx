@@ -48,6 +48,9 @@ logInternalInfo("main.bootstrap start");
 // let its image flash the fallback icon.
 hydrateArtworkCache();
 applyPlatformAttributes();
+// The glass skin is desktop-only; the CSS also gates it to >=768px, so a phone-width window
+// keeps the opaque palette even when this attribute is present.
+if (!isAndroid) document.documentElement.setAttribute("data-glass", "");
 if (!isAndroid) void detectTilingWindowManager();
 // Before React mounts: a late theme apply shows a flash of the wrong palette.
 applyTheme();

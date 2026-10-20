@@ -1,5 +1,6 @@
-import { memo, useEffect, useMemo, useRef, useState } from "react";
+import { memo, useEffect, useMemo, useRef, useState, type RefObject } from "react";
 import { cn } from "@/lib/utils";
+import { LyricsCard } from "./LyricsCard";
 import { Tooltip } from "@/components/motion/tooltip";
 import {
   CheckIcon,
@@ -32,6 +33,8 @@ import { SquareAltArrowLeftIcon, SquareAltArrowRightIcon } from "@solar-icons/re
 
 interface QueuePanelProps {
   onClose: () => void;
+  /** Opens the full lyrics page; the card at the foot of the rail is its preview. */
+  onOpenLyrics?: () => void;
 }
 
 /** Pointer travel before a press becomes a drag rather than a click. */
@@ -328,7 +331,7 @@ function ShowMoreQueueButton({
   );
 }
 
-export function QueuePanel({ onClose }: QueuePanelProps) {
+export function QueuePanel({ onClose, onOpenLyrics }: QueuePanelProps) {
   const panelRef = useRef<HTMLElement>(null);
   const draggedElementRef = useRef<HTMLElement | null>(null);
   const captureElementRef = useRef<HTMLElement | null>(null);
@@ -655,18 +658,18 @@ export function QueuePanel({ onClose }: QueuePanelProps) {
     );
 
   return (
-    <aside
-      ref={panelRef}
+    <aside className="flex h-full flex-col" aria-label="Queue">
+    <div
+      ref={panelRef as RefObject<HTMLDivElement>}
       className={cn(
-        "flex h-full flex-col overflow-y-auto overscroll-contain",
+        "flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain",
         // Dragging over rows must not select their text.
         draggedIndex !== null && "select-none",
       )}
-      aria-label="Queue"
     >
       <header
         className={cn(
-          "sticky top-0 z-10 flex shrink-0 items-center gap-1 bg-card",
+          "sticky top-0 z-10 flex shrink-0 items-center gap-1",
           collapsed ? "flex-col px-2 py-2" : "px-3 py-2.5",
         )}
       >
@@ -686,7 +689,7 @@ export function QueuePanel({ onClose }: QueuePanelProps) {
 
         {!collapsed && (
           <div className="flex min-w-0 flex-1 flex-col">
-            <h2 className="text-sm font-semibold text-foreground">Up next</h2>
+            <h2 className="font-lexend text-xl font-light tracking-wide text-foreground">Up next</h2>
             <p className="flex items-center gap-1 truncate text-[11px] text-muted-foreground">
               <span>{upcomingCount === 0 ? "Nothing queued" : `${upcomingCount} songs`}</span>
               {remaining && (
@@ -796,14 +799,14 @@ export function QueuePanel({ onClose }: QueuePanelProps) {
       {currentTrack && (
         <div
           className={cn(
-            "flex shrink-0 items-center rounded bg-primary/5",
+            "flex shrink-0 items-center rounded-2xl bg-white/[0.08]",
             collapsed ? "mx-2 mb-1 justify-center p-1.5" : "mx-2 mb-1 gap-2.5 p-2",
           )}
         >
           <span className="relative shrink-0">
             <TrackArtwork
               className={cn(
-                "rounded ring-1 ring-primary/60",
+                "rounded-lg ring-1 ring-primary/60",
                 collapsed ? "size-11" : "size-10",
               )}
               size={collapsed ? 44 : 40}
@@ -891,6 +894,10 @@ export function QueuePanel({ onClose }: QueuePanelProps) {
           Hide queue
         </button>
       )}
+    </div>
+
+    {/* Outside the scroller on purpose: it stays put while the queue scrolls behind it. */}
+    {!collapsed && <LyricsCard onOpen={onOpenLyrics} />}
     </aside>
   );
 }

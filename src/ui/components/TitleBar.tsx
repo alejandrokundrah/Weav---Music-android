@@ -160,13 +160,15 @@ export function TitleBar({
   };
 
   return (
-    <div className="relative z-30 flex h-[var(--titlebar-height)] shrink-0 items-stretch bg-background">
+    <div className="relative z-30 flex h-[var(--titlebar-height)] shrink-0 items-stretch pt-1">
       <button
         type="button"
         style={{ width: `${sidebarWidth}px` }}
         className={cn(
-          "flex shrink-0 items-center gap-1 px-4 text-sm font-bold  transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring focus-visible:ring-inset",
-          isHomeActive ? "text-primary" : "text-muted-foreground hover:text-foreground",
+          // The brand block: its right edge is the sidebar's divider, continued up through the
+          // title bar so the left column reads as one full-height strip.
+          "flex shrink-0 items-center gap-2.5 border-r border-border px-6 text-foreground transition-opacity focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring focus-visible:ring-inset",
+          isHomeActive ? "opacity-100" : "opacity-85 hover:opacity-100",
           hideHomeText && "justify-center gap-0 px-0",
         )}
         onClick={() => {
@@ -215,11 +217,13 @@ export function TitleBar({
           initial={{ opacity: 0, scale: 0.92 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ type: "spring", stiffness: 260, damping: 24 }}
-          className="size-6 "
+          className="size-7"
           src={appIcon}
           alt=""
         /> 
-        {!hideHomeText && <h3>WEAV</h3>}
+        {!hideHomeText && (
+          <h3 className="font-lexend text-[1.65rem] font-light leading-none tracking-[0.1em]">WEAV</h3>
+        )}
       </button>
 
       <MusicTabs

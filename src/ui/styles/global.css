@@ -15,6 +15,8 @@
 @import "@fontsource-variable/inter";
 /* Lexend: the phone Home's display face (see PhoneHome). Bundled for the same offline reason. */
 @import "@fontsource-variable/lexend";
+/* Oswald: the condensed display face for artist / album hero titles. Bundled, offline app. */
+@import "@fontsource-variable/oswald";
 @import "tailwindcss";
 @source not "../../../docs";
 
@@ -221,6 +223,75 @@ input:focus-visible,
 textarea:focus,
 textarea:focus-visible {
   outline: none;
+}
+
+/*
+ * Glass skin (desktop widths only).
+ *
+ * `data-glass` is set on <html> by main.tsx, so the mini-player window — a transparent
+ * window with its own palettes — never receives translucent surfaces it has nothing to sit on.
+ * The tokens keep their names, so every component follows without knowing the skin exists:
+ * `bg-background` is now the frosted fill of the whole window shell, `bg-card` a light veil
+ * that lifts hovered rows and chips, and `primary` the mint accent from the Soundbeats design.
+ *
+ * Specificity (0,1,1) beats `:root` and the @theme block, and sits *before* the Potato PC
+ * block below, which must win — an opaque palette is the entire point of that mode.
+ */
+@media (min-width: 768px) {
+  html[data-glass] {
+    --color-background: oklch(0.24 0.04 212 / 0.42);
+    --color-foreground: oklch(0.985 0.004 200);
+
+    --color-card: oklch(1 0 0 / 0.08);
+    --color-card-foreground: oklch(0.985 0.004 200);
+    --color-popover: oklch(0.27 0.04 212 / 0.96);
+    --color-popover-foreground: oklch(0.985 0.004 200);
+
+    --color-muted: oklch(1 0 0 / 0.14);
+    --color-muted-foreground: oklch(0.95 0.01 200 / 0.62);
+
+    --color-primary: #6fd98f;
+    --color-primary-foreground: #05220f;
+
+    --color-secondary: oklch(1 0 0 / 0.12);
+    --color-secondary-foreground: oklch(0.985 0.004 200);
+
+    --color-border: oklch(1 0 0 / 11%);
+    --color-input: oklch(1 0 0 / 16%);
+    --color-ring: #6fd98f;
+
+    --window-edge: oklch(1 0 0 / 10%);
+    --window-edge-highlight: oklch(1 0 0 / 30%);
+    --glass-divider: oklch(1 0 0 / 0.1);
+    /* Seek bar: a white fill with a resting thumb, as in the design (the phone keeps its accent). */
+    --seek-fill: var(--color-foreground);
+    --seek-thumb: 1;
+    /* The lyrics card — a flat mint panel, deliberately not a token anything else borrows. */
+    --glass-lyrics: oklch(0.76 0.075 168);
+    --glass-lyrics-ink: oklch(0.2 0.03 180);
+  }
+}
+
+/*
+ * The window shell: one rounded pane floating over the scene.
+ *
+ * No `backdrop-filter`. WebKitGTK composites it badly (see the Linux rule below), so the blur
+ * is a pre-blurred copy of the scene painted *inside* the shell (SceneBackdrop, `blurred`).
+ * That costs one static layer on every platform instead of a live filter on all of them.
+ */
+.glass-shell {
+  background:
+    linear-gradient(155deg, oklch(1 0 0 / 0.17) 0%, oklch(1 0 0 / 0.05) 38%, oklch(0.18 0.04 215 / 0.2) 100%),
+    var(--color-background);
+  box-shadow:
+    inset 0 1px 0 oklch(1 0 0 / 0.3),
+    inset 0 0 0 1px oklch(1 0 0 / 0.1),
+    0 28px 70px -24px oklch(0 0 0 / 0.6);
+}
+
+html[data-paper-pc] .glass-shell {
+  background: var(--color-background);
+  box-shadow: inset 0 0 0 1px var(--color-border);
 }
 
 /*
@@ -685,4 +756,9 @@ html[data-fx-off~="marquee"] .animate-marquee-vertical {
   /* The phone Home's face. Opt in with `font-lexend`; everything else stays on Inter. */
   --font-lexend: "Lexend Variable", ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto,
     Arial, sans-serif;
+}
+
+@theme {
+  /* Hero titles: Oswald, then the closest condensed faces a machine is likely to have. */
+  --font-display: "Oswald Variable", "Arial Narrow", Impact, ui-sans-serif, sans-serif;
 }

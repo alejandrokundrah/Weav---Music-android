@@ -18,13 +18,21 @@ import { isLikedSongsId, likedSongsCover } from "../likedSongsArtwork";
 import {
   AlbumIcon,
   CheckIcon,
+  ClockIcon,
   CloseIcon,
+  CompassIcon,
+  DownloadIcon,
   FolderIcon,
+  HomeIcon,
   PlaylistIcon,
   RefreshIcon,
   SearchIcon,
+  SettingsIcon,
   SortIcon,
 } from "@/ui/icons";
+import { primaryModifierLabel } from "../platform";
+import { AccountAvatar } from "./AccountSwitcher";
+import type { TabView } from "../types/tab";
 import type { Album, Playlist } from "../../datasource/types";
 import { libraryController, useLibraryState } from "../../player/playerStore";
 import {
@@ -116,7 +124,22 @@ function mergeVisibleOrderWithStoredOrder(storedOrder: string[], visibleOrder: s
   ].filter((id, index, ids) => ids.indexOf(id) === index);
 }
 
+/** Where the sidebar's navigation list goes. Supplied by the window; the rail owns no routing. */
+export interface SidebarNav {
+  activeView?: TabView;
+  activeBrowseTab?: string;
+  onHome: () => void;
+  onBrowse: () => void;
+  onLibrary: () => void;
+  onHistory: () => void;
+  onDownloads: () => void;
+  onSettings: () => void;
+}
+
 interface SidebarProps {
+  nav?: SidebarNav;
+  /** Opens the search overlay. */
+  onOpenSearch?: () => void;
   width: number;
   /** Retained for the callers' benefit; the rail no longer resizes, so it is unused. */
   onWidthChange: (width: number) => void;
@@ -464,7 +487,50 @@ function SidebarPlaylistArtwork({ playlist }: { playlist: Playlist }) {
   );
 }
 
+/** One row of the navigation list. Icon-only (with a tooltip) on the collapsed rail. */
+function SidebarNavItem({
+  icon: Icon,
+  label,
+  active,
+  collapsed,
+  onClick,
+}: {
+  icon: typeof HomeIcon;
+  label: string;
+  active: boolean;
+  collapsed: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <SidebarItemTooltip enabled={collapsed} title={label}>
+      <button
+        type="button"
+        onClick={onClick}
+        aria-current={active ? "page" : undefined}
+        aria-label={label}
+        className={cn(
+          "group/nav relative flex w-full items-center gap-3.5 rounded-xl py-2 font-lexend text-[15px] font-light transition-colors",
+          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+          collapsed ? "justify-center px-0" : "px-3",
+          active
+            ? "bg-white/[0.1] text-foreground"
+            : "text-muted-foreground hover:bg-white/[0.06] hover:text-foreground",
+        )}
+      >
+        <Icon
+          size={19}
+          aria-hidden="true"
+          className={cn("shrink-0 transition-colors", active && "text-primary")}
+        />
+        {!collapsed && <span className="truncate">{label}</span>}
+      </button>
+    </SidebarItemTooltip>
+  );
+}
+
 export function Sidebar({
+  nav,
+  onOpenSearch,
   width,
   onWidthChange,
   onNavigateAlbum,
@@ -1093,7 +1159,7 @@ export function Sidebar({
   return (
     <div
       ref={sidebarRef}
-      className="relative flex min-h-0 shrink-0 flex-col bg-background transition-[width] duration-200 ease-out"
+      className="relative flex min-h-0 shrink-0 flex-col border-r border-border transition-[width] duration-200 ease-out"
       style={{ width: `${effectiveWidth}px` }}
       onPointerEnter={(event) => {
         // Pointer only. A drag passing over the rail is not a request to expand it, and a
@@ -1117,6 +1183,88 @@ export function Sidebar({
       */}
 
       <div className="flex min-h-0 flex-1 flex-col">
+        {/* Search. The pill opens the same overlay the old top-of-page bar did, and carries the
+            attribute the onboarding tour points at. */}
+        {onOpenSearch && (
+          <div className={cn("shrink-0 pb-3 pt-1", shouldHideText ? "px-2" : "px-5")}>
+            <button
+              type="button"
+              onClick={onOpenSearch}
+              data-onboarding="search"
+              aria-label="Search"
+              className={cn(
+                "group flex h-10 w-full items-center gap-2.5 rounded-full bg-white/[0.12] text-left text-sm text-muted-foreground transition-colors",
+                "hover:bg-white/[0.18] hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                shouldHideText ? "justify-center px-0" : "px-3.5",
+              )}
+            >
+              <SearchIcon size={17} className="shrink-0" aria-hidden="true" />
+              {!shouldHideText && (
+                <>
+                  <span className="truncate font-lexend text-xs font-light">Search...</span>
+                  <kbd className="ml-auto shrink-0 rounded bg-black/20 px-1.5 py-0.5 font-sans text-[10px] text-muted-foreground">
+                    {primaryModifierLabel} Space
+                  </kbd>
+                </>
+              )}
+            </button>
+          </div>
+        )}
+
+        {nav && (
+          <>
+            <span className={cn("mb-2 h-px shrink-0 bg-border", shouldHideText ? "mx-3" : "mx-5")} aria-hidden="true" />
+            <nav
+              aria-label="Main"
+              className={cn("flex shrink-0 flex-col gap-0.5", shouldHideText ? "px-2" : "px-3")}
+            >
+              <SidebarNavItem
+                icon={HomeIcon}
+                label="Home"
+                active={nav.activeView === "home"}
+                collapsed={shouldHideText}
+                onClick={nav.onHome}
+              />
+              <SidebarNavItem
+                icon={CompassIcon}
+                label="Browse"
+                active={nav.activeView === "browse" && nav.activeBrowseTab !== "downloads"}
+                collapsed={shouldHideText}
+                onClick={nav.onBrowse}
+              />
+              <SidebarNavItem
+                icon={AlbumIcon}
+                label="Library"
+                active={nav.activeView === "library"}
+                collapsed={shouldHideText}
+                onClick={nav.onLibrary}
+              />
+              <SidebarNavItem
+                icon={ClockIcon}
+                label="History"
+                active={nav.activeView === "history"}
+                collapsed={shouldHideText}
+                onClick={nav.onHistory}
+              />
+              <SidebarNavItem
+                icon={DownloadIcon}
+                label="Downloads"
+                active={nav.activeView === "browse" && nav.activeBrowseTab === "downloads"}
+                collapsed={shouldHideText}
+                onClick={nav.onDownloads}
+              />
+              <SidebarNavItem
+                icon={SettingsIcon}
+                label="Settings"
+                active={nav.activeView === "settings"}
+                collapsed={shouldHideText}
+                onClick={nav.onSettings}
+              />
+            </nav>
+            <span className={cn("my-3 h-px shrink-0 bg-border", shouldHideText ? "mx-3" : "mx-5")} aria-hidden="true" />
+          </>
+        )}
+
         {/*
           The list filter. Deliberately quieter than the destinations above: it does not
           change the page, only what the list below shows, and styling it identically was
@@ -1443,6 +1591,37 @@ export function Sidebar({
             )
           )}
         </div>
+
+        {/* Who is signed in. Tapping it goes to Settings, where the account is managed. */}
+        {nav && (
+          <button
+            type="button"
+            onClick={nav.onSettings}
+            aria-label="Account settings"
+            className={cn(
+              "mx-3 mb-3 mt-1 flex shrink-0 items-center gap-3 rounded-2xl p-2 text-left transition-colors hover:bg-white/[0.08]",
+              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+              shouldHideText && "justify-center",
+            )}
+          >
+            <AccountAvatar
+              artworkUrl={libraryState.library?.account?.artworkUrl}
+              className="size-9"
+              iconSize={18}
+            />
+            {!shouldHideText && (
+              <span className="flex min-w-0 flex-col">
+                <span className="truncate font-lexend text-sm font-light text-foreground">
+                  {libraryState.library?.account?.name ||
+                    (libraryState.status === "signed-out" ? "Not signed in" : "YouTube Music")}
+                </span>
+                <span className="truncate text-[11px] text-muted-foreground">
+                  {libraryState.status === "signed-out" ? "Sign in from Settings" : "Account"}
+                </span>
+              </span>
+            )}
+          </button>
+        )}
       </div>
     </div>
   );

@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
 import { SearchBar } from "./SearchBar";
 import { TrackArtwork } from "./TrackArtwork";
 import { useAmbientArtwork } from "../stores/ambientArtworkStore";
-import { Sidebar } from "./Sidebar";
+import { Sidebar, type SidebarNav } from "./Sidebar";
 import { useCompactViewport } from "../hooks/useCompactViewport";
 import type { Album, Playlist } from "../../datasource/types";
 
@@ -41,6 +41,15 @@ interface LayoutProps {
    * because they were, briefly, the same DOM node's position.
    */
   scrollKey?: string;
+  /** Destinations for the sidebar's navigation list. */
+  nav?: SidebarNav;
+  /** The sidebar's search field opens the same overlay the old top-of-page bar did. */
+  onOpenSearchFromSidebar?: () => void;
+  /**
+   * Docked under the page, inside the centre column — the floating player capsule. Rendered by
+   * the page's own column rather than the window so the queue rail can run the full height.
+   */
+  footer?: ReactNode;
 }
 
 const SCROLLBAR_HIDE_DELAY_MS = 760;
@@ -66,6 +75,9 @@ export function Layout({
   rightPanel,
   rightPanelWidth = 340,
   scrollKey,
+  nav,
+  onOpenSearchFromSidebar,
+  footer,
 }: LayoutProps) {
   const ambientArtwork = useAmbientArtwork();
   const isPhone = useCompactViewport();
@@ -238,7 +250,7 @@ export function Layout({
   useEffect(() => () => clearScrollHideTimer(), [clearScrollHideTimer]);
 
   return (
-    <div className="relative flex min-h-0 flex-1 overflow-hidden bg-background ">
+    <div className="relative flex min-h-0 flex-1 overflow-hidden">
      
 
       <div className="relative flex min-h-0 min-w-0 flex-1">
@@ -248,13 +260,15 @@ export function Layout({
             onWidthChange={onSidebarWidthChange}
             onNavigateAlbum={onNavigateAlbum}
             onNavigatePlaylist={onNavigatePlaylist}
+            nav={nav}
+            onOpenSearch={onOpenSearchFromSidebar ?? onOpenSearch}
           />
         )}
         {/* No backdrop-blur: `bg-background` is fully opaque, so a backdrop filter here costs a
             composited layer and a blur pass to render something nothing can see through. */}
         <div
           className={cn(
-            "relative flex min-h-0 min-w-0 flex-1 flex-col gap-3 px-4 pt-3 max-md:px-3 max-md:pt-2 bg-background rounded-tl-lg",
+            "relative flex min-h-0 min-w-0 flex-1 flex-col gap-2 px-5 pt-2 max-md:px-3 max-md:pt-2 max-md:gap-3 max-md:bg-background",
             edgeToEdge && "max-md:px-0 max-md:pt-0",
           )}
         >
@@ -269,7 +283,7 @@ export function Layout({
           {ambientArtwork ? (
             <span
               key={ambientArtwork}
-              className="pointer-events-none absolute inset-x-0 top-0 h-[22rem] overflow-hidden [mask-image:linear-gradient(to_bottom,background_25%,transparent)] rounded-tl-lg"
+              className="pointer-events-none absolute inset-x-0 top-0 h-[22rem] overflow-hidden [mask-image:linear-gradient(to_bottom,black_25%,transparent)]"
               aria-hidden="true"
               data-fx="ambient"
             >
@@ -283,7 +297,7 @@ export function Layout({
                 well past the clipped box on three sides, so the scale was adding composited
                 area to hide edges that were never reachable.
               */}
-              <span className="absolute -inset-x-1/4 -top-1/2 bottom-0 opacity-40 blur-[32px] saturate-[2]">
+              <span className="absolute -inset-x-1/4 -top-1/2 bottom-0 opacity-25 blur-[32px] saturate-[1.6]">
                 {/*
                   Deliberately the smallest variant: this is blurred and dropped to 40% opacity,
                   so nothing above 120px survives to be seen — it only costs texture.
@@ -298,7 +312,12 @@ export function Layout({
             </span>
           ) : null}
 
-          {showSearchBar && (
+          {/*
+            Desktop: the search field lives in the sidebar now, so all that is left up here is
+            history navigation — and only once there is some, so the page starts at the top.
+            Phone: the full bar, as before.
+          */}
+          {showSearchBar && (isPhone || canGoBack || canGoForward) && (
             <div className="relative">
               <SearchBar
                 onOpen={onOpenSearch}
@@ -306,11 +325,12 @@ export function Layout({
                 canGoForward={canGoForward}
                 onBack={onNavigateBack}
                 onForward={onNavigateForward}
+                navigationOnly={!isPhone}
               />
             </div>
           )}
 
-          <div className={cn("relative flex min-h-0 min-w-0 flex-1 gap-3 pb-3", edgeToEdge && "max-md:pb-0")}>
+          <div className={cn("relative flex min-h-0 min-w-0 flex-1 gap-3", footer ? "pb-0" : "pb-3", edgeToEdge && "max-md:pb-0")}>
             <div className="relative min-h-0 min-w-0 flex-1">
               <div
                 ref={pageContentRef}
@@ -403,6 +423,8 @@ export function Layout({
             </div>
 
           </div>
+
+          {footer ? <div className="relative shrink-0 pb-4 pt-1">{footer}</div> : null}
         </div>
 
  {/* Phone: the queue is its own screen, not a 340px column squeezed beside the page. */}
@@ -436,7 +458,7 @@ export function Layout({
                     width: { duration: 0.22, ease: [0.16, 1, 0.3, 1] },
                     opacity: { duration: 0.16, ease: "easeOut" },
                   }}
-                  className="relative min-h-0 shrink-0 overflow-hidden bg-card"
+                  className="relative min-h-0 shrink-0 overflow-hidden border-l border-border"
                 >
                   {/*
                     Pinned to the target width, not 100%: this box's *wrapper* is what's
