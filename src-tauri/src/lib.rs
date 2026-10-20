@@ -5800,6 +5800,7 @@ mod tests {
         load_superseded, LOAD_GENERATION, bytes_preview,
         YoutubeAccountStore, generate_slot_id, login_partition_directory_name,
         decode_slot_id_bytes, LEGACY_ACCOUNT_SLOT_ID,
+        session_cookie_header, YOUTUBE_AUTH_COOKIE_NAMES,
     };
     use std::sync::atomic::Ordering;
     use super::audio::BufferReader;
