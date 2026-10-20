@@ -2511,10 +2511,10 @@ fn harvest_session_cookie(
     let has_auth_cookie = ["SAPISID", "__Secure-1PAPISID", "__Secure-3PAPISID"]
         .iter()
         .any(|name| cookie_names.contains(name));
-    let on_music_page = window
-        .url()
-        .map(|url| url.domain() == Some("music.youtube.com"))
-        .unwrap_or(false);
+    let on_music_page = match window.url() {
+        Ok(url) => url.domain() == Some("music.youtube.com"),
+        Err(_) => false,
+    };
     if !has_auth_cookie || !on_music_page {
         return Ok(None);
     }
