@@ -807,7 +807,14 @@ export function SettingsPage({
     setLogOpening(true);
     setLogError(null);
     try {
-      await invoke("open_current_log");
+      if (isAndroid) {
+        // The file cannot be opened on Android; hand the text over for pasting instead.
+        const text = await invoke<string>("read_app_logs");
+        await navigator.clipboard.writeText(text);
+        setLogError("Log copied. Paste it into your bug report.");
+      } else {
+        await invoke("open_current_log");
+      }
     } catch {
       setLogError("Unable to open the log file.");
     } finally {
@@ -1863,7 +1870,7 @@ export function SettingsPage({
                 onClick={() => void handleOpenLog()}
               >
                 <LogFileIcon size={18} />
-                {logOpening ? "Opening..." : "Open log"}
+                {logOpening ? "Opening..." : isAndroid ? "Copy log" : "Open log"}
               </button>
             </div>
 

@@ -1272,6 +1272,8 @@ fn app_setting_remove(
     write_json_file(&app_settings_path(&app)?, &settings)
 }
 
+const PREVIOUS_LOG_FILE_NAME: &str = "previous-session.txt";
+
 fn current_log_path(app: &tauri::AppHandle) -> Result<PathBuf, CommandError> {
     app.path()
         .app_log_dir()
@@ -1302,6 +1304,13 @@ fn initialize_app_log(app: &tauri::AppHandle) -> Result<(), CommandError> {
                 let _ = fs::remove_file(path);
             }
         }
+    }
+
+    // The log is truncated on every start, which would erase the one record of what happened
+    // right before a crash. Keep the last session's copy next to it (a non-`.log` name, so the
+    // cleanup above leaves it alone).
+    if log_path.exists() {
+        let _ = fs::copy(&log_path, log_dir.join(PREVIOUS_LOG_FILE_NAME));
     }
 
     let file = OpenOptions::new()
@@ -1421,6 +1430,33 @@ fn sanitize_log_url(value: &str) -> String {
     } else {
         format!("{base}?{}", query.join("&"))
     }
+}
+
+/// The previous and current session logs as one text, newest last, for copying into a bug
+/// report. Android has no way to open the log file, and the previous session is the interesting
+/// one after a crash.
+#[tauri::command]
+fn read_app_logs(app: tauri::AppHandle) -> Result<String, CommandError> {
+    const MAX_BYTES: usize = 200_000;
+    let current = current_log_path(&app)?;
+    let previous = current.with_file_name(PREVIOUS_LOG_FILE_NAME);
+    let tail = |path: &std::path::Path| {
+        let text = fs::read_to_string(path).unwrap_or_default();
+        if text.len() > MAX_BYTES {
+            let mut start = text.len() - MAX_BYTES;
+            while !text.is_char_boundary(start) {
+                start += 1;
+            }
+            text[start..].to_string()
+        } else {
+            text
+        }
+    };
+    Ok(format!(
+        "==== previous session ====\n{}\n==== this session ====\n{}",
+        tail(&previous),
+        tail(&current)
+    ))
 }
 
 #[tauri::command]
@@ -2535,9 +2571,11 @@ async fn sign_in_youtube_music(
         let window = app.get_webview_window("main").ok_or_else(|| CommandError {
             message: "the app window is unavailable".to_string(),
         })?;
+        append_log_line(format_args!("[internal][tauri][info] android sign-in: main webview found"));
         let return_url = window.url().map_err(|error| CommandError {
             message: format!("unable to remember the app address: {error}"),
         })?;
+        append_log_line(format_args!("[internal][tauri][info] android sign-in: return url remembered"));
         let result = poll_for_sign_in(
             &app,
             &jar,
@@ -2590,9 +2628,13 @@ fn poll_for_sign_in(
     window.navigate(login_url).map_err(|error| CommandError {
         message: format!("unable to navigate to YouTube Music sign-in: {error}"),
     })?;
+    append_log_line(format_args!("[internal][tauri][info] sign-in: navigated to Google"));
     eprintln!("[internal][tauri][info] sign_in_youtube_music navigated to Google sign-in");
 
     for poll in 1..=300 {
+        if poll == 1 || poll % 15 == 0 {
+            append_log_line(format_args!("[internal][tauri][info] sign-in: polling for session poll={poll}"));
+        }
         let harvested = match harvest_session_cookie(window) {
             // Closing the window mid-read fails the read on macOS; that is still a cancel (#143).
             Err(_) if app.get_webview_window(window.label()).is_none() => None,
@@ -5447,6 +5489,14 @@ fn desktop_environment() -> String {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    // A panic that takes the process down leaves nothing behind unless it is written first.
+    {
+        let default_hook = std::panic::take_hook();
+        std::panic::set_hook(Box::new(move |info| {
+            append_log_line(format_args!("[internal][tauri][panic] {info}"));
+            default_hook(info);
+        }));
+    }
     // Initialize Discord RPC manager
     let discord_manager =
         std::sync::Arc::new(std::sync::Mutex::new(discord_rpc::DiscordRpcManager::new()));
@@ -5598,6 +5648,7 @@ pub fn run() {
             app_setting_remove,
             app_settings_clear,
             open_current_log,
+            read_app_logs,
             fetch_audio_bytes,
             fetch_audio_source,
             offline_audio_save,
