@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useMemo, useSyncExternalStore, type ReactElement,
 } from "react";
+import { useTranslation } from "react-i18next";
 import { motion } from "motion/react";
 import {
   LIBRARY_SORTS,
@@ -495,7 +496,7 @@ function SidebarNavItem({
   collapsed,
   onClick,
 }: {
-  icon: typeof HomeIcon;
+  icon: React.ComponentType<{ size?: number | string; className?: string }>;
   label: string;
   active: boolean;
   collapsed: boolean;
@@ -536,6 +537,7 @@ export function Sidebar({
   onNavigateAlbum,
   onNavigatePlaylist,
 }: SidebarProps) {
+  const { t } = useTranslation();
   const libraryState = useLibraryState();
   const { openPlaylistMenu, openAlbumMenu } = usePlaylistContextMenu();
   const [libraryView, setLibraryView] = useState<LibraryView>("playlists");
@@ -1220,42 +1222,42 @@ export function Sidebar({
             >
               <SidebarNavItem
                 icon={HomeIcon}
-                label="Home"
+                label={t("sidebar.home")}
                 active={nav.activeView === "home"}
                 collapsed={shouldHideText}
                 onClick={nav.onHome}
               />
               <SidebarNavItem
                 icon={CompassIcon}
-                label="Browse"
+                label={t("sidebar.browse")}
                 active={nav.activeView === "browse" && nav.activeBrowseTab !== "downloads"}
                 collapsed={shouldHideText}
                 onClick={nav.onBrowse}
               />
               <SidebarNavItem
                 icon={AlbumIcon}
-                label="Library"
+                label={t("sidebar.library")}
                 active={nav.activeView === "library"}
                 collapsed={shouldHideText}
                 onClick={nav.onLibrary}
               />
               <SidebarNavItem
                 icon={ClockIcon}
-                label="History"
+                label={t("sidebar.history")}
                 active={nav.activeView === "history"}
                 collapsed={shouldHideText}
                 onClick={nav.onHistory}
               />
               <SidebarNavItem
                 icon={DownloadIcon}
-                label="Downloads"
+                label={t("common.downloads")}
                 active={nav.activeView === "browse" && nav.activeBrowseTab === "downloads"}
                 collapsed={shouldHideText}
                 onClick={nav.onDownloads}
               />
               <SidebarNavItem
                 icon={SettingsIcon}
-                label="Settings"
+                label={t("sidebar.settings")}
                 active={nav.activeView === "settings"}
                 collapsed={shouldHideText}
                 onClick={nav.onSettings}

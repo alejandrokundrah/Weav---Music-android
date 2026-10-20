@@ -14,6 +14,7 @@
  */
 
 import type { SVGProps } from "react";
+import { forwardRef } from "react";
 
 /* ── Transport ─────────────────────────────────────────────────────── */
 export { PlayIcon } from "@solar-icons/react/linear/play";
@@ -61,8 +62,70 @@ export { EyeIcon } from "@solar-icons/react/linear/eye";
 export { EyeClosedIcon } from "@solar-icons/react/linear/eye-closed";
 export { VinylIcon as AlbumIcon } from "@solar-icons/react/linear/vinyl";
 export { VinylIcon as AlbumActiveIcon } from "@solar-icons/react/bold/vinyl";
-export { Microphone2Icon as LyricsIcon } from "@solar-icons/react/linear/microphone-2";
-export { Microphone2Icon as LyricsActiveIcon } from "@solar-icons/react/bold/microphone-2";
+/**
+ * Custom lyrics icon (Lucide audio-lines).
+ * Replaces Solar Microphone2Icon for desktop.
+ */
+export const LyricsIcon = forwardRef<SVGSVGElement, SVGProps<SVGSVGElement> & { size?: number | string }>(
+  ({ size = 24, ...props }, ref) => {
+    return (
+      <svg
+        ref={ref}
+        xmlns="http://www.w3.org/2000/svg"
+        width={size}
+        height={size}
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth={2.5}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        aria-hidden="true"
+        {...props}
+      >
+        <path d="M2 10v3" />
+        <path d="M6 6v11" />
+        <path d="M10 3v18" />
+        <path d="M14 8v7" />
+        <path d="M18 5v13" />
+        <path d="M22 10v3" />
+      </svg>
+    );
+  },
+);
+LyricsIcon.displayName = "LyricsIcon";
+
+/**
+ * Custom lyrics active icon (filled version).
+ */
+export const LyricsActiveIcon = forwardRef<SVGSVGElement, SVGProps<SVGSVGElement> & { size?: number | string }>(
+  ({ size = 24, ...props }, ref) => {
+    return (
+      <svg
+        ref={ref}
+        xmlns="http://www.w3.org/2000/svg"
+        width={size}
+        height={size}
+        viewBox="0 0 24 24"
+        fill="currentColor"
+        stroke="currentColor"
+        strokeWidth={2.5}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        aria-hidden="true"
+        {...props}
+      >
+        <path d="M2 10v3" />
+        <path d="M6 6v11" />
+        <path d="M10 3v18" />
+        <path d="M14 8v7" />
+        <path d="M18 5v13" />
+        <path d="M22 10v3" />
+      </svg>
+    );
+  },
+);
+LyricsActiveIcon.displayName = "LyricsActiveIcon";
 
 /* ── Files & folders (local music) ─────────────────────────────────── */
 export { FolderIcon } from "@solar-icons/react/linear/folder";
@@ -92,7 +155,72 @@ export { AddCircleIcon as PlusIcon } from "@solar-icons/react/linear/add-circle"
 export { CheckCircleIcon as CheckIcon } from "@solar-icons/react/linear/check-circle";
 export { CheckCircleIcon as CheckActiveIcon } from "@solar-icons/react/bold/check-circle";
 export { RefreshIcon } from "@solar-icons/react/linear/refresh";
-export { DownloadMinimalisticIcon as DownloadIcon } from "@solar-icons/react/linear/download-minimalistic";
+/**
+ * Custom download icon (Lucide circle-fading-arrow-up).
+ * Replaces Solar DownloadMinimalisticIcon for desktop.
+ */
+export const DownloadIcon = forwardRef<SVGSVGElement, SVGProps<SVGSVGElement> & { size?: number | string }>(
+  ({ size = 24, ...props }, ref) => {
+    return (
+      <svg
+        ref={ref}
+        xmlns="http://www.w3.org/2000/svg"
+        width={size}
+        height={size}
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth={2.5}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        aria-hidden="true"
+        {...props}
+      >
+        <path d="M12 2a10 10 0 0 1 7.38 16.75" />
+        <path d="m16 12-4-4-4 4" />
+        <path d="M12 16V8" />
+        <path d="M2.5 8.875a10 10 0 0 0-.5 3" />
+        <path d="M2.83 16a10 10 0 0 0 2.43 3.4" />
+        <path d="M4.636 5.235a10 10 0 0 1 .891-.857" />
+        <path d="M8.644 21.42a10 10 0 0 0 7.631-.38" />
+      </svg>
+    );
+  },
+);
+DownloadIcon.displayName = "DownloadIcon";
+
+/**
+ * Custom download active icon (filled version).
+ */
+export const DownloadActiveIcon = forwardRef<SVGSVGElement, SVGProps<SVGSVGElement> & { size?: number | string }>(
+  ({ size = 24, ...props }, ref) => {
+    return (
+      <svg
+        ref={ref}
+        xmlns="http://www.w3.org/2000/svg"
+        width={size}
+        height={size}
+        viewBox="0 0 24 24"
+        fill="currentColor"
+        stroke="currentColor"
+        strokeWidth={2.5}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        aria-hidden="true"
+        {...props}
+      >
+        <path d="M12 2a10 10 0 0 1 7.38 16.75" />
+        <path d="m16 12-4-4-4 4" />
+        <path d="M12 16V8" />
+        <path d="M2.5 8.875a10 10 0 0 0-.5 3" />
+        <path d="M2.83 16a10 10 0 0 0 2.43 3.4" />
+        <path d="M4.636 5.235a10 10 0 0 1 .891-.857" />
+        <path d="M8.644 21.42a10 10 0 0 0 7.631-.38" />
+      </svg>
+    );
+  },
+);
+DownloadActiveIcon.displayName = "DownloadActiveIcon";
 export { TrashBinTrashIcon as TrashIcon } from "@solar-icons/react/linear/trash-bin-trash";
 export { CopyIcon } from "@solar-icons/react/linear/copy";
 export { PenIcon as PencilIcon } from "@solar-icons/react/linear/pen";

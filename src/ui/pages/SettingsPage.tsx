@@ -218,6 +218,13 @@ import {
   useStreamingQuality,
   type AudioQuality,
 } from "../../internal/audioQuality";
+import { useTranslation } from "react-i18next";
+import {
+  APP_LANGUAGES,
+  setAppLanguageWithStorage,
+  useAppLanguage,
+  type AppLanguage,
+} from "../settings/appLanguage";
 import {
   getOfflineMaxBytes,
   removeAllDownloads,
@@ -557,24 +564,29 @@ function SettingsCardHeader({
 /** Quiet outbound links in the page header. */
 type WindowControlStyle = "macos" | "windows" | "native";
 
-const SETTINGS_TABS: Array<{
+/**
+ * Generate settings tabs with localized labels.
+ */
+function getSettingsTabs(t: (key: string) => string): Array<{
   id: SettingsTab;
   label: string;
   description: string;
   icon: typeof UserIcon;
-}> = [
-  { id: "about", label: "Account", description: "Sign-in, integrations, updates", icon: UserIcon },
-  { id: "appearance", label: "Appearance", description: "Theme and motion", icon: PaletteIcon },
-  {
-    id: "playback",
-    label: "Playback",
-    description: "Transitions and session",
-    icon: PlayIcon,
-  },
-  { id: "system", label: "Library", description: "Cache and local files", icon: FolderIcon },
-  { id: "window", label: "Window", description: "Chrome and mini player", icon: QueuePanelIcon },
-  { id: "shortcuts", label: "Shortcuts", description: "Keyboard bindings", icon: KeyIcon },
-];
+}> {
+  return [
+    { id: "about", label: t("settings.tabs.about"), description: t("settings.tabs.aboutDescription"), icon: UserIcon },
+    { id: "appearance", label: t("settings.tabs.appearance"), description: t("settings.tabs.appearanceDescription"), icon: PaletteIcon },
+    {
+      id: "playback",
+      label: t("settings.tabs.playback"),
+      description: t("settings.tabs.playbackDescription"),
+      icon: PlayIcon,
+    },
+    { id: "system", label: t("settings.tabs.system"), description: t("settings.tabs.systemDescription"), icon: FolderIcon },
+    { id: "window", label: t("settings.tabs.window"), description: t("settings.tabs.windowDescription"), icon: QueuePanelIcon },
+    { id: "shortcuts", label: t("settings.tabs.shortcuts"), description: t("settings.tabs.shortcutsDescription"), icon: KeyIcon },
+  ];
+}
 
 
 
@@ -593,6 +605,9 @@ export function SettingsPage({
   onSignIn,
   onDeleteAllAppData,
 }: SettingsPageProps) {
+  const { t } = useTranslation();
+  const appLanguage = useAppLanguage();
+  const settingsTabs = getSettingsTabs(t);
   const [cacheStats, setCacheStats] = useState<CacheStats | null>(null);
   const [cacheSizeGb, setCacheSizeGb] = useState(DEFAULT_CACHE_SIZE_GB.toString());
   const [cacheBusy, setCacheBusy] = useState(false);
@@ -1030,7 +1045,7 @@ export function SettingsPage({
             <ArrowLeftIcon size={20} aria-hidden="true" />
           </button>
           <h1 className="text-[26px] font-semibold leading-8 tracking-normal text-white">
-            {SETTINGS_TABS.find((tab) => tab.id === phoneTab)?.label}
+            {settingsTabs.find((tab) => tab.id === phoneTab)?.label}
           </h1>
         </header>
       ) : (
@@ -1061,7 +1076,7 @@ export function SettingsPage({
       <div className="flex min-h-0 flex-1 items-start gap-10 @max-4xl/settings:flex-col @max-4xl/settings:gap-4">
         {isPhone && !phoneTab && !settingsQuery.trim() && (
           <div className="flex w-full flex-col gap-3">
-            {SETTINGS_TABS.filter((tab) => !isMobile || (tab.id !== "window" && tab.id !== "shortcuts")).map(
+            {settingsTabs.filter((tab) => !isMobile || (tab.id !== "window" && tab.id !== "shortcuts")).map(
               (tab) => {
                 const Icon = tab.icon;
                 return (
@@ -1109,7 +1124,7 @@ export function SettingsPage({
           role="tablist"
           aria-label="Settings categories"
         >
-          {SETTINGS_TABS.map((tab) => {
+          {settingsTabs.map((tab) => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
             return (
@@ -1339,18 +1354,42 @@ export function SettingsPage({
 
           <section className={SETTINGS_CARD} aria-labelledby="about-settings-title">
             <h2 className="text-lg font-semibold text-foreground" id="about-settings-title">
-              About
+              {t("settings.general.about")}
             </h2>
 
             <div className="flex flex-col gap-5">
+              <SettingRow
+                title={t("settings.general.language")}
+                description={t("settings.general.languageDescription")}
+              >
+                {(labelId) => (
+                  <Select
+                    className="w-52"
+                    value={appLanguage}
+                    onValueChange={(value) => setAppLanguageWithStorage(value as AppLanguage)}
+                  >
+                    <SelectTrigger aria-labelledby={labelId}>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {APP_LANGUAGES.map((lang) => (
+                        <SelectItem key={lang.code} value={lang.code}>
+                          {lang.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              </SettingRow>
+
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <span className={cn(SETTING_LABEL, "min-w-0 flex-1")}>
-                  <strong>Updates</strong>
+                  <strong>{t("settings.general.updates")}</strong>
                   <span>
-                    Installed version: {
+                    {t("settings.general.version")}: {
                       installedVersion
                         ? installedVersion === "Unknown" ? installedVersion : `v${installedVersion}`
-                        : "Loading..."
+                        : t("common.loading")
                     }
                   </span>
                 </span>
@@ -1361,7 +1400,7 @@ export function SettingsPage({
                   onClick={() => void handleCheckForUpdates()}
                 >
                   <RefreshIcon size={18} />
-                  {updateStatus === "checking" ? "Checking..." : "Check for updates"}
+                  {updateStatus === "checking" ? t("settings.general.checkingForUpdates") : t("settings.general.checkForUpdates")}
                 </button>
               </div>
 
@@ -1370,9 +1409,9 @@ export function SettingsPage({
                   <span>
                     {updateStatus === "installing"
                       ? updateProgress?.percent !== undefined
-                        ? `Downloading version ${updateResult.version}: ${updateProgress.percent}%`
-                        : `Preparing version ${updateResult.version}...`
-                      : `Version ${updateResult.version} is available.`}
+                        ? `${t("settings.general.installingUpdate")} ${updateResult.version}: ${updateProgress.percent}%`
+                        : `${t("settings.general.installingUpdate")} ${updateResult.version}...`
+                      : `${t("settings.general.updateAvailable")} ${updateResult.version}.`}
                   </span>
                   {updateResult.canInstall && (
                     <button
@@ -1381,20 +1420,20 @@ export function SettingsPage({
                       disabled={updateStatus === "installing"}
                       onClick={() => void handleInstallUpdate()}
                     >
-                      {updateStatus === "installing" ? "Installing..." : "Install"}
+                      {updateStatus === "installing" ? t("settings.general.installingUpdate") : t("settings.general.installUpdate")}
                     </button>
                   )}
                   {/* The one link where a silent failure strands the user: if this cannot
                       open, they have no other route to the download. */}
                   <ExternalLinkButton
-                    label={updateResult.canInstall ? "View changes" : "Download"}
+                    label={updateResult.canInstall ? t("common.viewChanges") : t("common.download")}
                     url={updateResult.releaseUrl}
                     className="px-4 py-2"
                   />
                 </div>
               )}
               {updateStatus === "current" && (
-                <p className="text-sm text-muted-foreground">You are up to date.</p>
+                <p className="text-sm text-muted-foreground">{t("settings.general.noUpdates")}</p>
               )}
               {updateStatus === "error" && (
                 <p className="text-sm text-destructive">{updateError}</p>
@@ -1402,8 +1441,8 @@ export function SettingsPage({
 
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <span className={cn(SETTING_LABEL, "min-w-0 flex-1")}>
-                  <strong>Quick start</strong>
-                  <span>Replay the guided introduction.</span>
+                  <strong>{t("settings.general.quickStart")}</strong>
+                  <span>{t("settings.general.quickStartDescription")}</span>
                 </span>
                 <button
                   className="flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-card disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
@@ -1411,7 +1450,7 @@ export function SettingsPage({
                   onClick={onRestartOnboarding}
                 >
                   <RefreshIcon size={18} />
-                  Start onboarding
+                  {t("settings.general.restartOnboarding")}
                 </button>
               </div>
             </div>

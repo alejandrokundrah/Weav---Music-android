@@ -28,9 +28,11 @@
     "ci": "^2.3.0",
     "clsx": "^2.1.1",
     "googlevideo": "^4.1.1",
+    "i18next": "^26.5.3",
     "motion": "^12.42.2",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
+    "react-i18next": "^17.1.0",
     "tailwind-merge": "^3.6.0",
     "youtubei.js": "^17.0.1"
   },
