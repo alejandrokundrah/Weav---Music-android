@@ -5937,6 +5937,7 @@ dependencies = [
  "block2",
  "discord-rich-presence",
  "futures-util",
+ "jni 0.21.1",
  "keyring",
  "lofty",
  "md5",

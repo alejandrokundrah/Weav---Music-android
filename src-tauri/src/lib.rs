@@ -54,6 +54,8 @@ mod discord_rpc;
 mod discord_rpc;
 #[cfg(target_os = "android")]
 mod keyring;
+#[cfg(target_os = "android")]
+mod android_cookies;
 mod equalizer;
 mod opus_source;
 mod lastfm;
@@ -2314,7 +2316,7 @@ fn update_youtube_music_account_profile(
     save_account_store(&app, &store)
 }
 
-#[cfg(any(target_os = "macos", target_os = "android", test))]
+#[cfg(any(target_os = "macos", test))]
 fn cookie_domain_matches(host: &str, cookie_domain: Option<&str>) -> bool {
     let Some(cookie_domain) = cookie_domain else {
         return false;
@@ -2477,67 +2479,90 @@ fn remove_login_partition(app: &tauri::AppHandle, slot_id: &str) {
     let _ = window.close();
 }
 
+/// Cookies that only exist once Google has actually signed the user in.
+const YOUTUBE_AUTH_COOKIE_NAMES: [&str; 3] = ["SAPISID", "__Secure-1PAPISID", "__Secure-3PAPISID"];
+
+/// Whether the login webview is currently on music.youtube.com — the page Google's `continue`
+/// parameter lands on once it has accepted the sign-in.
+fn is_on_music_page(window: &tauri::WebviewWindow) -> bool {
+    match window.url() {
+        Ok(url) => url.domain() == Some("music.youtube.com"),
+        Err(_) => false,
+    }
+}
+
+/// The cookie header to store, if these cookies amount to a finished sign-in.
+///
+/// Both halves matter: an auth cookie alone can be a leftover on a page that has since bounced
+/// back to a login step, and landing on music.youtube.com alone is also what a signed-out visit
+/// looks like.
+fn session_cookie_header(pairs: &[(String, String)], on_music_page: bool) -> Option<String> {
+    let has_auth_cookie = pairs
+        .iter()
+        .any(|(name, _)| YOUTUBE_AUTH_COOKIE_NAMES.contains(&name.as_str()));
+    if !has_auth_cookie || !on_music_page {
+        return None;
+    }
+    Some(serialize_cookie_pairs(pairs))
+}
+
 /// The session cookie as the login webview currently holds it, if it holds one at all.
 fn harvest_session_cookie(
     window: &tauri::WebviewWindow,
 ) -> Result<Option<String>, CommandError> {
-    #[cfg(target_os = "macos")]
-    let cookies = window
-        .cookies()
-        .map_err(|error| CommandError {
-            message: format!("unable to read YouTube Music session: {error}"),
-        })?
-        .into_iter()
-        .filter(|cookie| cookie_domain_matches("music.youtube.com", cookie.domain()))
-        .collect::<Vec<_>>();
+    // Android reads the WebView's cookie jar through `android_cookies` instead of the wry API:
+    // wry's `cookies()` is an empty stub there, which is what left sign-in hanging on a full
+    // YouTube Music page inside the app, and its `cookies_for_url()` crashes the app whenever
+    // the URL has no cookies yet. See that module for the details.
     #[cfg(target_os = "android")]
-    let cookies = {
-        // On Android, cookies_for_url can crash during navigation. Use all cookies and filter.
-        window
+    {
+        // Until the webview reaches music.youtube.com there is no session to find, so don't
+        // bother the main thread with a cookie read on every poll of the Google sign-in pages.
+        if !is_on_music_page(window) {
+            return Ok(None);
+        }
+        let header = android_cookies::cookie_header_for_url(window, "https://music.youtube.com/")
+            .map_err(|message| CommandError {
+                message: format!("unable to read YouTube Music session: {message}"),
+            })?;
+        let pairs = header
+            .as_deref()
+            .map(parse_cookie_header)
+            .unwrap_or_default();
+        return Ok(session_cookie_header(&pairs, true));
+    }
+
+    #[cfg(not(target_os = "android"))]
+    {
+        #[cfg(target_os = "macos")]
+        let cookies = window
             .cookies()
             .map_err(|error| CommandError {
                 message: format!("unable to read YouTube Music session: {error}"),
             })?
             .into_iter()
             .filter(|cookie| cookie_domain_matches("music.youtube.com", cookie.domain()))
-            .collect::<Vec<_>>()
-    };
-    #[cfg(not(any(target_os = "macos", target_os = "android")))]
-    let cookies = {
-        let cookie_url: url::Url = "https://music.youtube.com/"
-            .parse()
-            .map_err(|error| CommandError {
-                message: format!("invalid YouTube Music cookie URL: {error}"),
-            })?;
-        window
-            .cookies_for_url(cookie_url)
-            .map_err(|error| CommandError {
-                message: format!("unable to read YouTube Music session: {error}"),
-            })?
-    };
+            .collect::<Vec<_>>();
+        #[cfg(not(target_os = "macos"))]
+        let cookies = {
+            let cookie_url: url::Url = "https://music.youtube.com/"
+                .parse()
+                .map_err(|error| CommandError {
+                    message: format!("invalid YouTube Music cookie URL: {error}"),
+                })?;
+            window
+                .cookies_for_url(cookie_url)
+                .map_err(|error| CommandError {
+                    message: format!("unable to read YouTube Music session: {error}"),
+                })?
+        };
 
-    let cookie_names = cookies
-        .iter()
-        .map(|cookie| cookie.name())
-        .collect::<std::collections::HashSet<_>>();
-    let has_auth_cookie = ["SAPISID", "__Secure-1PAPISID", "__Secure-3PAPISID"]
-        .iter()
-        .any(|name| cookie_names.contains(name));
-    let on_music_page = match window.url() {
-        Ok(url) => url.domain() == Some("music.youtube.com"),
-        Err(_) => false,
-    };
-    if !has_auth_cookie || !on_music_page {
-        return Ok(None);
-    }
-
-    Ok(Some(
-        cookies
+        let pairs = cookies
             .iter()
-            .map(|cookie| format!("{}={}", cookie.name(), cookie.value()))
-            .collect::<Vec<_>>()
-            .join("; "),
-    ))
+            .map(|cookie| (cookie.name().to_string(), cookie.value().to_string()))
+            .collect::<Vec<_>>();
+        Ok(session_cookie_header(&pairs, is_on_music_page(window)))
+    }
 }
 
 /// The outcome of an interactive sign-in.
@@ -6441,6 +6466,49 @@ mod tests {
             "music.youtube.com",
             Some("youtube.com")
         ));
+    }
+
+    fn pairs(cookies: &[(&str, &str)]) -> Vec<(String, String)> {
+        cookies
+            .iter()
+            .map(|(name, value)| (name.to_string(), value.to_string()))
+            .collect()
+    }
+
+    #[test]
+    fn session_cookie_header_needs_an_auth_cookie_and_the_music_page() {
+        let signed_in = pairs(&[("VISITOR_INFO1_LIVE", "v"), ("__Secure-3PAPISID", "p"), ("SID", "s")]);
+        assert_eq!(
+            session_cookie_header(&signed_in, true).as_deref(),
+            Some("VISITOR_INFO1_LIVE=v; __Secure-3PAPISID=p; SID=s")
+        );
+        // Still on a Google sign-in step: the cookies may be leftovers, so it is not done yet.
+        assert_eq!(session_cookie_header(&signed_in, false), None);
+    }
+
+    #[test]
+    fn session_cookie_header_ignores_a_signed_out_visit() {
+        // What music.youtube.com holds for someone who has not signed in.
+        let signed_out = pairs(&[("VISITOR_INFO1_LIVE", "v"), ("YSC", "y")]);
+        assert_eq!(session_cookie_header(&signed_out, true), None);
+        assert_eq!(session_cookie_header(&[], true), None);
+    }
+
+    #[test]
+    fn session_cookie_header_accepts_each_auth_cookie_name() {
+        for name in YOUTUBE_AUTH_COOKIE_NAMES {
+            let cookies = pairs(&[(name, "x")]);
+            assert!(session_cookie_header(&cookies, true).is_some(), "{name}");
+        }
+    }
+
+    #[test]
+    fn android_cookie_manager_header_round_trips_through_the_jar_parser() {
+        // `CookieManager.getCookie` returns one "a=b; c=d" string, values possibly containing `=`.
+        let header = "SAPISID=abc/def; __Secure-1PSID=g.a000=; YSC=z";
+        let parsed = parse_cookie_header(header);
+        assert_eq!(parsed.len(), 3);
+        assert_eq!(session_cookie_header(&parsed, true).as_deref(), Some(header));
     }
 
     #[test]
