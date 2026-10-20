@@ -2490,7 +2490,19 @@ fn harvest_session_cookie(
         .into_iter()
         .filter(|cookie| cookie_domain_matches("music.youtube.com", cookie.domain()))
         .collect::<Vec<_>>();
-    #[cfg(not(target_os = "macos"))]
+    #[cfg(target_os = "android")]
+    let cookies = {
+        // On Android, cookies_for_url can crash during navigation. Use all cookies and filter.
+        window
+            .cookies()
+            .map_err(|error| CommandError {
+                message: format!("unable to read YouTube Music session: {error}"),
+            })?
+            .into_iter()
+            .filter(|cookie| cookie_domain_matches("music.youtube.com", cookie.domain()))
+            .collect::<Vec<_>>()
+    };
+    #[cfg(not(any(target_os = "macos", target_os = "android")))]
     let cookies = {
         let cookie_url: url::Url = "https://music.youtube.com/"
             .parse()
