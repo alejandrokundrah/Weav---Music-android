@@ -2575,7 +2575,26 @@ async fn sign_in_youtube_music(
         let return_url = window.url().map_err(|error| CommandError {
             message: format!("unable to remember the app address: {error}"),
         })?;
-        append_log_line(format_args!("[internal][tauri][info] android sign-in: return url remembered"));
+        append_log_line(format_args!("[internal][tauri][info] android sign-in: return url remembered: {}", return_url));
+        
+        // Try to navigate with detailed error logging
+        let login_url = YOUTUBE_LOGIN_URL.parse().map_err(|error| CommandError {
+            message: format!("invalid YouTube Music sign-in URL: {error}"),
+        })?;
+        append_log_line(format_args!("[internal][tauri][info] android sign-in: attempting navigation to {}", login_url));
+        
+        match window.navigate(login_url.clone()) {
+            Ok(_) => {
+                append_log_line(format_args!("[internal][tauri][info] android sign-in: navigation successful"));
+            }
+            Err(error) => {
+                append_log_line(format_args!("[internal][tauri][error] android sign-in: navigation failed: {}", error));
+                return Err(CommandError {
+                    message: format!("navigation to sign-in page failed: {error}"),
+                });
+            }
+        }
+        
         let result = poll_for_sign_in(
             &app,
             &jar,
@@ -2585,6 +2604,7 @@ async fn sign_in_youtube_music(
             Some(return_url.clone()),
         );
         if result.is_err() {
+            append_log_line(format_args!("[internal][tauri][info] android sign-in: sign-in failed, navigating back"));
             let _ = window.navigate(return_url);
         }
         return result;
