@@ -38,6 +38,8 @@ export interface RangeSliderProps {
   disabled?: boolean;
   className?: string;
   "aria-label"?: string;
+  /** When true, fill becomes green at max value */
+  highlightAtMax?: boolean;
 }
 
 const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
@@ -53,6 +55,7 @@ export function RangeSlider({
   disabled = false,
   className,
   "aria-label": ariaLabel,
+  highlightAtMax = false,
 }: RangeSliderProps) {
   const reduce = useReducedMotion();
   const trackRef = useRef<HTMLDivElement>(null);
@@ -156,7 +159,10 @@ export function RangeSlider({
     >
       {/* fill — runs from the left edge to the thumb, consistent tone */}
       <motion.div
-        className="absolute inset-y-0 left-0 bg-foreground/15"
+        className={cn(
+          "absolute inset-y-0 left-0",
+          highlightAtMax && current >= max ? "bg-primary" : "bg-foreground/15"
+        )}
         style={{ width: left }}
       />
 

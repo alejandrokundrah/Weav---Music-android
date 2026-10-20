@@ -94,6 +94,7 @@ export function VolumeControl() {
           max={100}
           step={1}
           showTicks={false}
+          highlightAtMax={true}
           aria-label="Volume"
         />
       </div>
