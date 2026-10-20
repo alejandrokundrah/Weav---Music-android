@@ -6,6 +6,7 @@ import type { PlayerControllerActions } from "./playerStore";
 import { logInternalWarn } from "../internal/logging";
 import { useLinuxMediaSession } from "../ui/settings/mediaSession";
 import { useOfflineArtworkUrl } from "./offlineStore";
+import { isAndroid } from "../ui/platform";
 
 type NativeMediaAction =
   | "play"
@@ -14,6 +15,25 @@ type NativeMediaAction =
   | "next"
   | "previous"
   | { action: "seekTo"; positionSec: number };
+
+// Android media session state (matches Rust MediaState struct)
+interface MobileMediaState {
+  title?: string;
+  artist?: string;
+  album?: string;
+  artworkUrl?: string;
+  duration?: number;
+  position?: number;
+  playbackSpeed?: number;
+  isPlaying?: boolean;
+  canPrev?: boolean;
+  canNext?: boolean;
+}
+
+interface MobileMediaAction {
+  action: "play" | "pause" | "next" | "previous" | "seek" | "stop";
+  seekPosition?: number;
+}
 
 const usesNativeWindowsMediaSession =
   isTauri() && /Windows/i.test(navigator.userAgent);
@@ -28,20 +48,25 @@ const usesNativeWindowsMediaSession =
  * the desktop widget or media keys. Unlike Windows/macOS this one has an on/off switch — the
  * existing "Show in system media controls" setting — since it's the only platform that ever had
  * one to turn off.
+ *
+ * Android uses tauri-plugin-media-session for foreground service with notification controls.
  */
 const usesNativeMacosMediaSession =
   isTauri() && /Macintosh|Mac OS X/i.test(navigator.userAgent);
 const usesNativeLinuxMediaSession =
   isTauri() && /Linux/i.test(navigator.userAgent) && !/Android/i.test(navigator.userAgent);
+const usesNativeAndroidMediaSession = isTauri() && isAndroid;
 const usesNativeMediaSession =
   usesNativeWindowsMediaSession ||
   usesNativeMacosMediaSession ||
-  usesNativeLinuxMediaSession;
+  usesNativeLinuxMediaSession ||
+  usesNativeAndroidMediaSession;
 
 function getNativeMediaCommand(linuxEnabled: boolean): string | null {
   if (usesNativeWindowsMediaSession) return "update_windows_media_session";
   if (usesNativeMacosMediaSession) return "update_macos_media_session";
   if (usesNativeLinuxMediaSession && linuxEnabled) return "update_linux_media_session";
+  if (usesNativeAndroidMediaSession) return "plugin:mediasession|update_state";
   return null;
 }
 
@@ -49,6 +74,7 @@ function getNativeMediaControlEvent(linuxEnabled: boolean): string | null {
   if (usesNativeWindowsMediaSession) return "windows-media-control";
   if (usesNativeMacosMediaSession) return "macos-media-control";
   if (usesNativeLinuxMediaSession && linuxEnabled) return "linux-media-control";
+  if (usesNativeAndroidMediaSession) return "plugin:mediasession|action";
   return null;
 }
 
@@ -102,34 +128,86 @@ export function useMediaSession(
 
     const track = state.currentTrack;
     const duration = controller.getDuration() || track?.durationSec || 0;
-    void invoke(nativeMediaCommand, {
-      update: {
-        title: track?.title ?? null,
-        artist: track?.artist ?? null,
-        artworkUrl: offlineArtworkUrl ?? track?.artworkUrl ?? null,
-        status: state.status,
-        durationSec: duration || null,
-        positionSec: getClampedPosition(duration, controller.getCurrentTime()),
-        forceMetadata,
-      },
-    }).catch((error) => {
-      logInternalWarn(`useMediaSession native ${context} update failed`, {
-        error: String(error),
+    const position = getClampedPosition(duration, controller.getCurrentTime());
+
+    if (usesNativeAndroidMediaSession) {
+      // Android plugin uses separate state/timeline commands
+      const mediaState: MobileMediaState = {
+        title: track?.title,
+        artist: track?.artist,
+        artworkUrl: offlineArtworkUrl ?? track?.artworkUrl,
+        duration: duration || undefined,
+        position: position || undefined,
+        isPlaying: state.status === "playing" || state.status === "loading",
+        canPrev: true,
+        canNext: true,
+      };
+      void invoke(nativeMediaCommand, mediaState as Record<string, unknown>).catch((error) => {
+        logInternalWarn(`useMediaSession Android ${context} update failed`, {
+          error: String(error),
+        });
       });
-    });
+    } else {
+      // Desktop native media sessions
+      void invoke(nativeMediaCommand, {
+        update: {
+          title: track?.title ?? null,
+          artist: track?.artist ?? null,
+          artworkUrl: offlineArtworkUrl ?? track?.artworkUrl ?? null,
+          status: state.status,
+          durationSec: duration || null,
+          positionSec: position || null,
+          forceMetadata,
+        },
+      }).catch((error) => {
+        logInternalWarn(`useMediaSession native ${context} update failed`, {
+          error: String(error),
+        });
+      });
+    }
   }, [controller, nativeMediaCommand, offlineArtworkUrl, state.currentTrack, state.status]);
 
   useEffect(() => {
     if (!nativeMediaControlEvent) return;
 
-    const unlistenPromise = listen<NativeMediaAction>(
+    const unlistenPromise = listen<NativeMediaAction | MobileMediaAction>(
       nativeMediaControlEvent,
       ({ payload }) => {
-        if (typeof payload === "object") {
-          if (payload.action === "seekTo") void controller.seekTo(payload.positionSec);
+        // Desktop native media actions
+        if (typeof payload === "object" && "action" in payload && payload.action === "seekTo") {
+          void controller.seekTo(payload.positionSec);
           return;
         }
 
+        // Android mobile media actions
+        if (typeof payload === "object" && "action" in payload) {
+          const mobileAction = payload as MobileMediaAction;
+          switch (mobileAction.action) {
+            case "play":
+              void controller.play();
+              break;
+            case "pause":
+              void controller.pause();
+              break;
+            case "next":
+              void controller.skipToNext();
+              break;
+            case "previous":
+              void controller.skipToPrevious();
+              break;
+            case "seek":
+              if (mobileAction.seekPosition !== undefined) {
+                void controller.seekTo(mobileAction.seekPosition);
+              }
+              break;
+            case "stop":
+              void controller.pause();
+              break;
+          }
+          return;
+        }
+
+        // Desktop string actions
         if (payload === "play") void controller.play();
         if (payload === "pause") void controller.pause();
         if (payload === "playPause") void controller.togglePlayPause();
@@ -145,6 +223,15 @@ export function useMediaSession(
 
   useEffect(() => {
     if (!nativeMediaCommand) return;
+
+    if (usesNativeAndroidMediaSession) {
+      // Initialize Android media session on first track load
+      void invoke("plugin:mediasession|initialize").catch((error) => {
+        logInternalWarn("useMediaSession Android initialize failed", {
+          error: String(error),
+        });
+      });
+    }
 
     sendNativeMediaUpdate("state", true);
     const retryDelaysMs = [250, 1000, 2500];
@@ -165,15 +252,38 @@ export function useMediaSession(
   useEffect(() => {
     if (!nativeMediaCommand || !state.currentTrack) return;
 
-    sendNativeMediaUpdate("position");
-    if (state.status !== "playing") return;
+    if (usesNativeAndroidMediaSession) {
+      // Android plugin uses separate timeline command for position updates
+      const updateTimeline = () => {
+        const duration = controller.getDuration() || state.currentTrack?.durationSec || 0;
+        const position = getClampedPosition(duration, controller.getCurrentTime());
+        void invoke("plugin:mediasession|update_timeline", {
+          position,
+          playbackSpeed: 1,
+        } as Record<string, unknown>).catch((error) => {
+          logInternalWarn("useMediaSession Android timeline update failed", {
+            error: String(error),
+          });
+        });
+      };
 
-    const intervalId = window.setInterval(
-      () => sendNativeMediaUpdate("position"),
-      1000,
-    );
-    return () => window.clearInterval(intervalId);
-  }, [nativeMediaCommand, sendNativeMediaUpdate, state.currentTrack, state.status]);
+      updateTimeline();
+      if (state.status !== "playing") return;
+
+      const intervalId = window.setInterval(updateTimeline, 1000);
+      return () => window.clearInterval(intervalId);
+    } else {
+      // Desktop native media sessions send full state
+      sendNativeMediaUpdate("position");
+      if (state.status !== "playing") return;
+
+      const intervalId = window.setInterval(
+        () => sendNativeMediaUpdate("position"),
+        1000,
+      );
+      return () => window.clearInterval(intervalId);
+    }
+  }, [nativeMediaCommand, sendNativeMediaUpdate, state.currentTrack, state.status, controller]);
 
   useEffect(() => {
     if (mediaSessionEnabled || !("mediaSession" in navigator)) return;
