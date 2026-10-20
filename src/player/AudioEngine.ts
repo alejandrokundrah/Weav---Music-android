@@ -314,6 +314,7 @@ export class AudioEngine {
   private fadeIntervalId: number | null = null;
   private muted = false;
   private playbackRate = 1;
+  private nativePauseRequested = false;
   private nativeAudioListeners: { handleEnded: () => void; handleError: () => void } | null = null;
   private onEnded: (() => void) | null = null;
   private endedAt: { positionSec: number; durationSec: number } | null = null;
@@ -474,7 +475,19 @@ export class AudioEngine {
         throw new Error("No audio track is loaded.");
       }
       this.applyNativeAudioSettings();
-      await this.audio.play();
+      this.nativePauseRequested = false;
+      const element = this.audio;
+      try {
+        await element.play();
+      } catch (error) {
+        // A rejected play() right after a load is usually the webview not being ready yet (or
+        // refusing a start no gesture asked for). One more try is cheap; a real failure throws.
+        if (this.audio !== element || this.nativePauseRequested) throw error;
+        await new Promise((resolve) => window.setTimeout(resolve, 250));
+        if (this.audio !== element) return false;
+        await element.play();
+      }
+      this.watchNativeStart(element);
       return claimId === playbackClaimId && playbackOwner === this;
     }
 
@@ -561,7 +574,28 @@ export class AudioEngine {
     return true;
   }
 
+  /*
+   * play() resolving is not proof of sound: on Android the song after an automatic advance has
+   * been seen "playing" with the element still paused, until the listener pressed pause and
+   * play. So the start is checked a moment later, and kicked again if the element is paused
+   * although nobody asked it to be.
+   */
+  private watchNativeStart(element: HTMLAudioElement, attempt = 1): void {
+    window.setTimeout(() => {
+      if (this.audio !== element || this.nativePauseRequested || element.ended) return;
+      if (!element.paused) return;
+      logInternalWarn("AudioEngine native audio was paused after play; starting it again", { attempt });
+      void element.play().then(
+        () => this.watchNativeStart(element, attempt + 1),
+        () => {
+          if (attempt < 3) this.watchNativeStart(element, attempt + 1);
+        },
+      );
+    }, 500);
+  }
+
   pause(): void {
+    this.nativePauseRequested = true;
     if (this.rustTrackId) void rustAudio.pause().catch(() => {});
     this.audio?.pause();
     this.player?.pauseVideo();
