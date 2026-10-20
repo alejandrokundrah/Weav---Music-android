@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo } from "react";
-import { invoke, isTauri } from "@tauri-apps/api/core";
+import { addPluginListener, invoke, isTauri } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import type { PlayerState } from "./PlayerController";
 import type { PlayerControllerActions } from "./playerStore";
@@ -66,7 +66,7 @@ function getNativeMediaCommand(linuxEnabled: boolean): string | null {
   if (usesNativeWindowsMediaSession) return "update_windows_media_session";
   if (usesNativeMacosMediaSession) return "update_macos_media_session";
   if (usesNativeLinuxMediaSession && linuxEnabled) return "update_linux_media_session";
-  if (usesNativeAndroidMediaSession) return "plugin:mediasession|update_state";
+  if (usesNativeAndroidMediaSession) return "plugin:media-session|update_state";
   return null;
 }
 
@@ -74,7 +74,7 @@ function getNativeMediaControlEvent(linuxEnabled: boolean): string | null {
   if (usesNativeWindowsMediaSession) return "windows-media-control";
   if (usesNativeMacosMediaSession) return "macos-media-control";
   if (usesNativeLinuxMediaSession && linuxEnabled) return "linux-media-control";
-  if (usesNativeAndroidMediaSession) return "plugin:mediasession|action";
+  if (usesNativeAndroidMediaSession) return "plugin:media-session|media_action";
   return null;
 }
 
@@ -170,50 +170,70 @@ export function useMediaSession(
   useEffect(() => {
     if (!nativeMediaControlEvent) return;
 
+    const handleMediaAction = (payload: NativeMediaAction | MobileMediaAction) => {
+      // Desktop native media actions
+      if (typeof payload === "object" && "action" in payload && payload.action === "seekTo") {
+        void controller.seekTo(payload.positionSec);
+        return;
+      }
+
+      // Android mobile media actions
+      if (typeof payload === "object" && "action" in payload) {
+        const mobileAction = payload as MobileMediaAction;
+        switch (mobileAction.action) {
+          case "play":
+            void controller.play();
+            break;
+          case "pause":
+            void controller.pause();
+            break;
+          case "next":
+            void controller.skipToNext();
+            break;
+          case "previous":
+            void controller.skipToPrevious();
+            break;
+          case "seek":
+            if (mobileAction.seekPosition !== undefined) {
+              void controller.seekTo(mobileAction.seekPosition);
+            }
+            break;
+          case "stop":
+            void controller.pause();
+            break;
+        }
+        return;
+      }
+
+      // Desktop string actions
+      if (payload === "play") void controller.play();
+      if (payload === "pause") void controller.pause();
+      if (payload === "playPause") void controller.togglePlayPause();
+      if (payload === "next") void controller.skipToNext();
+      if (payload === "previous") void controller.skipToPrevious();
+    };
+
+    if (usesNativeAndroidMediaSession) {
+      // The Android plugin emits through Tauri's plugin-listener channel, not a global event.
+      const listenerPromise = addPluginListener<MobileMediaAction>(
+        "media-session",
+        "media_action",
+        (payload) => handleMediaAction(payload),
+      ).catch((error) => {
+        logInternalWarn("useMediaSession Android action listener failed", {
+          error: String(error),
+        });
+        return null;
+      });
+
+      return () => {
+        void listenerPromise.then((listener) => listener?.unregister());
+      };
+    }
+
     const unlistenPromise = listen<NativeMediaAction | MobileMediaAction>(
       nativeMediaControlEvent,
-      ({ payload }) => {
-        // Desktop native media actions
-        if (typeof payload === "object" && "action" in payload && payload.action === "seekTo") {
-          void controller.seekTo(payload.positionSec);
-          return;
-        }
-
-        // Android mobile media actions
-        if (typeof payload === "object" && "action" in payload) {
-          const mobileAction = payload as MobileMediaAction;
-          switch (mobileAction.action) {
-            case "play":
-              void controller.play();
-              break;
-            case "pause":
-              void controller.pause();
-              break;
-            case "next":
-              void controller.skipToNext();
-              break;
-            case "previous":
-              void controller.skipToPrevious();
-              break;
-            case "seek":
-              if (mobileAction.seekPosition !== undefined) {
-                void controller.seekTo(mobileAction.seekPosition);
-              }
-              break;
-            case "stop":
-              void controller.pause();
-              break;
-          }
-          return;
-        }
-
-        // Desktop string actions
-        if (payload === "play") void controller.play();
-        if (payload === "pause") void controller.pause();
-        if (payload === "playPause") void controller.togglePlayPause();
-        if (payload === "next") void controller.skipToNext();
-        if (payload === "previous") void controller.skipToPrevious();
-      },
+      ({ payload }) => handleMediaAction(payload),
     );
 
     return () => {
@@ -226,7 +246,7 @@ export function useMediaSession(
 
     if (usesNativeAndroidMediaSession) {
       // Initialize Android media session on first track load
-      void invoke("plugin:mediasession|initialize").catch((error) => {
+      void invoke("plugin:media-session|initialize").catch((error) => {
         logInternalWarn("useMediaSession Android initialize failed", {
           error: String(error),
         });
@@ -257,7 +277,7 @@ export function useMediaSession(
       const updateTimeline = () => {
         const duration = controller.getDuration() || state.currentTrack?.durationSec || 0;
         const position = getClampedPosition(duration, controller.getCurrentTime());
-        void invoke("plugin:mediasession|update_timeline", {
+        void invoke("plugin:media-session|update_timeline", {
           position,
           playbackSpeed: 1,
         } as Record<string, unknown>).catch((error) => {
