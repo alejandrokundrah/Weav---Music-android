@@ -26,9 +26,10 @@ export function PhoneHomeHeader({
   return (
     <header className="flex items-center justify-between">
       <div className="flex min-w-0 items-center gap-1">
-        {/* 50px including its 1px ring, which is how the design draws it. */}
-        <span className="grid size-[50px] shrink-0 place-items-center rounded-full border border-[#adf106]">
-          <AccountAvatar artworkUrl={avatarUrl} className="size-12" iconSize={22} />
+        {/* 40px including its 1px ring. The design draws it at 50px, which reads as oversized on
+            a real phone next to the 22px name, so it is scaled down to sit in proportion. */}
+        <span className="mr-2 grid size-10 shrink-0 place-items-center rounded-full border border-[#adf106]">
+          <AccountAvatar artworkUrl={avatarUrl} className="size-[38px]" iconSize={18} />
         </span>
         <div className="flex min-w-0 flex-col">
           <span className="text-base font-light leading-[18px] text-[#cdcdcd]">{greeting}</span>

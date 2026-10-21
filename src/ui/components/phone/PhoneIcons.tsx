@@ -178,13 +178,14 @@ export function PhoneBellIcon({ size = 24, ...props }: IconProps) {
 }
 
 /**
- * The Home header's downloads button: a dashed lime ring around a down arrow.
+ * The Home header's downloads button: a dashed ring around a down arrow.
  *
  * Geometry is the design's own, in the design's coordinates (the 27.8px box the ring was
  * drawn in). The ring is a separate group from the arrow so that it alone can turn while
  * something is downloading — the arrow stays put, which is what makes it read as progress
- * rather than as a spinner. The colour is the design's `#ADF106`, not `--color-primary`:
- * this is a fixed brand mark in the header, not a themed accent.
+ * rather than as a spinner. It takes its colour from the surrounding text (`currentColor`), so
+ * it matches the search icon beside it. It was lime, which made the download button the loudest
+ * thing in the header; do not hard-code a colour here again.
  */
 export function PhoneDownloadIcon({
   size = 28,
@@ -192,7 +193,7 @@ export function PhoneDownloadIcon({
   ...props
 }: IconProps & { spinning?: boolean }) {
   const stroke = {
-    stroke: "#ADF106",
+    stroke: "currentColor",
     strokeWidth: 2.8956,
     strokeLinecap: "round",
     strokeLinejoin: "round",
