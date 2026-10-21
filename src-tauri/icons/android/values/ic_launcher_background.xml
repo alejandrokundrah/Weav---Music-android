@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-  <!-- Deliberately transparent: the logo carries no backing colour of its own. -->
-  <color name="ic_launcher_background">#00000000</color>
+  <!-- The artwork is a full-bleed disc face drawn in ic_launcher_foreground, so this colour only
+       shows if a launcher scales the foreground down; it matches the face's mid-tone. -->
+  <color name="ic_launcher_background">#E3E3E3</color>
 </resources>
