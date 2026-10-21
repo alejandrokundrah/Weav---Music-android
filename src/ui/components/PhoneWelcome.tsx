@@ -4,8 +4,10 @@ import { cn } from "@/lib/utils";
 import { GoogleIcon } from "@/ui/icons";
 import { SpinnerSteps } from "@/components/motion/loader";
 import { libraryController } from "../../player/playerStore";
-import type { GoogleAccountOption } from "../../datasource/types";
+import type { BrowsePage, GoogleAccountOption } from "../../datasource/types";
+import { artworkIdentity } from "../../datasource/youtube/artwork";
 import { useReduceMotion } from "../settings/renderEffects";
+import { TrackArtwork } from "./TrackArtwork";
 import appIcon from "../../../assets/img/logo.svg";
 
 /*
@@ -28,8 +30,9 @@ interface Tile {
 }
 
 /*
- * Generic artwork. These are drawn, not licensed images: the screen sells the feeling of a big
- * catalogue without shipping anyone's album covers, and without a network request on first paint.
+ * Placeholder artwork. Each tile is painted with one of these first and keeps it if no real
+ * image arrives (offline first launch, or a browse page that came back empty), so the screen is
+ * never blank. Real artist portraits and covers are laid over them by `useWelcomeArtwork`.
  */
 const TILES: Record<string, Tile> = {
   green: {
@@ -59,14 +62,101 @@ const TILES: Record<string, Tile> = {
   },
 };
 
-function ArtTile({ tile, className, style }: { tile: Tile; className?: string; style?: React.CSSProperties }) {
+/** Tiles are filled in this order, so the most visible one (the full centre tile) gets the first image. */
+const TILE_ORDER = ["sun", "green", "blue", "cream", "violet", "navy"] as const;
+
+/** Tiles are 51vw wide; the artwork is requested at that size so a phone does not decode originals. */
+function tileWidthPx(): number {
+  return typeof window === "undefined" ? 210 : Math.round(window.innerWidth * 0.51);
+}
+
+/**
+ * Artwork for a tile, one image per distinct picture: artist portraits first (they are the point
+ * of the screen), then album covers, playlists and finally track thumbnails to make up the count.
+ */
+function collectWelcomeArtwork(pages: BrowsePage[]): string[] {
+  const seen = new Set<string>();
+  const urls: string[] = [];
+  const add = (url: string | undefined) => {
+    const trimmed = url?.trim();
+    if (!trimmed) return;
+    const identity = artworkIdentity(trimmed);
+    if (seen.has(identity)) return;
+    seen.add(identity);
+    urls.push(trimmed);
+  };
+
+  const shelves = pages.flatMap((page) => page.shelves);
+  for (const shelf of shelves) for (const artist of shelf.artists) add(artist.artworkUrl);
+  for (const shelf of shelves) for (const album of shelf.albums) add(album.artworkUrl);
+  for (const shelf of shelves) for (const playlist of shelf.playlists) add(playlist.artworkUrl);
+  for (const shelf of shelves) for (const track of shelf.tracks) add(track.artworkUrl);
+  return urls;
+}
+
+/**
+ * Real artwork for the backdrop, taken from the charts (then Explore) — both work signed out.
+ *
+ * Best effort and silent, like the stored-account lookup: the gradients are already on screen,
+ * so a slow or failed request just means they stay. Explore is only asked for when the charts
+ * did not supply enough images by themselves.
+ */
+function useWelcomeArtwork(): string[] {
+  const [urls, setUrls] = useState<string[]>([]);
+
+  useEffect(() => {
+    let active = true;
+    void (async () => {
+      const pages: BrowsePage[] = [];
+      for (const surface of ["charts", "explore"] as const) {
+        try {
+          pages.push(await libraryController.getBrowsePage(surface));
+        } catch {
+          /* Try the next surface; the gradients cover whatever is still missing. */
+        }
+        if (collectWelcomeArtwork(pages).length >= TILE_ORDER.length) break;
+      }
+      if (active) setUrls(collectWelcomeArtwork(pages).slice(0, TILE_ORDER.length));
+    })();
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  return urls;
+}
+
+function ArtTile({
+  tile,
+  artworkUrl,
+  className,
+  style,
+}: {
+  tile: Tile;
+  artworkUrl?: string;
+  className?: string;
+  style?: React.CSSProperties;
+}) {
   return (
     <div
       aria-hidden="true"
       className={cn("absolute overflow-hidden rounded-[2.6vw]", className)}
       style={{ ...style, background: tile.background }}
     >
-      {tile.rings && (
+      {artworkUrl && (
+        /* `text-transparent` hides the component's own placeholder note while the image loads;
+           the tile's gradient is the placeholder here. */
+        <TrackArtwork
+          className="absolute inset-0 size-full text-transparent"
+          artworkUrl={artworkUrl}
+          size={tileWidthPx()}
+          loading="eager"
+          preferProxy
+          retryOnError
+        />
+      )}
+      {/* Rings suit the flat gradient; over a real photograph they would just be noise. */}
+      {tile.rings && !artworkUrl && (
         <div
           className="absolute left-1/2 top-[44%] aspect-square w-[78%] -translate-x-1/2 -translate-y-1/2 rounded-full"
           style={{
@@ -117,6 +207,9 @@ interface PhoneWelcomeProps {
 export function PhoneWelcome({ onSignIn, onSkip, isBusy = false }: PhoneWelcomeProps) {
   const reduceMotion = useReduceMotion();
   const [account, setAccount] = useState<GoogleAccountOption | null>(null);
+  const artwork = useWelcomeArtwork();
+  /** The image for a named tile, or nothing to leave its gradient showing. */
+  const artFor = (key: (typeof TILE_ORDER)[number]) => artwork[TILE_ORDER.indexOf(key)];
 
   /*
    * A stored login is offered by name, the way the reference does ("Continue as …"). Best
@@ -149,37 +242,50 @@ export function PhoneWelcome({ onSignIn, onSkip, isBusy = false }: PhoneWelcomeP
     >
       {/* Left column — cropped by the screen edge. */}
       <Column drift={-14} duration={14} animated={animated}>
-        <ArtTile tile={TILES.blue} className="left-[-33vw] w-[51vw]" style={{ top: "42.5vw", height: "78.5vw" }} />
-        <ArtTile tile={TILES.navy} className="left-[-33vw] w-[51vw]" style={{ top: "130vw", height: "78.5vw" }} />
+        <ArtTile tile={TILES.blue} artworkUrl={artFor("blue")} className="left-[-33vw] w-[51vw]" style={{ top: "42.5vw", height: "78.5vw" }} />
+        <ArtTile tile={TILES.navy} artworkUrl={artFor("navy")} className="left-[-33vw] w-[51vw]" style={{ top: "130vw", height: "78.5vw" }} />
       </Column>
 
       {/* Right column. */}
       <Column drift={16} duration={16} animated={animated}>
-        <ArtTile tile={TILES.cream} className="left-[87vw] w-[51vw]" style={{ top: "42.5vw", height: "78.5vw" }} />
-        <ArtTile tile={TILES.violet} className="left-[87vw] w-[51vw]" style={{ top: "130vw", height: "78.5vw" }} />
+        <ArtTile tile={TILES.cream} artworkUrl={artFor("cream")} className="left-[87vw] w-[51vw]" style={{ top: "42.5vw", height: "78.5vw" }} />
+        <ArtTile tile={TILES.violet} artworkUrl={artFor("violet")} className="left-[87vw] w-[51vw]" style={{ top: "130vw", height: "78.5vw" }} />
       </Column>
 
-      {/* Centre column — runs off the top of the screen and carries the brand. */}
+      {/* Centre column — runs off the top of the screen and sits behind the brand. */}
       <Column drift={-10} duration={12} animated={animated}>
-        <ArtTile tile={TILES.green} className="left-[24vw] w-[51vw]" style={{ top: "-25.5vw", height: "78.5vw" }} />
-        <ArtTile tile={TILES.sun} className="left-[24vw] w-[51vw]" style={{ top: "59.4vw", height: "78.5vw" }} />
+        <ArtTile tile={TILES.green} artworkUrl={artFor("green")} className="left-[24vw] w-[51vw]" style={{ top: "-25.5vw", height: "78.5vw" }} />
+        <ArtTile tile={TILES.sun} artworkUrl={artFor("sun")} className="left-[24vw] w-[51vw]" style={{ top: "59.4vw", height: "78.5vw" }} />
       </Column>
 
-      {/* Brand mark over the top tile. */}
-      <div className="absolute inset-x-0 top-[calc(20vw+env(safe-area-inset-top))] flex items-center justify-center gap-2.5">
-        <img src={appIcon} alt="" className="size-10 drop-shadow-lg" />
-        <span className="text-[34px] font-semibold leading-none tracking-tight">WEAV</span>
-      </div>
+      {/*
+       * Scrim behind the brand and headline. The top tile is now a real picture and can be
+       * bright anywhere, so the text cannot rely on a text-shadow alone. It fades out before
+       * the second centre tile (which starts at 59.4vw) so that one stays at full strength.
+       */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-x-0 top-0 h-[62vw] bg-gradient-to-b from-black/65 via-black/45 to-transparent"
+      />
 
-      {/* Headline. Its own scrim keeps it readable where it crosses the bright top tile. */}
-      <div className="absolute inset-x-0 top-[34vw] px-[5vw] text-center [text-shadow:0_1px_14px_rgb(0_0_0/0.45)]">
+      {/*
+       * Brand mark and headline as ONE block. They used to be two absolutely positioned
+       * elements, and only the logo had the status-bar inset added to its offset, so on any
+       * phone with a notch or punch-hole the logo ran down into the headline. In a single flow
+       * they cannot overlap whatever the inset, the font scale or the screen height.
+       */}
+      <div className="absolute inset-x-0 top-[calc(14vw+env(safe-area-inset-top))] flex flex-col items-center px-[5vw] text-center [text-shadow:0_1px_14px_rgb(0_0_0/0.55)]">
+        <div className="flex items-center justify-center gap-2.5">
+          <img src={appIcon} alt="" className="size-10 drop-shadow-lg" />
+          <span className="text-[34px] font-semibold leading-none tracking-tight">WEAV</span>
+        </div>
         <h1
           id="phone-welcome-title"
-          className="text-[clamp(22px,6.2vw,30px)] font-medium leading-[1.15] tracking-normal text-white"
+          className="mt-4 text-[clamp(22px,6.2vw,30px)] font-medium leading-[1.15] tracking-normal text-white"
         >
           Music for every moment
         </h1>
-        <p className="mx-auto mt-2 max-w-[86vw] text-[clamp(14px,4vw,17px)] font-light leading-snug text-white/70">
+        <p className="mx-auto mt-2 max-w-[86vw] text-[clamp(14px,4vw,17px)] font-light leading-snug text-white/80">
           Stream, download and connect through music — your whole library in one place
         </p>
       </div>
