@@ -129,6 +129,8 @@ function mergeVisibleOrderWithStoredOrder(storedOrder: string[], visibleOrder: s
 export interface SidebarNav {
   activeView?: TabView;
   activeBrowseTab?: string;
+  /** Id of the playlist or album the active tab is showing. Only the Noir skin's list uses it. */
+  activeItemId?: string;
   onHome: () => void;
   onBrowse: () => void;
   onLibrary: () => void;
@@ -206,12 +208,15 @@ const RETRY_BUTTON =
  * look for "new playlist" — this puts it where the playlists are. Opens to the right because
  * the rail is 72px wide and a panel below would be clipped by the window edge.
  */
-function CreatePlaylistButton({
+export function CreatePlaylistButton({
   collapsed,
   canCreateRemote,
   onCreated,
   onOpenChange,
+  triggerClassName,
 }: {
+  /** Extra classes for the trigger, merged last so another skin can restyle it. */
+  triggerClassName?: string;
   collapsed: boolean;
   /** Signed in, so a YouTube Music playlist is a real option. */
   canCreateRemote: boolean;
@@ -347,6 +352,7 @@ function CreatePlaylistButton({
             open
               ? "border-primary bg-primary/10 text-primary"
               : "border-border text-muted-foreground hover:border-muted-foreground hover:text-foreground",
+            triggerClassName,
           )}
         >
           <AddCircleIcon size={18} aria-hidden="true" />

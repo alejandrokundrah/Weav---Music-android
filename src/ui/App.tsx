@@ -43,6 +43,8 @@ import { PlaylistContextMenuProvider } from "./components/PlaylistContextMenu";
 import { ArtistNavigationProvider } from "./components/ArtistLinks";
 import { cn } from "@/lib/utils";
 import { TitleBar } from "./components/TitleBar";
+import { useAppSkin } from "./settings/appSkin";
+import { NoirNavCluster } from "./skins/noir/NoirNavCluster";
 import { PlayerBar } from "./components/player/PlayerBar";
 import { NowPlayingScreen } from "./components/player/NowPlayingScreen";
 
@@ -381,6 +383,9 @@ export default function App() {
   const isQueuePanelCollapsed = useQueuePanelCollapsed();
   const nativeWindowControls = useNativeWindowControls();
   const isPhone = useCompactViewport();
+  // The Noir desktop skin (Settings → Appearance). A phone-width window always keeps the opaque
+  // layout, so this is false there whatever is selected.
+  const isNoir = useAppSkin() === "noir" && !isPhone;
   const [loadingScreenState, setLoadingScreenState] = useState<"visible" | "leaving" | "hidden">("visible");
   const [onboardingComplete, setOnboardingComplete] = useState<boolean | null>(() =>
     readLocalOnboardingComplete() ? true : null
@@ -1979,6 +1984,7 @@ useEffect(() => {
   const playerBarNode = (
     <ErrorBoundary label="Playback controls">
       <PlayerBar
+        variant={isNoir ? "noir" : "glass"}
         onToggleLyrics={handleToggleLyrics}
         onToggleQueue={handleToggleQueue}
         isQueueOpen={isQueuePanelOpen}
@@ -2015,7 +2021,7 @@ useEffect(() => {
         The scenery the glass window floats over. Desktop only: a phone has no desktop to show
         through, so it keeps its opaque, edge-to-edge layout.
       */}
-      {!isPhone && <SceneBackdrop className="absolute inset-0" />}
+      {!isPhone && !isNoir && <SceneBackdrop className="absolute inset-0" />}
       {/*
         The shell. Everything the app draws lives in this one rounded pane; the sidebar, page and
         queue are columns of it, separated by hairlines rather than boxes. Edge to edge when the
@@ -2025,11 +2031,13 @@ useEffect(() => {
       <div
         className={cn(
           "relative flex min-h-0 flex-1 flex-col",
-          !isPhone && "glass-shell overflow-hidden",
-          !isPhone && (playerUIState.isLyricsFullscreen ? "m-0 rounded-none" : "m-3.5 rounded-[28px]"),
+          !isPhone && !isNoir && "glass-shell overflow-hidden",
+          !isPhone && !isNoir && (playerUIState.isLyricsFullscreen ? "m-0 rounded-none" : "m-3.5 rounded-[28px]"),
+          // Noir fills the window edge to edge: no floating pane, no scenery behind it.
+          isNoir && "noir-shell overflow-hidden",
         )}
       >
-      {!isPhone && (
+      {!isPhone && !isNoir && (
         // Same picture as the backdrop, softened — the "frost" without a live backdrop-filter.
         // Offset by the shell's margin so the two line up; it is blurred, so exactness is moot.
         <SceneBackdrop
@@ -2071,6 +2079,17 @@ useEffect(() => {
         onOpenSettings={handleOpenSettings}
         onOpenDownloads={() => handleOpenBrowse("downloads")}
         onboardingFirstTabId={onboardingStep ? onboardingFirstTabId : undefined}
+        variant={isNoir ? "noir" : "glass"}
+        leading={isNoir ? (
+          <NoirNavCluster
+            activeTab={activeTab}
+            canGoBack={canNavigateBack}
+            canGoForward={canNavigateForward}
+            onBack={handleNavigateBack}
+            onForward={handleNavigateForward}
+            onOpenSearch={() => setIsSearchOpen(true)}
+          />
+        ) : undefined}
       />
       )}
 
@@ -2113,8 +2132,10 @@ useEffect(() => {
             onHistory: handleOpenHistory,
             onDownloads: () => handleOpenBrowse("downloads"),
             onSettings: handleOpenSettings,
+            activeItemId: activeTab?.playlist?.id ?? activeTab?.album?.id,
           }}
-          footer={isPhone || playerUIState.isLyricsFullscreen ? undefined : playerBarNode}
+          // Noir docks the player under the sidebar as well, so it sits outside this column.
+          footer={isPhone || isNoir || playerUIState.isLyricsFullscreen ? undefined : playerBarNode}
           /*
             Bound straight to `isQueuePanelOpen`, not a delayed mirror of it: `AnimatePresence`
             in Layout already keeps the last-rendered panel mounted for the whole exit
@@ -2255,7 +2276,12 @@ useEffect(() => {
           </ErrorBoundary>
         </Layout>
       </div>
-      
+
+      {/* Noir's docked player: full width, under the sidebar and the page alike. */}
+      {isNoir && !playerUIState.isLyricsFullscreen && (
+        <div className="relative shrink-0">{playerBarNode}</div>
+      )}
+
       <VolumeSyncBridge />
 
       {/*

@@ -5,6 +5,8 @@ import { CheckIcon, DownloadIcon, ListIcon, PauseActiveIcon, PlayActiveIcon, Pla
 import { SpinnerSteps } from "@/components/motion/loader";
 import { TrackArtwork } from "./TrackArtwork";
 import { setAmbientArtwork } from "../stores/ambientArtworkStore";
+import { useAppSkin } from "../settings/appSkin";
+import { NoirMediaHeader } from "../skins/noir/NoirMediaHeader";
 
 /**
  * "24 songs · 1 hr 32 min".
@@ -45,7 +47,34 @@ export const HERO_PILL =
 export const HERO_ICON_BUTTON =
   "flex size-11 items-center justify-center rounded-full bg-black/25 text-white ring-1 ring-inset ring-white/35 backdrop-blur-sm transition-colors hover:bg-black/40 disabled:pointer-events-none disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white";
 
-interface MediaHeaderProps {
+/**
+ * What the download control should say, given how much of a collection is already offline.
+ *
+ * Shared by every skin's header so "all 12 downloaded" and "download 9 songs" are worded once.
+ */
+export function describeCollectionDownload(
+  counts: { downloaded: number; total: number; isPartial?: boolean } | undefined,
+): { allDownloaded: boolean; tooltip: string; label: string } {
+  const total = counts?.total ?? 0;
+  const downloaded = counts?.downloaded ?? 0;
+  const remaining = Math.max(0, total - downloaded);
+  // Never "all downloaded" while pages remain unfetched — the unseen ones are not.
+  const allDownloaded = total > 0 && remaining === 0 && !counts?.isPartial;
+
+  return {
+    allDownloaded,
+    tooltip: allDownloaded
+      ? "Every song here is downloaded"
+      : counts?.isPartial
+        ? "Download every song here for offline"
+        : remaining > 0
+          ? `Download ${remaining} song${remaining === 1 ? "" : "s"} for offline`
+          : "Download for offline",
+    label: allDownloaded ? "Already downloaded" : "Download for offline",
+  };
+}
+
+export interface MediaHeaderProps {
   /** Small uppercase kicker: PLAYLIST, ALBUM, ARTIST. */
   eyebrow: string;
   /** ReactNode so a page can make the title interactive — the artist page's copies its URL. */
@@ -162,6 +191,7 @@ export function MediaHeader({
   actionsDisabled = false,
   actions,
 }: MediaHeaderProps) {
+  const isNoir = useAppSkin() === "noir";
   /* Destructured once, so the body below reads the same as it did when these were flat props
      rather than threading `playback?.` through every branch. */
   const isPlaying = playback?.isPlaying ?? false;
@@ -181,6 +211,31 @@ export function MediaHeader({
   }, [artworkUrl]);
 
   const isBanner = circularArtwork;
+
+  // Same props, a different hero: Noir lays the title out beside an arched portrait instead of
+  // over a blurred wash. Everything above this line (the ambient tint) is harmless to share.
+  if (isNoir) {
+    return (
+      <NoirMediaHeader
+        eyebrow={eyebrow}
+        title={title}
+        subtitle={subtitle}
+        meta={meta}
+        artworkUrl={artworkUrl}
+        artworkVariant={artworkVariant}
+        artworkSlot={artworkSlot}
+        circularArtwork={circularArtwork}
+        playback={playback}
+        onShuffle={onShuffle}
+        onAddToQueue={onAddToQueue}
+        onAddToPlaylist={onAddToPlaylist}
+        download={download}
+        loop={loop}
+        actionsDisabled={actionsDisabled}
+        actions={actions}
+      />
+    );
+  }
 
   return (
     <header className="relative isolate overflow-hidden rounded-3xl bg-black/20">
@@ -360,30 +415,16 @@ export function MediaHeader({
              * would be a no-op the user cannot see, so the button says so instead of appearing
              * to do nothing.
              */
-            const total = downloadCounts?.total ?? 0;
-            const downloaded = downloadCounts?.downloaded ?? 0;
-            const remaining = Math.max(0, total - downloaded);
-            // Never "all downloaded" while pages remain unfetched — the unseen ones are not.
-            const allDownloaded = total > 0 && remaining === 0 && !downloadCounts?.isPartial;
+            const { allDownloaded, tooltip, label } = describeCollectionDownload(downloadCounts);
 
             return (
-              <Tooltip
-                content={
-                  allDownloaded
-                    ? "Every song here is downloaded"
-                    : downloadCounts?.isPartial
-                      ? "Download every song here for offline"
-                      : remaining > 0
-                        ? `Download ${remaining} song${remaining === 1 ? "" : "s"} for offline`
-                        : "Download for offline"
-                }
-              >
+              <Tooltip content={tooltip}>
                 <button
                   type="button"
                   disabled={actionsDisabled || allDownloaded || downloadBusy}
                   onClick={download.onStart}
                   aria-busy={downloadBusy}
-                  aria-label={allDownloaded ? "Already downloaded" : "Download for offline"}
+                  aria-label={label}
                   className={cn(HERO_ICON_BUTTON, "relative")}
                 >
                   {downloadBusy ? (

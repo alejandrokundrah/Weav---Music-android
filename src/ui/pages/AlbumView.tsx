@@ -13,6 +13,7 @@ import type { PlayerControllerActions } from "../../player/playerStore";
 import { shuffleTracks } from "../../player/shuffleTracks";
 import { useTrackContextMenu } from "../components/TrackContextMenu";
 import { SelectionBar } from "../components/SelectionBar";
+import { NoirTrackTableHeader } from "../skins/noir/NoirTrackTableHeader";
 import { useTrackSelection } from "../hooks/useTrackSelection";
 import { queueDownloads, useOfflineState } from "../../player/offlineStore";
 import { ArtistLinks } from "../components/ArtistLinks";
@@ -305,6 +306,7 @@ export function AlbumView({ album, playerController, libraryController }: AlbumV
             <p className="px-2 py-10 text-center text-sm text-muted-foreground">No songs match this search.</p>
           ) : (
             <div className="flex flex-col gap-0.5">
+              <NoirTrackTableHeader />
               {visibleTracks.map((track, index) => {
                 /*
                  * Matched on track identity rather than row position: the queue can be

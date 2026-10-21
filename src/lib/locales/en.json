@@ -14,6 +14,15 @@
     "createPlaylist": "Create Playlist",
     "importPlaylist": "Import Playlist"
   },
+  "noir": {
+    "browseMusic": "Browse Music",
+    "library": "Library",
+    "related": "Related",
+    "back": "Go back",
+    "forward": "Go forward",
+    "title": "Title",
+    "album": "Album"
+  },
   "settings": {
     "title": "Settings",
     "tabs": {

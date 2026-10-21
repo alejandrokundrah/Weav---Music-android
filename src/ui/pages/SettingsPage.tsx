@@ -138,6 +138,7 @@ import {
   type MiniPlayerHoverAction,
 } from "../settings/miniPlayer";
 import { MiniPlayerSkinPicker } from "../components/mini-player/SkinPicker";
+import { AppSkinPicker } from "../components/AppSkinPicker";
 import {
   setMainWindowGeometryPersistenceEnabled,
   useMainWindowGeometryPersistenceEnabled,
@@ -2304,6 +2305,21 @@ export function SettingsPage({
 
       {activeTab === "appearance" && (
         <div className="flex flex-col gap-5" role="tabpanel" aria-label="Appearance settings">
+          {/*
+            Desktop only: a phone has one layout and nothing to switch. Above Theme because it
+            decides the whole look of the window, where Theme only decides the palette within it.
+          */}
+          <section className={DESKTOP_ONLY_CARD} aria-labelledby="skin-settings-title">
+            <SettingsCardHeader
+              title="Skin"
+              titleId="skin-settings-title"
+              icon={<PaletteIcon size={18} aria-hidden="true" />}
+              description="Change how WEAV looks and is laid out on desktop. Your tabs, playlists and settings stay exactly as they are, and you can switch back at any time."
+            />
+
+            <AppSkinPicker labelledBy="skin-settings-title" />
+          </section>
+
           <section className={SETTINGS_CARD} aria-labelledby="theme-settings-title">
             <SettingsCardHeader
               title="Theme"

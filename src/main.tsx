@@ -3,10 +3,12 @@ import ReactDOM from "react-dom/client";
 import App from "./ui/App";
 import { ErrorBoundary } from "./ui/components/ErrorBoundary";
 import "./ui/styles/global.css";
+import "./ui/skins/noir/noir.css";
 import "./lib/i18n";
 import { logInternalError, logInternalInfo } from "./internal/logging";
 import { applyPaperPcMode, hydratePaperPcMode } from "./ui/settings/paperPcMode";
 import { applyTheme, hydrateTheme, watchSystemTheme } from "./ui/settings/theme";
+import { applyAppSkin, hydrateAppSkin } from "./ui/settings/appSkin";
 import {
   applyNativeWindowControls,
   hydrateWindowControlSettings,
@@ -49,9 +51,11 @@ logInternalInfo("main.bootstrap start");
 // let its image flash the fallback icon.
 hydrateArtworkCache();
 applyPlatformAttributes();
-// The glass skin is desktop-only; the CSS also gates it to >=768px, so a phone-width window
-// keeps the opaque palette even when this attribute is present.
-if (!isAndroid) document.documentElement.setAttribute("data-glass", "");
+// The desktop skin (glass by default, or whichever one was chosen in Settings → Appearance).
+// Both skins are desktop-only and the CSS gates them to >=768px, so a phone-width window keeps
+// the opaque palette. For the default skin this sets the same `data-glass` attribute this line
+// always did; it is applied before React mounts so a stored skin never flashes the other one.
+applyAppSkin();
 if (!isAndroid) void detectTilingWindowManager();
 // Before React mounts: a late theme apply shows a flash of the wrong palette.
 applyTheme();
@@ -70,6 +74,7 @@ if (!isAndroid) {
 void Promise.all([
   hydratePaperPcMode(),
   hydrateRenderEffects(),
+  hydrateAppSkin(),
   hydrateTheme(),
   hydrateWindowControlSettings(),
   hydrateMediaSessionSettings(),
