@@ -139,7 +139,10 @@
       "deleteAllDataConfirm": "Cela supprimera définitivement toutes vos données. Êtes-vous sûr ?",
       "restartOnboarding": "Redémarrer l'onboarding",
       "quickStart": "Démarrage rapide",
-      "quickStartDescription": "Rejouer l'introduction guidée"
+      "quickStartDescription": "Rejouer l'introduction guidée",
+      "aboutDeveloper": "À propos du développeur",
+      "aboutDeveloperIntro": "Salut ! Je suis Alejandro Kundrah, un développeur indépendant. J’ai créé cette application parce que je crois que l’écoute de la musique devrait être fluide, belle et libre des interruptions publicitaires constantes.",
+      "aboutDeveloperOutro": "J’espère que vous aurez autant de plaisir à l’utiliser que j’en ai eu à la créer !"
     },
     "integrations": {
       "lastFm": "Last.fm",
