@@ -14,6 +14,15 @@
     "createPlaylist": "Créer une playlist",
     "importPlaylist": "Importer une playlist"
   },
+  "noir": {
+    "browseMusic": "Parcourir la musique",
+    "library": "Bibliothèque",
+    "related": "Similaires",
+    "back": "Retour",
+    "forward": "Suivant",
+    "title": "Titre",
+    "album": "Album"
+  },
   "settings": {
     "title": "Paramètres",
     "tabs": {

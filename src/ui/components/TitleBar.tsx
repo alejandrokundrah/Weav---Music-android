@@ -1,4 +1,4 @@
-import { useRef, useState, useSyncExternalStore } from "react";
+import { useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { invoke } from "@tauri-apps/api/core";
 import { cn } from "@/lib/utils";
@@ -47,6 +47,14 @@ interface TitleBarProps {
   onOpenSettings: () => void;
   onOpenDownloads?: () => void;
   onboardingFirstTabId?: string;
+  /**
+   * Which desktop skin is drawing this bar. Only the brand block's edge and the bar's underline
+   * differ; everything that acts on the window or the account is shared, so a fix to window
+   * controls or the account panel lands in both skins at once.
+   */
+  variant?: "glass" | "noir";
+  /** Extra content between the brand block and the tabs. Noir puts history and search here. */
+  leading?: ReactNode;
 }
 
 const ACCOUNT_PANEL_ITEM =
@@ -71,7 +79,10 @@ export function TitleBar({
   onOpenSettings,
   onOpenDownloads,
   onboardingFirstTabId,
+  variant = "glass",
+  leading,
 }: TitleBarProps) {
+  const isNoir = variant === "noir";
   const appWindow = getCurrentWindow();
   const libraryState = useLibraryState();
   const account = libraryState.library?.account;
@@ -157,7 +168,13 @@ export function TitleBar({
   };
 
   return (
-    <div className="relative z-30 flex h-[var(--titlebar-height)] shrink-0 items-stretch pt-1">
+    <div
+      className={cn(
+        "relative z-30 flex h-[var(--titlebar-height)] shrink-0 items-stretch pt-1",
+        // Noir: one hairline under the whole bar, in place of glass's divider beside the brand.
+        isNoir && "border-b border-[var(--noir-hairline)] pt-0",
+      )}
+    >
       <button
         type="button"
         style={{ width: `${sidebarWidth}px` }}
@@ -167,6 +184,8 @@ export function TitleBar({
           "flex shrink-0 items-center gap-2.5 border-r border-border px-6 text-foreground transition-opacity focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring focus-visible:ring-inset",
           isHomeActive ? "opacity-100" : "opacity-85 hover:opacity-100",
           hideHomeText && "justify-center gap-0 px-0",
+          // Noir has no divider here, and the brand lines up with the sidebar's text edge.
+          isNoir && "border-r-0 px-0 pl-10",
         )}
         onClick={() => {
           if (suppressHomeClickRef.current) {
@@ -222,6 +241,8 @@ export function TitleBar({
           <h3 className="font-lexend text-[1.65rem] font-light leading-none tracking-[0.1em]">WEAV</h3>
         )}
       </button>
+
+      {leading}
 
       <MusicTabs
         tabs={tabs}

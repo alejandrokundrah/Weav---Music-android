@@ -420,6 +420,8 @@ export const TrackRow = memo(function TrackRow({
     <button
       {...buttonProps}
       type="button"
+      // A styling hook only: alternate desktop skins (see skins/noir) restyle rows through it.
+      data-track-row=""
       onClick={handleSelect}
       /* Kept conditional: whether the prop was supplied still decides whether a handler is
          attached at all, only its identity is ignored. */

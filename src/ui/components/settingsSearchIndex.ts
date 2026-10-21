@@ -12,6 +12,7 @@ const ENTRIES: SettingsSearchEntry[] = [
   { tab: "about", category: "Account", title: "Last.fm", description: "Connect Last.fm and scrobble plays." },
   { tab: "about", category: "Account", title: "Discord presence", description: "Show what you are playing and hide status when paused." },
   { tab: "about", category: "Account", title: "Updates", description: "Check for and install WEAV updates." },
+  { tab: "appearance", category: "Appearance", title: "Skin", description: "Switch between the Glass and Noir desktop skins." },
   { tab: "appearance", category: "Appearance", title: "Theme", description: "Choose light, dark, or system theme." },
   { tab: "appearance", category: "Appearance", title: "Motion", description: "Control animations and visual effects." },
   { tab: "appearance", category: "Appearance", title: "Toolbar", description: "Choose which controls appear in the title bar." },

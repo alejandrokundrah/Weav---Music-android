@@ -5,6 +5,8 @@ import { SearchBar } from "./SearchBar";
 import { TrackArtwork } from "./TrackArtwork";
 import { useAmbientArtwork } from "../stores/ambientArtworkStore";
 import { Sidebar, type SidebarNav } from "./Sidebar";
+import { NoirSidebar } from "../skins/noir/NoirSidebar";
+import { useAppSkin } from "../settings/appSkin";
 import { useCompactViewport } from "../hooks/useCompactViewport";
 import type { Album, Playlist } from "../../datasource/types";
 
@@ -81,6 +83,8 @@ export function Layout({
 }: LayoutProps) {
   const ambientArtwork = useAmbientArtwork();
   const isPhone = useCompactViewport();
+  // Noir is a desktop skin: a phone-width window keeps the opaque layout whatever is selected.
+  const isNoir = useAppSkin() === "noir" && !isPhone;
   const pageContentRef = useRef<HTMLDivElement>(null);
   /** One entry per `scrollKey` ever visited this session. Ephemeral on purpose — a browser tab
    *  does not persist scroll across a reload either, and it would go stale against content that
@@ -255,14 +259,24 @@ export function Layout({
 
       <div className="relative flex min-h-0 min-w-0 flex-1">
         {!hideSidebar && !isPhone && (
-          <Sidebar
-            width={sidebarWidth}
-            onWidthChange={onSidebarWidthChange}
-            onNavigateAlbum={onNavigateAlbum}
-            onNavigatePlaylist={onNavigatePlaylist}
-            nav={nav}
-            onOpenSearch={onOpenSearchFromSidebar ?? onOpenSearch}
-          />
+          isNoir ? (
+            <NoirSidebar
+              width={sidebarWidth}
+              onWidthChange={onSidebarWidthChange}
+              onNavigateAlbum={onNavigateAlbum}
+              onNavigatePlaylist={onNavigatePlaylist}
+              nav={nav}
+            />
+          ) : (
+            <Sidebar
+              width={sidebarWidth}
+              onWidthChange={onSidebarWidthChange}
+              onNavigateAlbum={onNavigateAlbum}
+              onNavigatePlaylist={onNavigatePlaylist}
+              nav={nav}
+              onOpenSearch={onOpenSearchFromSidebar ?? onOpenSearch}
+            />
+          )
         )}
         {/* No backdrop-blur: `bg-background` is fully opaque, so a backdrop filter here costs a
             composited layer and a blur pass to render something nothing can see through. */}
@@ -270,6 +284,8 @@ export function Layout({
           className={cn(
             "relative flex min-h-0 min-w-0 flex-1 flex-col gap-2 px-5 pt-2 max-md:px-3 max-md:pt-2 max-md:gap-3 max-md:bg-background",
             edgeToEdge && "max-md:px-0 max-md:pt-0",
+            // Noir gives the page more air on the right, where the glass layout hugs the edge.
+            isNoir && "pl-2 pr-10 pt-0",
           )}
         >
           {/*
@@ -280,7 +296,7 @@ export function Layout({
             Everything after this is positioned, so DOM order alone puts the chrome above it;
             no z-index juggling, and no stacking context that would trap the blur.
           */}
-          {ambientArtwork ? (
+          {ambientArtwork && !isNoir ? (
             <span
               key={ambientArtwork}
               className="pointer-events-none absolute inset-x-0 top-0 h-[22rem] overflow-hidden [mask-image:linear-gradient(to_bottom,black_25%,transparent)]"
@@ -317,7 +333,8 @@ export function Layout({
             history navigation — and only once there is some, so the page starts at the top.
             Phone: the full bar, as before.
           */}
-          {showSearchBar && (isPhone || canGoBack || canGoForward) && (
+          {/* Noir carries history navigation in its top bar instead, so the page starts at the top. */}
+          {showSearchBar && !isNoir && (isPhone || canGoBack || canGoForward) && (
             <div className="relative">
               <SearchBar
                 onOpen={onOpenSearch}

@@ -24,6 +24,11 @@ interface PlayerBarProps {
   isQueueOpen: boolean;
   onConnectionRestored: () => Promise<void>;
   handlePlayerBarClick:()=>void;
+  /**
+   * Which desktop skin is drawing the bar. Only the outer surface and where the seek bar sits
+   * differ; the connection handling and every control inside are shared by both skins.
+   */
+  variant?: "glass" | "noir";
 }
 
 /*
@@ -37,7 +42,8 @@ const CONNECTION_CHECK_URLS = [
   "https://cp.cloudflare.com/generate_204",
 ];
 
-export function PlayerBar({ onToggleLyrics, onToggleQueue, isQueueOpen, onConnectionRestored,handlePlayerBarClick }: PlayerBarProps) {
+export function PlayerBar({ onToggleLyrics, onToggleQueue, isQueueOpen, onConnectionRestored,handlePlayerBarClick, variant = "glass" }: PlayerBarProps) {
+  const isNoir = variant === "noir";
   const isOnline = useOnline();
   const [isCheckingConnection, setIsCheckingConnection] = useState(false);
  
@@ -225,7 +231,11 @@ export function PlayerBar({ onToggleLyrics, onToggleQueue, isQueueOpen, onConnec
         // A floating capsule, not a docked strip: it rounds, darkens and lifts off the page, and
         // the page's own column gives it the margin — so the queue rail beside it runs the full
         // height of the window instead of ending at the bar.
-        className="group/playerbar flex shrink-0 flex-col gap-2 rounded-[26px] bg-black/25 px-5 py-3.5 shadow-lg shadow-black/20 ring-1 ring-inset ring-white/10"
+        className={cn(
+          "group/playerbar flex shrink-0 flex-col gap-2 rounded-[26px] bg-black/25 px-5 py-3.5 shadow-lg shadow-black/20 ring-1 ring-inset ring-white/10",
+          // Noir: a flat docked strip, full width, with one hairline above it.
+          isNoir && "gap-1 rounded-none bg-[var(--noir-bar)] px-10 py-3 shadow-none ring-0 border-t border-[var(--noir-hairline)]",
+        )}
         onClick={handlePlayerBarClick}
       >
         <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-4">
@@ -237,7 +247,7 @@ export function PlayerBar({ onToggleLyrics, onToggleQueue, isQueueOpen, onConnec
               the bar keeps one row of height and the transport stays the anchor. */}
           <div className="flex flex-col items-center gap-1">
             <PlaybackControls extraControlsAlwaysVisible={extraControlsAlwaysVisible} />
-            {compactPlayerBar && (
+            {(compactPlayerBar || isNoir) && (
               <div className="w-full min-w-[22rem]">
                 <SeekBar />
               </div>
@@ -278,7 +288,7 @@ export function PlayerBar({ onToggleLyrics, onToggleQueue, isQueueOpen, onConnec
 
         {/* Expanded: the seek bar runs the full width of the capsule, under the transport —
             the design's arrangement. Compact tucks it inside the centre column above. */}
-        {!compactPlayerBar && <SeekBar />}
+        {!compactPlayerBar && !isNoir && <SeekBar />}
       </div>
       )}
     </>
