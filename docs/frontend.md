@@ -112,7 +112,7 @@ the key matches any bound shortcut.
     <SelectionBar>                  multi-select actions, docked above the player bar
     <SearchOverlay>                 Ctrl/⌘+K
     <AuthOverlay> <AppLoadingScreen> <KeychainNotice> <Onboarding*>
-    <UpdateToast> <ReleaseNoteDialog>
+    <UpdateToast>
 ```
 
 ---
@@ -159,7 +159,7 @@ Tailwind classes inline; there are no `*.module.css` files.
 | `ExternalLinkButton.tsx` | Open-or-copy with inline outcome feedback. |
 | `Onboarding.tsx` | `OnboardingWelcome`, stepped `Onboarding` (`onboardingSteps.ts`), `OnboardingCompleteToast`, and `KeychainNotice` (macOS keychain-prompt explainer). |
 | `AppLoadingScreen.tsx` | Startup splash with a leaving/fade state. |
-| `UpdateToast.tsx` / `ReleaseNoteDialog.tsx` | Update available → download progress → restart (or "open release page" on macOS); and the one-time post-update note. |
+| `UpdateToast.tsx` | Update available → download progress → restart (or "open release page" on macOS). |
 
 ### Player (`components/player/`)
 

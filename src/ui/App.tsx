@@ -72,8 +72,6 @@ import { playerUIStore, usePlayerUIState } from "./stores/playerUIStore";
 import { AppLoadingScreen } from "./components/AppLoadingScreen";
 import { AuthOverlay } from "./components/AuthOverlay";
 import { UpdateToast } from "./components/UpdateToast";
-import { ReleaseNoteDialog } from "./components/ReleaseNoteDialog";
-import { markReleaseNoteSeen, resolveReleaseNoteVersion } from "../internal/releaseNote";
 import {
   checkForUpdates,
   isUpdateSnoozed,
@@ -306,9 +304,6 @@ export default function App() {
     shallowEqual,
   );
   const playerSession = usePlayerSession();
-  /* Resolved once at startup. Null in every case except the first launch after an update —
-     see resolveReleaseNoteVersion, which records silently for all the others. */
-  const [releaseNoteVersion, setReleaseNoteVersion] = useState<string | null>(null);
   const playerUIState = usePlayerUIState();
   const miniPlayerEnabled = useMiniPlayerEnabled();
   const miniPlayerWindowLive = useMiniPlayerWindowLive();
@@ -636,17 +631,6 @@ export default function App() {
   );
 
   useMediaSession(playerState, playerController);
-
-  useEffect(() => {
-    let cancelled = false;
-    void resolveReleaseNoteVersion().then((version) => {
-      if (!cancelled) setReleaseNoteVersion(version);
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
 
   useEffect(() => {
     const syncLastFm = () => {
@@ -2376,14 +2360,6 @@ useEffect(() => {
           onDismiss={dismissAvailableUpdate}
         />
       )}
-
-      <ReleaseNoteDialog
-        version={releaseNoteVersion}
-        onDismiss={() => {
-          if (releaseNoteVersion) markReleaseNoteSeen(releaseNoteVersion);
-          setReleaseNoteVersion(null);
-        }}
-      />
       {/*
         Mounted only while a sign-in is running: `signInProgress` is null at every other moment,
         so the overlay and its animation cost nothing for the whole rest of the session.
