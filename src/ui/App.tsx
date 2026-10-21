@@ -95,6 +95,7 @@ import {
   previousOnboardingStep,
   type OnboardingStep,
 } from "./components/Onboarding";
+import { PhoneWelcome } from "./components/PhoneWelcome";
 import { isAndroid, isLinux, isMacOS } from "./platform";
 import { useCompactViewport } from "./hooks/useCompactViewport";
 import { MobileNav } from "./components/MobileNav";
@@ -1059,6 +1060,15 @@ export default function App() {
     ]);
     setActiveTabId(newId);
     setNextTabId((currentId) => currentId + 1);
+  };
+
+  /*
+   * The phone welcome screen's sign-in. A successful sign-in is the screen's whole purpose, so
+   * it also ends the first-run flow; a cancelled or failed one leaves the screen up to retry.
+   */
+  const handlePhoneWelcomeSignIn = async () => {
+    await handleSignIn();
+    if (libraryController.getState().status === "ready") markOnboardingComplete(false);
   };
 
   /**
@@ -2335,10 +2345,21 @@ useEffect(() => {
         <KeychainNotice onContinue={handleKeychainNoticeContinue} />
       ) : (
         <>
-          {loadingScreenState === "hidden" && showOnboardingWelcome && (
+          {/*
+            On a phone the spotlight tour has nothing to point at (no search bar, no tab strip),
+            so first launch gets the sign-in welcome instead; the tour stays desktop-only.
+          */}
+          {isPhone && loadingScreenState === "hidden" && onboardingComplete === false && (
+            <PhoneWelcome
+              onSignIn={() => void handlePhoneWelcomeSignIn()}
+              onSkip={finishOnboarding}
+              isBusy={libraryState.status === "authorizing"}
+            />
+          )}
+          {!isPhone && loadingScreenState === "hidden" && showOnboardingWelcome && (
             <OnboardingWelcome />
           )}
-          {loadingScreenState === "hidden" && onboardingComplete === false && !showOnboardingWelcome && onboardingStep && (
+          {!isPhone && loadingScreenState === "hidden" && onboardingComplete === false && !showOnboardingWelcome && onboardingStep && (
             <Onboarding
               step={onboardingStep}
               onSkip={finishOnboarding}
