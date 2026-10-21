@@ -143,7 +143,6 @@ Alongside the source, `*.check.ts` files hold executable assertions for the non-
 | `durableLocalSetting.ts` | The localStorage ⇄ durable-settings mirroring helpers (`read/write/hydrateLocal{Boolean,Json}Setting`). Every settings module in `ui/settings/` is built on these. |
 | `logging.ts` | `logInternalDebug/Info/Warn/Error`. Redacts cookies, tokens, authorization headers and full URLs before forwarding to Rust via `frontend_log`, then also mirrors to the console. |
 | `updateChecker.ts` | `tauri-plugin-updater` wrapper; on macOS it degrades to a GitHub Releases API check (notify-only, no in-app install). 24 h per-version snooze in localStorage. |
-| `releaseNote.ts` | The one-time "what's new" note, keyed to the installed version rather than a flag. |
 | `artworkCache.ts` | Remembers which artwork candidate URL actually loaded, per source URL, so remounts don't rewalk the fallback chain. Hydrated before React mounts. |
 | `audioQuality.ts` | Streaming and download quality caps, set independently. |
 | `lyricsSourcePreference.ts` | Which lyric provider is promoted to the front of the race. A preference, not a restriction. |
