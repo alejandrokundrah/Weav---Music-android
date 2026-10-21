@@ -38,7 +38,7 @@ export function previousOnboardingStep(step: OnboardingStep): OnboardingStep | n
 }
 
 export const SPOTLIGHT_PADDING = 8;
-export const CARD_WIDTH = 320;
+export const CARD_WIDTH = 344;
 export const CARD_GAP = 14;
 export const VIEWPORT_MARGIN = 12;
 

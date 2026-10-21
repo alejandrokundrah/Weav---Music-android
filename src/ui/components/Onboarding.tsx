@@ -5,6 +5,11 @@ import {
   CheckIcon,
   CloseIcon,
   KeyIcon,
+  MusicNoteIcon,
+  PlayIcon,
+  PlusIcon,
+  SearchIcon,
+  ShuffleIcon,
 } from "@/ui/icons";
 import { primaryModifierLabel } from "../platform";
 import { useReduceMotion } from "../settings/renderEffects";
@@ -69,6 +74,26 @@ function getStepContent(): Record<OnboardingStep, StepContent> {
       shortcut: `${primaryModifierLabel} 1, 2, 3…`,
     },
   };
+}
+
+/** One glyph per step, so the badge says what kind of action is being asked for at a glance. */
+const STEP_ICONS: Record<OnboardingStep, typeof SearchIcon> = {
+  "open-search": SearchIcon,
+  "type-first": MusicNoteIcon,
+  "play-first": PlayIcon,
+  "new-tab": PlusIcon,
+  "type-second": SearchIcon,
+  "play-second": PlayIcon,
+  "switch-back": ShuffleIcon,
+};
+
+/**
+ * Splits a shortcut into keycaps: the modifier on its own, everything after it as one key.
+ * The tail stays whole because "1, 2, 3…" is one idea, not three keys.
+ */
+function shortcutKeys(shortcut: string): string[] {
+  const [modifier, ...rest] = shortcut.split(" ");
+  return [modifier, rest.join(" ")].filter(Boolean);
 }
 
 /**
@@ -185,6 +210,7 @@ export function Onboarding({ step, onSkip, onSkipStep, onBack }: OnboardingProps
   }, [content.text, typed]);
 
   const index = ONBOARDING_STEPS.indexOf(step);
+  const StepIcon = STEP_ICONS[step];
   const isFirst = index === 0;
   const isLast = index === ONBOARDING_STEPS.length - 1;
   const { left: cardLeft, top: cardTop } = getCardPosition(rect, cardHeight, {
@@ -260,7 +286,7 @@ export function Onboarding({ step, onSkip, onSkipStep, onBack }: OnboardingProps
 
       <div
         ref={cardRef}
-        className="pointer-events-auto absolute flex flex-col gap-3 rounded-xl bg-popover p-4 text-sm text-foreground shadow-2xl"
+        className="pointer-events-auto absolute flex flex-col overflow-hidden rounded-2xl bg-popover/95 text-sm text-foreground shadow-[0_0_0_1px_rgb(255_255_255/0.07),0_24px_64px_rgb(0_0_0/0.5)] backdrop-blur-xl"
         style={{ left: cardLeft, top: cardTop, width: CARD_WIDTH }}
         role="dialog"
         aria-modal="false"
@@ -269,70 +295,88 @@ export function Onboarding({ step, onSkip, onSkipStep, onBack }: OnboardingProps
         // Tapping the card finishes the typewriter rather than making anyone wait it out.
         onClick={done ? undefined : reveal}
       >
-        <div className="flex items-start justify-between gap-2">
-          <div className="flex flex-col gap-0.5">
-            <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-              Step {index + 1} of {ONBOARDING_STEPS.length}
-            </span>
-            <h2 id="onboarding-title" className="text-sm font-semibold">
-              {content.title}
-            </h2>
-          </div>
-          <button
-            className="rounded p-1 text-muted-foreground transition-colors hover:bg-card hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            type="button"
-            onClick={onSkip}
-            aria-label="Skip the whole tour"
-            title="Skip tour (Esc)"
-          >
-            <CloseIcon size={16} />
-          </button>
+        {/* Progress runs along the card's top edge: one continuous bar reads faster than dots. */}
+        <div
+          className="h-1 w-full bg-white/10"
+          role="progressbar"
+          aria-valuemin={1}
+          aria-valuemax={ONBOARDING_STEPS.length}
+          aria-valuenow={index + 1}
+          aria-label={`Step ${index + 1} of ${ONBOARDING_STEPS.length}`}
+        >
+          <div
+            className="h-full rounded-r-full bg-primary transition-[width] duration-300 ease-out"
+            style={{ width: `${((index + 1) / ONBOARDING_STEPS.length) * 100}%` }}
+          />
         </div>
 
-        <p id="onboarding-text" className="min-h-[2.5rem] text-muted-foreground">
-          {typed}
-        </p>
-
-        {content.shortcut && (
-          <kbd className="w-fit rounded bg-card px-1.5 py-0.5 font-sans text-xs text-muted-foreground">
-            {content.shortcut}
-          </kbd>
-        )}
-
-        {/* Progress as dots: cheaper to read at a glance than the counter, and shows the end. */}
-        <div className="flex items-center gap-1.5" aria-hidden="true">
-          {ONBOARDING_STEPS.map((id, dotIndex) => (
+        <div className="flex flex-col gap-3.5 p-4">
+          <div className="flex items-start gap-3">
             <span
-              key={id}
-              className={`h-1 flex-1 rounded-full transition-colors ${
-                dotIndex <= index ? "bg-primary" : "bg-card"
-              }`}
-            />
-          ))}
-        </div>
-
-        <div className="flex items-center justify-between gap-2">
-          <button
-            className="flex items-center gap-1 rounded px-2 py-1 text-xs text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-40"
-            type="button"
-            onClick={onBack}
-            disabled={isFirst}
-            title="Previous step (Alt ←)"
-          >
-            <ArrowLeftIcon size={14} />
-            Back
-          </button>
-
-          <div className="flex items-center gap-1">
+              className="grid size-10 shrink-0 place-items-center rounded-xl bg-primary/15 text-primary"
+              aria-hidden="true"
+            >
+              <StepIcon size={20} />
+            </span>
+            <div className="flex min-w-0 flex-1 flex-col gap-0.5 pt-0.5">
+              <span className="text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
+                Step {index + 1} of {ONBOARDING_STEPS.length}
+              </span>
+              <h2 id="onboarding-title" className="text-base font-semibold leading-snug tracking-normal">
+                {content.title}
+              </h2>
+            </div>
             <button
-              className="text-xs text-muted-foreground underline-offset-2 transition-colors hover:text-foreground hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              className="-mr-1 -mt-1 grid size-8 shrink-0 place-items-center rounded-full text-muted-foreground transition-colors hover:bg-white/10 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              type="button"
+              onClick={onSkip}
+              aria-label="Skip the whole tour"
+              title="Skip tour (Esc)"
+            >
+              <CloseIcon size={16} />
+            </button>
+          </div>
+
+          <p id="onboarding-text" className="min-h-[2.75rem] text-[13px] leading-relaxed text-muted-foreground">
+            {typed}
+          </p>
+
+          {content.shortcut && (
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <span>Shortcut</span>
+              {shortcutKeys(content.shortcut).map((key) => (
+                <kbd
+                  key={key}
+                  className="min-w-6 rounded-md bg-white/10 px-1.5 py-0.5 text-center font-sans text-xs font-medium text-foreground shadow-[inset_0_-1px_0_rgb(255_255_255/0.14)]"
+                >
+                  {key}
+                </kbd>
+              ))}
+            </div>
+          )}
+
+          <div className="flex items-center gap-2 pt-0.5">
+            <button
+              className="grid size-9 shrink-0 place-items-center rounded-full bg-white/8 text-muted-foreground transition-colors hover:bg-white/15 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-35"
+              type="button"
+              onClick={onBack}
+              disabled={isFirst}
+              aria-label="Previous step"
+              title="Previous step (Alt ←)"
+            >
+              <ArrowLeftIcon size={16} />
+            </button>
+
+            <button
+              className="ml-auto rounded-full px-3 py-2 text-xs text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               type="button"
               onClick={onSkip}
             >
               Skip tour
             </button>
+
             <button
-              className="flex items-center gap-1 rounded-md bg-primary px-2.5 py-1 text-xs font-medium text-primary-foreground transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              className="flex items-center gap-1.5 rounded-full bg-primary px-4 py-2 text-xs font-semibold text-primary-foreground transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-popover"
               type="button"
               onClick={onSkipStep}
               title={isLast ? "Finish" : "Skip this step (Alt →)"}
@@ -340,12 +384,12 @@ export function Onboarding({ step, onSkip, onSkipStep, onBack }: OnboardingProps
               {isLast ? (
                 <>
                   Finish
-                  <CheckIcon size={14} />
+                  <CheckIcon size={15} />
                 </>
               ) : (
                 <>
                   Skip step
-                  <ArrowRightIcon size={14} />
+                  <ArrowRightIcon size={15} />
                 </>
               )}
             </button>
