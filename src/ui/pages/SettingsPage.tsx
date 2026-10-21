@@ -1452,15 +1452,11 @@ export function SettingsPage({
 
           <section className={SETTINGS_CARD} aria-labelledby="about-developer-title">
             <h2 className="text-lg font-semibold text-foreground" id="about-developer-title">
-              About the Developer
+              {t("settings.general.aboutDeveloper")}
             </h2>
             <div className="flex flex-col gap-3 text-sm leading-relaxed text-muted-foreground">
-              <p>
-                Hey there! I’m Alejandro Kundrah, an independent developer. I built this app because
-                I believe listening to music should be smooth, beautiful, and free of constant ad
-                interruptions.
-              </p>
-              <p>Hope you enjoy using it as much as I enjoyed building it!</p>
+              <p>{t("settings.general.aboutDeveloperIntro")}</p>
+              <p>{t("settings.general.aboutDeveloperOutro")}</p>
             </div>
           </section>
         </div>
