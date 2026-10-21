@@ -80,7 +80,7 @@ export function DownloadsPanel({
   variant = "toolbar",
 }: {
   onOpenDownloads?: () => void;
-  /** `phone` swaps the toolbar button for the lime ring used in the phone Home header. */
+  /** `phone` swaps the toolbar button for the dashed ring used in the phone Home header. */
   variant?: "toolbar" | "phone";
 }) {
   const [open, setOpen] = useState(false);
