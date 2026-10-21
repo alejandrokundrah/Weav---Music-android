@@ -47,7 +47,6 @@ import {
   QueuePanelIcon,
   RefreshIcon,
   SettingsIcon,
-  StarIcon,
   TrashIcon,
   UserIcon,
 } from "@/ui/icons";
@@ -208,7 +207,7 @@ import {
   subscribeTilingWindowManager,
   isMobile,
 } from "../platform";
-import { GITHUB_NEW_ISSUE_URL, GITHUB_REPOSITORY_URL } from "../links";
+import { GITHUB_NEW_ISSUE_URL } from "../links";
 import { AccountAvatar, AccountSwitcher, AddGoogleAccountButton, GoogleAccountSwitcher } from "../components/AccountSwitcher";
 import {
   AUDIO_QUALITY_LABELS,
@@ -1107,11 +1106,6 @@ export function SettingsPage({
             )}
             <div className="mt-2 flex flex-wrap gap-2">
               <ExternalLinkButton
-                icon={<StarIcon size={16} aria-hidden="true" />}
-                label="Star on GitHub"
-                url={GITHUB_REPOSITORY_URL}
-              />
-              <ExternalLinkButton
                 icon={<BugIcon size={16} aria-hidden="true" />}
                 label="Report an issue"
                 url={GITHUB_NEW_ISSUE_URL}
@@ -1453,6 +1447,20 @@ export function SettingsPage({
                   {t("settings.general.restartOnboarding")}
                 </button>
               </div>
+            </div>
+          </section>
+
+          <section className={SETTINGS_CARD} aria-labelledby="about-developer-title">
+            <h2 className="text-lg font-semibold text-foreground" id="about-developer-title">
+              About the Developer
+            </h2>
+            <div className="flex flex-col gap-3 text-sm leading-relaxed text-muted-foreground">
+              <p>
+                Hey there! I’m Alejandro Kundrah, an independent developer. I built this app because
+                I believe listening to music should be smooth, beautiful, and free of constant ad
+                interruptions.
+              </p>
+              <p>Hope you enjoy using it as much as I enjoyed building it!</p>
             </div>
           </section>
         </div>
