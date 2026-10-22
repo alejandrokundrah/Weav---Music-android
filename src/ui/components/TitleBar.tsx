@@ -279,19 +279,19 @@ export function TitleBar({
 
       {leading}
 
-      {(!isAzure || tabs.length > 1) && (
-      <MusicTabs
-        tabs={tabs}
-        activeTabId={activeTabId}
-        playingTabId={playingTabId}
-        nonClosableTabId={nonClosableTabId}
-        onCreateTab={onCreateTab}
-        onCloseTab={onCloseTab}
-        onSwitchTab={onSwitchTab}
-        onReorderTab={onReorderTab}
-        onboardingFirstTabId={onboardingFirstTabId}
-      />
-      )}
+      {(!isAzure || tabs.length > 1) && (isNoir ? (
+        /*
+          Noir centres the search button and the tabs in the bar itself, not in whatever space the
+          brand and history controls leave over. The wrapper ignores the pointer so the window
+          can still be dragged by the bar around it; its children opt back in.
+        */
+        <div className="pointer-events-none absolute inset-y-0 left-1/2 z-10 flex max-w-[44%] -translate-x-1/2 items-center gap-3 [&>*]:pointer-events-auto">
+          {searchSlot}
+          {tabsNode}
+        </div>
+      ) : (
+        tabsNode
+      ))}
 
       <div
         className="min-w-6 flex-1"

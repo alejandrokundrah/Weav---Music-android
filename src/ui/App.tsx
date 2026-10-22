@@ -44,7 +44,6 @@ import { ArtistNavigationProvider } from "./components/ArtistLinks";
 import { cn } from "@/lib/utils";
 import { TitleBar } from "./components/TitleBar";
 import { useAppSkin } from "./settings/appSkin";
-import { NoirNavCluster } from "./skins/noir/NoirNavCluster";
 import type { SidebarNav } from "./components/Sidebar";
 import { AzureTopBar } from "./skins/azure/AzureTopBar";
 import { AzureRightRail, AZURE_RAIL_WIDTH } from "./skins/azure/AzureRightRail";

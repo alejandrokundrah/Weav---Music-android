@@ -34,9 +34,10 @@ const INLINE_SLIDER = [
 
 /**
  * `popover` (default) is the icon that opens a slider on hover. `inline` is Azure's: the icon and
- * a short slider side by side, always visible, as in its design.
+ * a short slider side by side, always visible, as in its design. `noir-inline` is Noir's take on
+ * the same always-visible arrangement, with its own styling.
  */
-export function VolumeControl({ variant = "popover" }: { variant?: "popover" | "inline" } = {}) {
+export function VolumeControl({ variant = "popover" }: { variant?: "popover" | "inline" | "noir-inline" } = {}) {
   /* This component writes volume on every pointer move of the slider, so it is the last one
      that should be subscribed to fields it does not read. */
   const playerState = usePlayerSelector(
@@ -111,7 +112,7 @@ export function VolumeControl({ variant = "popover" }: { variant?: "popover" | "
       ? VolumeSmallIcon
       : VolumeLoudIcon;
 
-  if (inline) {
+  if (variant === "noir-inline") {
     return (
       <div className="flex shrink-0 items-center gap-1">
         <button

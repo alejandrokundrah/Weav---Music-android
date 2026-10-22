@@ -27,7 +27,6 @@ import { useTrackContextMenu } from "./TrackContextMenu";
 import { ArtistLinks } from "./ArtistLinks";
 import { TrackArtwork } from "./TrackArtwork";
 import { AzureClockIcon, AzureMoreIcon } from "../skins/azure/azureIcons";
-import { formatTrackDuration } from "../pages/formatTrackDuration";
 
 /**
  * Anything else a caller needs on the underlying button — the playlist page attaches
