@@ -4,6 +4,7 @@ import App from "./ui/App";
 import { ErrorBoundary } from "./ui/components/ErrorBoundary";
 import "./ui/styles/global.css";
 import "./ui/skins/noir/noir.css";
+import "./ui/skins/azure/azure.css";
 import "./lib/i18n";
 import { logInternalError, logInternalInfo } from "./internal/logging";
 import { applyPaperPcMode, hydratePaperPcMode } from "./ui/settings/paperPcMode";

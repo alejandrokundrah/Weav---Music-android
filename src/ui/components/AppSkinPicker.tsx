@@ -56,7 +56,79 @@ export function AppSkinPicker({ labelledBy }: { labelledBy: string }) {
 }
 
 function SkinPreview({ id }: { id: AppSkinId }) {
-  return id === "noir" ? <NoirPreview /> : <GlassPreview />;
+  if (id === "noir") return <NoirPreview />;
+  if (id === "azure") return <AzurePreview />;
+  return <GlassPreview />;
+}
+
+/** Charcoal panels either side of the page, a blue accent, and a progress line over the player. */
+function AzurePreview() {
+  return (
+    <div className="relative flex aspect-[16/10] w-full flex-col bg-[#121212]">
+      <div className="flex min-h-0 flex-1">
+        {/* Sidebar: logo, a highlighted row with the blue tab, then plain rows */}
+        <div className="relative flex w-[24%] flex-col gap-[7%] bg-[#212121] px-[6%] pt-[7%]">
+          <div className="h-[9%] w-[34%] rounded-full bg-[#49c4e2]" />
+          <div className="mt-[4%] flex flex-col gap-[12%]">
+            <div className="relative -mx-[8%] flex items-center gap-[10%] bg-gradient-to-r from-white/15 to-transparent px-[8%] py-[6%]">
+              <div className="size-[14%] rounded-[3px] bg-[#31a9d9] [aspect-ratio:1]" />
+              <div className="h-[7%] w-[44%] rounded-full bg-white" />
+              <span className="absolute right-0 top-0 h-full w-[4%] rounded-l-sm bg-[#31a9d9]" />
+            </div>
+            {[0, 1, 2].map((row) => (
+              <div key={row} className="flex items-center gap-[10%]">
+                <div className="size-[14%] rounded-full bg-white/35 [aspect-ratio:1]" />
+                <div className="h-[7%] w-[50%] rounded-full bg-white/30" />
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Page: round back button, search pill, a banner, a shelf */}
+        <div className="flex min-w-0 flex-1 flex-col gap-[5%] px-[4%] pt-[4%]">
+          <div className="flex items-center gap-[4%]">
+            <div className="size-[13%] rounded-full bg-[#212121] [aspect-ratio:1]" />
+            <div className="h-[13%] w-[46%] rounded-full bg-[#212121]" />
+          </div>
+          <div className="relative flex h-[36%] items-center overflow-hidden rounded-lg bg-[#0d1d26] px-[6%]">
+            <div className="flex w-1/2 flex-col gap-[10%]">
+              <div className="h-[14%] w-[80%] rounded-full bg-white" />
+              <div className="h-[22%] w-[34%] rounded-full bg-[#31a9d9]" />
+            </div>
+            <div className="absolute inset-y-0 right-0 w-[40%] bg-gradient-to-r from-transparent to-[#31a9d9]/40" />
+          </div>
+          <div className="grid grid-cols-4 gap-[4%]">
+            {["#31a9d9", "#2fb344", "#d9d9d9", "#d94a3a"].map((color) => (
+              <div key={color} className="aspect-square rounded-[5px]" style={{ background: color, opacity: 0.85 }} />
+            ))}
+          </div>
+        </div>
+
+        {/* Right rail */}
+        <div className="flex w-[20%] flex-col gap-[7%] bg-[#212121] px-[3%] pt-[6%]">
+          <div className="flex items-center gap-[10%]">
+            <div className="size-[26%] rounded-full bg-white/60 [aspect-ratio:1]" />
+            <div className="h-[8%] w-[40%] rounded-full bg-white/60" />
+          </div>
+          {[0, 1, 2].map((row) => (
+            <div key={row} className="flex items-center gap-[8%]">
+              <div className="size-[22%] rounded-[3px] bg-white/25 [aspect-ratio:1]" />
+              <div className="h-[8%] w-[46%] rounded-full bg-white/30" />
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Docked player with its progress line on top */}
+      <div className="relative flex h-[16%] items-center justify-center gap-[3%] bg-[#121212]">
+        <div className="absolute inset-x-0 top-0 h-[3px] bg-[#656565]">
+          <div className="h-full w-2/5 bg-white" />
+        </div>
+        <div className="size-[34%] rounded-full bg-white [aspect-ratio:1]" />
+        <div className="h-[8%] w-[16%] rounded-full bg-[#31a9d9]" />
+      </div>
+    </div>
+  );
 }
 
 /** A frosted pane over the dusk-valley scene, with the lime accent. */

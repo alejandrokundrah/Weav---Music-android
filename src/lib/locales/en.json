@@ -23,6 +23,18 @@
     "title": "Title",
     "album": "Album"
   },
+  "azure": {
+    "discover": "Discover",
+    "favoriteSongs": "Favorite Songs",
+    "searchPlaceholder": "Search music, artist, albums...",
+    "guest": "WEAV",
+    "signedIn": "Signed in",
+    "notSignedIn": "Not signed in",
+    "recentPlayed": "Recent Played",
+    "seeAll": "See All",
+    "recentEmpty": "Songs you play will show up here.",
+    "playingNow": "Playing"
+  },
   "settings": {
     "title": "Settings",
     "tabs": {

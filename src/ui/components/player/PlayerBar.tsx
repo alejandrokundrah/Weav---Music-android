@@ -3,6 +3,10 @@ import { AnimatePresence, motion } from "motion/react";
 import { SpinnerSteps } from "@/components/motion/loader";
 import { cn } from "@/lib/utils";
 import { PlayActiveIcon, QueuePanelIcon } from "@/ui/icons";
+import { useTranslation } from "react-i18next";
+import { AzureWaveformIcon } from "../../skins/azure/azureIcons";
+import { usePlayerUIState } from "../../stores/playerUIStore";
+import { usePlayerSelector } from "../../../player/playerStore";
 import { tauriFetch } from "../../../datasource/youtube/tauriFetch";
 import { setOnline, useOnline } from "../../../internal/connectivity";
 import { TrackInfo } from "./TrackInfo";
@@ -28,7 +32,7 @@ interface PlayerBarProps {
    * Which desktop skin is drawing the bar. Only the outer surface and where the seek bar sits
    * differ; the connection handling and every control inside are shared by both skins.
    */
-  variant?: "glass" | "noir";
+  variant?: "glass" | "noir" | "azure";
 }
 
 /*
@@ -44,6 +48,10 @@ const CONNECTION_CHECK_URLS = [
 
 export function PlayerBar({ onToggleLyrics, onToggleQueue, isQueueOpen, onConnectionRestored,handlePlayerBarClick, variant = "glass" }: PlayerBarProps) {
   const isNoir = variant === "noir";
+  const isAzure = variant === "azure";
+  const { t } = useTranslation();
+  const lyricsOpen = usePlayerUIState().isLyricsOpen;
+  const hasTrack = usePlayerSelector((state) => state.currentTrack !== null);
   const isOnline = useOnline();
   const [isCheckingConnection, setIsCheckingConnection] = useState(false);
  
@@ -226,6 +234,68 @@ export function PlayerBar({ onToggleLyrics, onToggleQueue, isQueueOpen, onConnec
           </div>
           <SeekBar />
         </div>
+      ) : isAzure ? (
+      <div
+        // Azure: a docked strip with the progress line across its very top. The seek line sits
+        // half above the bar's edge so it reads as the border between page and player.
+        data-azure-player=""
+        className="group/playerbar relative flex h-[108px] shrink-0 flex-col justify-center bg-[rgb(18_18_18/0.94)]"
+        onClick={handlePlayerBarClick}
+      >
+        <div
+          className="absolute inset-x-0 -top-1.5 z-10 flex h-3 items-center"
+          onClick={(event) => event.stopPropagation()}
+        >
+          <SeekBar variant="line" />
+        </div>
+
+        <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-6 px-8">
+          <div className="min-w-0">
+            <TrackInfo />
+          </div>
+
+          <PlaybackControls extraControlsAlwaysVisible />
+
+          <div className="flex min-w-0 items-center justify-end gap-5">
+            <DownloadButton />
+            <SeekBar variant="time" />
+            <VolumeControl variant="inline" />
+            <button
+              type="button"
+              className={cn(
+                "flex size-8 items-center justify-center rounded-full text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                isQueueOpen ? "bg-white/10 text-[var(--azure-accent)]" : "hover:bg-white/10",
+              )}
+              onClick={(event) => {
+                event.stopPropagation();
+                onToggleQueue();
+              }}
+              aria-label={isQueueOpen ? "Close queue" : "Open queue"}
+              title={isQueueOpen ? "Close queue" : "Open queue"}
+            >
+              <QueuePanelIcon size={18} />
+            </button>
+            {/* The design's waveform is the lyrics toggle: the one thing it says is "listening". */}
+            <button
+              type="button"
+              className={cn(
+                "flex size-8 items-center justify-center rounded-full transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                "disabled:pointer-events-none disabled:opacity-40",
+                lyricsOpen ? "bg-white/10" : "hover:bg-white/10",
+              )}
+              onClick={(event) => {
+                event.stopPropagation();
+                onToggleLyrics();
+              }}
+              disabled={!hasTrack}
+              aria-label={lyricsOpen ? t("player.closeLyrics", "Close lyrics") : t("player.openLyrics", "Open lyrics")}
+              aria-pressed={lyricsOpen}
+            >
+              <AzureWaveformIcon size={20} />
+            </button>
+          </div>
+        </div>
+      </div>
       ) : (
       <div
         // A floating capsule, not a docked strip: it rounds, darkens and lifts off the page, and

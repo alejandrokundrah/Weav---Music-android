@@ -23,6 +23,8 @@ import { libraryController, useLibraryState } from "../../player/playerStore";
 import { useTrackContextMenu } from "./TrackContextMenu";
 import { ArtistLinks } from "./ArtistLinks";
 import { TrackArtwork } from "./TrackArtwork";
+import { AzureClockIcon, AzureMoreIcon } from "../skins/azure/azureIcons";
+import { formatTrackDuration } from "../pages/formatTrackDuration";
 
 /**
  * Anything else a caller needs on the underlying button — the playlist page attaches
@@ -227,6 +229,8 @@ function RatingActions({ track }: { track: Track }) {
           aria-label={isActive ? `Undo ${label.toLowerCase()} for ${track.title}` : `${label} ${track.title}`}
           aria-pressed={isActive}
           aria-busy={isPending}
+          // A styling hook: the Azure skin keeps the heart always visible and hides the thumb.
+          data-rate={target}
           className={cn(
             "grid size-8 shrink-0 place-items-center rounded-full transition",
             "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
@@ -518,7 +522,7 @@ export const TrackRow = memo(function TrackRow({
 
       {showArtwork ? (
         <TrackArtwork
-          className="size-10 shrink-0 rounded-lg max-md:size-14 max-md:rounded-2xl"
+          className="azure-row-art size-10 shrink-0 rounded-lg max-md:size-14 max-md:rounded-2xl"
           size={40}
           artworkUrl={track.artworkUrl}
           iconSize={18}
@@ -534,7 +538,7 @@ export const TrackRow = memo(function TrackRow({
         <span className="flex min-w-0 items-center gap-1.5">
           <span
             className={cn(
-              "truncate text-sm font-medium",
+              "azure-row-title truncate text-sm font-medium",
               isCurrent ? "text-primary" : "text-foreground",
             )}
           >
@@ -619,6 +623,34 @@ export const TrackRow = memo(function TrackRow({
       )}
 
       {trailing}
+
+      {/*
+        Azure-only extras (`.azure-only` is display:none in every other skin): the song length
+        beside a clock, and a "more" button that opens the same menu a right-click does. Rendered
+        unconditionally so the row never has to know which skin is drawing it.
+      */}
+      {track.durationSec ? (
+        <span className="azure-only w-[4.5rem] shrink-0 items-center gap-2 text-base tabular-nums text-foreground max-lg:hidden">
+          <AzureClockIcon size={20} className="shrink-0 text-[var(--azure-muted)]" />
+          {formatTrackDuration(track.durationSec)}
+        </span>
+      ) : null}
+      {onContextMenu && (
+        <span
+          role="button"
+          // Pointer-only: the menu is positioned from the click, and the row's own context-menu
+          // key already reaches it from the keyboard.
+          tabIndex={-1}
+          aria-label={`More options for ${track.title}`}
+          className="azure-only size-8 shrink-0 items-center justify-center rounded-full text-foreground hover:bg-white/10"
+          onClick={(event) => {
+            event.stopPropagation();
+            handleContextMenu(event);
+          }}
+        >
+          <AzureMoreIcon size={18} />
+        </span>
+      )}
 
       {/* Announced to screen readers only; the meter above is decorative. */}
       {isCurrent ? (

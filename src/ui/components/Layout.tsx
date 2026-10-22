@@ -6,6 +6,7 @@ import { TrackArtwork } from "./TrackArtwork";
 import { useAmbientArtwork } from "../stores/ambientArtworkStore";
 import { Sidebar, type SidebarNav } from "./Sidebar";
 import { NoirSidebar } from "../skins/noir/NoirSidebar";
+import { AzureSidebar } from "../skins/azure/AzureSidebar";
 import { useAppSkin } from "../settings/appSkin";
 import { useCompactViewport } from "../hooks/useCompactViewport";
 import type { Album, Playlist } from "../../datasource/types";
@@ -52,6 +53,8 @@ interface LayoutProps {
    * the page's own column rather than the window so the queue rail can run the full height.
    */
   footer?: ReactNode;
+  /** Azure only: the strip above the page (back, breadcrumb, search, bell). Ignored elsewhere. */
+  topBar?: ReactNode;
 }
 
 const SCROLLBAR_HIDE_DELAY_MS = 760;
@@ -80,11 +83,14 @@ export function Layout({
   nav,
   onOpenSearchFromSidebar,
   footer,
+  topBar,
 }: LayoutProps) {
   const ambientArtwork = useAmbientArtwork();
   const isPhone = useCompactViewport();
   // Noir is a desktop skin: a phone-width window keeps the opaque layout whatever is selected.
-  const isNoir = useAppSkin() === "noir" && !isPhone;
+  const skin = useAppSkin();
+  const isNoir = skin === "noir" && !isPhone;
+  const isAzure = skin === "azure" && !isPhone;
   const pageContentRef = useRef<HTMLDivElement>(null);
   /** One entry per `scrollKey` ever visited this session. Ephemeral on purpose — a browser tab
    *  does not persist scroll across a reload either, and it would go stale against content that
@@ -259,7 +265,15 @@ export function Layout({
 
       <div className="relative flex min-h-0 min-w-0 flex-1">
         {!hideSidebar && !isPhone && (
-          isNoir ? (
+          isAzure ? (
+            <AzureSidebar
+              width={sidebarWidth}
+              onWidthChange={onSidebarWidthChange}
+              onNavigateAlbum={onNavigateAlbum}
+              onNavigatePlaylist={onNavigatePlaylist}
+              nav={nav}
+            />
+          ) : isNoir ? (
             <NoirSidebar
               width={sidebarWidth}
               onWidthChange={onSidebarWidthChange}
@@ -286,6 +300,8 @@ export function Layout({
             edgeToEdge && "max-md:px-0 max-md:pt-0",
             // Noir gives the page more air on the right, where the glass layout hugs the edge.
             isNoir && "pl-2 pr-10 pt-0",
+            // Azure's top bar and page carry their own 32px gutters, as in the design.
+            isAzure && "gap-0 px-0 pt-0",
           )}
         >
           {/*
@@ -296,7 +312,7 @@ export function Layout({
             Everything after this is positioned, so DOM order alone puts the chrome above it;
             no z-index juggling, and no stacking context that would trap the blur.
           */}
-          {ambientArtwork && !isNoir ? (
+          {ambientArtwork && !isNoir && !isAzure ? (
             <span
               key={ambientArtwork}
               className="pointer-events-none absolute inset-x-0 top-0 h-[22rem] overflow-hidden [mask-image:linear-gradient(to_bottom,black_25%,transparent)]"
@@ -334,7 +350,8 @@ export function Layout({
             Phone: the full bar, as before.
           */}
           {/* Noir carries history navigation in its top bar instead, so the page starts at the top. */}
-          {showSearchBar && !isNoir && (isPhone || canGoBack || canGoForward) && (
+          {isAzure && topBar && !fullBleedContent ? topBar : null}
+          {showSearchBar && !isNoir && !isAzure && (isPhone || canGoBack || canGoForward) && (
             <div className="relative">
               <SearchBar
                 onOpen={onOpenSearch}
@@ -354,6 +371,7 @@ export function Layout({
                 className={cn(
                   "h-full overflow-y-auto overscroll-contain rounded-xl ",
                   fullBleedContent ? "p-0" : "p-4 max-md:p-2",
+                  isAzure && !fullBleedContent && "px-8 pb-6 pt-0",
                   edgeToEdge && "max-md:rounded-none max-md:p-0",
                 )}
                 data-page-scroll-root

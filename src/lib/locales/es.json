@@ -23,6 +23,18 @@
     "title": "Título",
     "album": "Álbum"
   },
+  "azure": {
+    "discover": "Descubrir",
+    "favoriteSongs": "Canciones favoritas",
+    "searchPlaceholder": "Busca música, artistas, álbumes...",
+    "guest": "WEAV",
+    "signedIn": "Sesión iniciada",
+    "notSignedIn": "Sin iniciar sesión",
+    "recentPlayed": "Reproducido recientemente",
+    "seeAll": "Ver todo",
+    "recentEmpty": "Las canciones que reproduzcas aparecerán aquí.",
+    "playingNow": "Reproduciendo"
+  },
   "settings": {
     "title": "Configuración",
     "tabs": {
