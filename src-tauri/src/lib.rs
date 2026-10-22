@@ -14,6 +14,9 @@ use std::sync::{Arc, LazyLock, Mutex, OnceLock};
 use std::thread;
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
+#[cfg(target_os = "android")]
+use tauri::AppHandle;
+
 macro_rules! eprintln {
     ($($arg:tt)*) => {{
         let message = $crate::sanitize_log_message(&format!($($arg)*));
@@ -59,6 +62,8 @@ mod android_cookies;
 mod equalizer;
 mod opus_source;
 mod lastfm;
+#[cfg(target_os = "android")]
+mod native_bridge;
 
 // Keep the legacy service name so existing sign-in credentials survive the product rename.
 const KEYRING_SERVICE: &str = "com.ytmusicdock.app";
@@ -190,6 +195,9 @@ const DEFAULT_CACHE_MAX_BYTES: u64 = 4 * 1024 * 1024 * 1024;
 const CURRENT_LOG_FILE_NAME: &str = "current.log";
 
 static APP_LOG_FILE: OnceLock<Mutex<Option<File>>> = OnceLock::new();
+
+#[cfg(target_os = "android")]
+static APP_HANDLE: OnceLock<Mutex<Option<AppHandle>>> = OnceLock::new();
 
 struct CacheLock(Mutex<()>);
 struct AppSettingsLock(Mutex<()>);
@@ -2012,7 +2020,7 @@ fn load_youtube_music_cookie_entries() -> Result<Option<String>, CommandError> {
 
 /*
  * The Keychain entry backing `load_or_create_cookie_encryption_key` is scoped to this build's
- * code signature. WEAV's macOS builds are ad-hoc signed (no paid Developer ID), so that
+ * code signature. Zuno's macOS builds are ad-hoc signed (no paid Developer ID), so that
  * signature — and with it, access to the old key — changes on every single update. Before this
  * guarded against it, a stale key read as `NoEntry`, the loader minted a brand new random one,
  * and it was handed straight to AES-GCM against ciphertext only the *old* key could ever open:
@@ -5784,7 +5792,47 @@ pub fn run() {
             #[cfg(target_os = "windows")]
             windows_media::update_windows_media_session,
             #[cfg(target_os = "linux")]
-            linux_media::update_linux_media_session
+            linux_media::update_linux_media_session,
+            #[cfg(target_os = "android")]
+            native_bridge::native_play_track,
+            #[cfg(target_os = "android")]
+            native_bridge::native_play,
+            #[cfg(target_os = "android")]
+            native_bridge::native_pause,
+            #[cfg(target_os = "android")]
+            native_bridge::native_seek_to,
+            #[cfg(target_os = "android")]
+            native_bridge::native_set_volume,
+            #[cfg(target_os = "android")]
+            native_bridge::native_set_playback_rate,
+            #[cfg(target_os = "android")]
+            native_bridge::native_get_current_position,
+            #[cfg(target_os = "android")]
+            native_bridge::native_get_duration,
+            #[cfg(target_os = "android")]
+            native_bridge::native_is_playing,
+            #[cfg(target_os = "android")]
+            native_bridge::native_skip_to_next,
+            #[cfg(target_os = "android")]
+            native_bridge::native_skip_to_previous,
+            #[cfg(target_os = "android")]
+            native_bridge::native_stop,
+            #[cfg(target_os = "android")]
+            native_bridge::native_enqueue_download,
+            #[cfg(target_os = "android")]
+            native_bridge::native_cancel_download,
+            #[cfg(target_os = "android")]
+            native_bridge::native_get_download_progress,
+            #[cfg(target_os = "android")]
+            native_bridge::native_save_track_to_media_store,
+            #[cfg(target_os = "android")]
+            native_bridge::native_scan_file,
+            #[cfg(target_os = "android")]
+            native_bridge::register_playback_state_callback,
+            #[cfg(target_os = "android")]
+            native_bridge::register_position_callback,
+            #[cfg(target_os = "android")]
+            native_bridge::register_track_ended_callback
         ])
         .run(context)
         .expect("error while running tauri application");

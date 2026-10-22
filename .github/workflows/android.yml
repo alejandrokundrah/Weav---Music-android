@@ -2,9 +2,9 @@
 # the artifact from the finished run.
 #
 # Two variants (the "variant" input):
-#   phone - arm64 only, phone layout. Artifact: `weav-android-apk` (weav-android.apk).
+#   phone - arm64 only, phone layout. Artifact: `zuno-android-apk` (zuno-android.apk).
 #   tv    - arm64 + 32-bit armv7 in one APK, always the desktop layout, and a manifest that
-#           declares Android TV support. Artifact: `weav-android-tv-apk` (weav-android-tv.apk).
+#           declares Android TV support. Artifact: `zuno-android-tv-apk` (zuno-android-tv.apk).
 #           The armv7 part matters: many TVs (Mali-450 era SoCs) are 32-bit only and refuse an
 #           arm64-only APK as "not compatible".
 #
@@ -80,12 +80,12 @@ jobs:
           if [ "$VARIANT" = "tv" ]; then
             echo "VITE_TV=1" >> "$GITHUB_ENV"
             echo "TARGETS=--target aarch64 --target armv7" >> "$GITHUB_ENV"
-            echo "APK_NAME=weav-android-tv.apk" >> "$GITHUB_ENV"
-            echo "ARTIFACT_NAME=weav-android-tv-apk" >> "$GITHUB_ENV"
+            echo "APK_NAME=zuno-android-tv.apk" >> "$GITHUB_ENV"
+            echo "ARTIFACT_NAME=zuno-android-tv-apk" >> "$GITHUB_ENV"
           else
             echo "TARGETS=--target aarch64" >> "$GITHUB_ENV"
-            echo "APK_NAME=weav-android.apk" >> "$GITHUB_ENV"
-            echo "ARTIFACT_NAME=weav-android-apk" >> "$GITHUB_ENV"
+            echo "APK_NAME=zuno-android.apk" >> "$GITHUB_ENV"
+            echo "ARTIFACT_NAME=zuno-android-apk" >> "$GITHUB_ENV"
           fi
 
       - name: Generate the Android project
@@ -101,20 +101,162 @@ jobs:
           cp -r src-tauri/icons/android/. "$res/"
           ls -R "$res" | grep -i launcher
 
+      - name: Copy native Android components
+        # Copy the native Kotlin files into the Tauri-generated Android project
+        run: |
+          java_dir=src-tauri/gen/android/app/src/main/java/com/weav
+          mkdir -p "$java_dir"
+          cp android-native/app/src/main/java/com/weav/*.kt "$java_dir/"
+          ls -la "$java_dir"
+
+      - name: Add native dependencies to build.gradle
+        # Add Media3/ExoPlayer and WorkManager dependencies
+        run: |
+          build_file=src-tauri/gen/android/app/build.gradle.kts
+
+          # Add Media3 ExoPlayer dependencies
+          if ! grep -q "androidx.media3" "$build_file"; then
+            sed -i '/dependencies {/a\    implementation("androidx.media3:media3-exoplayer:1.2.1")\n    implementation("androidx.media3:media3-ui:1.2.1")\n    implementation("androidx.media3:media3-session:1.2.1")' "$build_file"
+          fi
+
+          # Add WorkManager dependency
+          if ! grep -q "androidx.work" "$build_file"; then
+            sed -i '/dependencies {/a\    implementation("androidx.work:work-runtime-ktx:2.9.0")' "$build_file"
+          fi
+
+          # Add Kotlin Coroutines dependency
+          if ! grep -q "org.jetbrains.kotlinx:kotlinx-coroutines" "$build_file"; then
+            sed -i '/dependencies {/a\    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")' "$build_file"
+          fi
+
+          cat "$build_file"
+
+      - name: Patch MainActivity to initialize NativeBridge
+        # Add NativeBridge initialization to the Tauri-generated MainActivity
+        run: |
+          main_activity=src-tauri/gen/android/app/src/main/java/com/weav/desktop/MainActivity.kt
+
+          python3 - "$main_activity" <<'PY'
+          import sys
+          path = sys.argv[1]
+          with open(path, 'r') as f:
+            content = f.read()
+
+          # Add necessary imports
+          imports_to_add = []
+          if 'import android.Manifest' not in content:
+              imports_to_add.append('import android.Manifest')
+          if 'import android.content.pm.PackageManager' not in content:
+              imports_to_add.append('import android.content.pm.PackageManager')
+          if 'import android.os.Build' not in content:
+              imports_to_add.append('import android.os.Build')
+          if 'import androidx.core.content.ContextCompat' not in content:
+              imports_to_add.append('import androidx.core.content.ContextCompat')
+          if 'import com.weav.NativeBridge' not in content:
+              imports_to_add.append('import com.weav.NativeBridge')
+
+          if imports_to_add:
+              # Find the package line and add imports after it
+              package_idx = content.find('package ')
+              if package_idx != -1:
+                  newline_idx = content.find('\n', package_idx)
+                  if newline_idx != -1:
+                      for imp in reversed(imports_to_add):
+                          content = content[:newline_idx+1] + imp + '\n' + content[newline_idx+1:]
+
+          # Add NativeBridge initialization in onCreate
+          if 'NativeBridge.initialize' not in content:
+              content = content.replace(
+                  'super.onCreate(savedInstanceState)',
+                  'super.onCreate(savedInstanceState)\n\n        // Request runtime permissions\n        requestPermissions()\n\n        // Initialize native Android components\n        NativeBridge.initialize(this)'
+              )
+
+          # Add permission request method
+          if 'requestPermissions' not in content:
+              # Add the method before the last closing brace
+              permission_method = '''
+
+  private fun requestPermissions() {
+    val permissionsToRequest = mutableListOf<String>()
+
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+      if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+        permissionsToRequest.add(Manifest.permission.POST_NOTIFICATIONS)
+      }
+      if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_MEDIA_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+        permissionsToRequest.add(Manifest.permission.READ_MEDIA_AUDIO)
+      }
+    } else {
+      if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
+        permissionsToRequest.add(Manifest.permission.READ_EXTERNAL_STORAGE)
+      }
+    }
+
+    if (permissionsToRequest.isNotEmpty()) {
+      requestPermissions(permissionsToRequest.toTypedArray(), 1001)
+    }
+  }
+
+  override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
+    super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+    // Handle permission results if needed
+  }
+'''
+              content = content.rstrip()
+              if content.endswith('}'):
+                  content = content[:-1] + permission_method + '}'
+
+          # Add onDestroy cleanup
+          if 'NativeBridge.cleanup' not in content:
+              if 'override fun onDestroy' in content:
+                  content = content.replace(
+                      'super.onDestroy()',
+                      'super.onDestroy()\n    NativeBridge.cleanup()'
+                  )
+              else:
+                  # Add onDestroy method before the last closing brace
+                  content = content.rstrip()
+                  if content.endswith('}'):
+                      content = content[:-1] + '''
+  override fun onDestroy() {
+    super.onDestroy()
+    NativeBridge.cleanup()
+  }
+}'''
+
+          with open(path, 'w') as f:
+              f.write(content)
+          PY
+
+          cat "$main_activity"
+
       - name: Patch the Android manifest
         run: |
           app=src-tauri/gen/android/app/src/main
           manifest="$app/AndroidManifest.xml"
 
-          for permission in INTERNET WAKE_LOCK; do
+          for permission in INTERNET WAKE_LOCK FOREGROUND_SERVICE FOREGROUND_SERVICE_MEDIA_PLAYBACK POST_NOTIFICATIONS READ_MEDIA_AUDIO; do
             grep -q "android.permission.${permission}\"" "$manifest" || \
               sed -i "s#<application#<uses-permission android:name=\"android.permission.${permission}\" />\n    <application#" "$manifest"
           done
+
+          # Add legacy storage permissions for older Android versions
+          if ! grep -q "READ_EXTERNAL_STORAGE" "$manifest"; then
+            sed -i "s#<application#<uses-permission android:name=\"android.permission.READ_EXTERNAL_STORAGE\" android:maxSdkVersion=\"32\" />\n    <application#" "$manifest"
+          fi
+          if ! grep -q "WRITE_EXTERNAL_STORAGE" "$manifest"; then
+            sed -i "s#<application#<uses-permission android:name=\"android.permission.WRITE_EXTERNAL_STORAGE\" android:maxSdkVersion=\"29\" />\n    <application#" "$manifest"
+          fi
 
           # Lets the <audio> element reach the app's own 127.0.0.1 media server.
           mkdir -p "$app/res/xml"
           cp src-tauri/android/network_security_config.xml "$app/res/xml/network_security_config.xml"
           sed -i 's#<application#<application android:networkSecurityConfig="@xml/network_security_config"#' "$manifest"
+
+          # Add native audio service declaration
+          if ! grep -q "NativeAudioService" "$manifest"; then
+            sed -i '/<\/application>/i\        <!-- Native Audio Service -->\n        <service\n            android:name="com.weav.NativeAudioService"\n            android:enabled="true"\n            android:exported="false"\n            android:foregroundServiceType="mediaPlayback" />' "$manifest"
+          fi
 
           cat "$manifest"
 
@@ -179,11 +321,11 @@ jobs:
           if [ -n "${KEYSTORE_B64:-}" ]; then
             echo "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/release.jks"
           else
-            KEYSTORE_PASSWORD=weav-throwaway
-            KEY_ALIAS=weav
+            KEYSTORE_PASSWORD=zuno-throwaway
+            KEY_ALIAS=zuno
             keytool -genkeypair -keystore "$RUNNER_TEMP/release.jks" -alias "$KEY_ALIAS" \
               -keyalg RSA -keysize 2048 -validity 10000 -storepass "$KEYSTORE_PASSWORD" \
-              -dname "CN=WEAV" >/dev/null 2>&1
+              -dname "CN=Zuno" >/dev/null 2>&1
           fi
 
           tools="$ANDROID_HOME/build-tools/35.0.0"

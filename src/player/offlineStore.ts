@@ -7,6 +7,7 @@ import { getAppSetting, setAppSetting } from "../internal/appSettings";
 import { getDownloadQuality, type AudioQuality } from "../internal/audioQuality";
 import { artworkIdentity, getArtworkUrlCandidates } from "../datasource/youtube/artwork";
 import { isOnline, onReconnect, useOnline } from "../internal/connectivity";
+import { isAndroidSync } from "../internal/platform";
 
 const MANIFEST_KEY = "weav.offline-manifest.v1";
 const MAX_BYTES_KEY = "weav.offline-max-bytes.v1";
@@ -399,6 +400,30 @@ export async function removeAllDownloads(): Promise<void> {
 /** Track objects for queued ids, so the worker has metadata without re-fetching. */
 const pendingTracks = new Map<string, Track>();
 
+/**
+ * Monitor native Android download progress
+ */
+async function monitorNativeDownload(workId: string, _trackId: string): Promise<void> {
+  const checkInterval = 1000; // Check every second
+  let progress = 0;
+
+  const checkProgress = async (): Promise<void> => {
+    try {
+      progress = await invoke<number>("native_get_download_progress", { workId });
+      setState({ progress });
+
+      if (progress < 100) {
+        setTimeout(checkProgress, checkInterval);
+      }
+    } catch (error) {
+      logInternalError("offlineStore.native download progress check failed", error, { workId });
+    }
+  };
+
+  // Start checking progress
+  setTimeout(checkProgress, checkInterval);
+}
+
 async function pump(): Promise<void> {
   /*
    * `downloadingId` is only ever set by a running pump, so finding it set while none is
@@ -437,7 +462,25 @@ async function pump(): Promise<void> {
       try {
         logInternalInfo("offlineStore.download start", { trackId, title: track.title });
         const { url, mimeType, cookie } = await resolveStreamUrl(track, getDownloadQuality());
-        const byteLength = await invoke<number>("offline_audio_save", { url, trackId, cookie });
+
+        let byteLength: number;
+        if (isAndroidSync()) {
+          // Use native Android download manager
+          const workId = await invoke<string>("native_enqueue_download", {
+            trackId,
+            url,
+            quality: getDownloadQuality(),
+          });
+          logInternalInfo("offlineStore.native download enqueued", { trackId, workId });
+
+          // Monitor download progress
+          await monitorNativeDownload(workId, trackId);
+          byteLength = 0; // Will be updated when download completes
+        } else {
+          // Use Rust download
+          byteLength = await invoke<number>("offline_audio_save", { url, trackId, cookie });
+        }
+
         logInternalInfo("offlineStore.download complete", { trackId, byteLength });
         const hasArtwork = await saveArtwork(track);
         pendingTracks.delete(trackId);

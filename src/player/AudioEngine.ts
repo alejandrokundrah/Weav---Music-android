@@ -6,6 +6,8 @@ import {
 } from "../ui/settings/audioEngine";
 import type { RustAudioSource } from "../datasource/types";
 import * as rustAudio from "./rustAudio";
+import * as nativeAndroidAudio from "./nativeAndroidAudio";
+import { isAndroidSync } from "../internal/platform";
 
 type YouTubePlayerEvent = {
   data: number;
@@ -257,7 +259,16 @@ export class AudioEngine {
 
   /** Rust decodes and plays; nothing in this class touches a media element or an IFrame. */
   private get useRustAudio(): boolean {
+    // On Android, use native Android audio instead of Rust
+    if (isAndroidSync()) {
+      return false;
+    }
     return usesRustAudioEngine();
+  }
+
+  /** Native Android audio (ExoPlayer) on Android platform */
+  private get useNativeAndroidAudio(): boolean {
+    return isAndroidSync();
   }
 
   /** What Rust has loaded on the active deck for this engine, or null. */
@@ -266,6 +277,9 @@ export class AudioEngine {
   private rustStandbyTrackId: string | null = null;
   private rustDurationSec = 0;
   private rustStandbyDurationSec = 0;
+  /** What native Android audio has loaded, or null. */
+  private nativeAndroidTrackId: string | null = null;
+  private nativeAndroidDurationSec = 0;
   /**
    * This track is on the IFrame deck even though the selected engine is not `iframe`.
    *
@@ -347,6 +361,16 @@ export class AudioEngine {
     rustSource?: RustAudioSource,
     durationSec?: number,
   ): Promise<void> {
+    if (this.useNativeAndroidAudio) {
+      if (!sourceUrl) {
+        throw new Error("Native Android playback requires a streaming URL.");
+      }
+      this.releaseIframePlayer();
+      this.releaseNativeAudio();
+      await this.loadNativeAndroidAudio(videoId, sourceUrl, durationSec ?? 0);
+      return;
+    }
+
     if (this.useRustAudio) {
       if (!rustSource) {
         throw new Error("Rust playback requires a resolved audio source.");
@@ -465,6 +489,11 @@ export class AudioEngine {
 
   async play(): Promise<boolean> {
     const claimId = this.claimPlayback();
+    if (this.nativeAndroidTrackId) {
+      await nativeAndroidAudio.setVolume(this.volume);
+      await nativeAndroidAudio.play();
+      return claimId === playbackClaimId && playbackOwner === this;
+    }
     if (this.rustTrackId) {
       await rustAudio.setVolume(this.volume, this.muted);
       await rustAudio.play();
@@ -596,6 +625,7 @@ export class AudioEngine {
 
   pause(): void {
     this.nativePauseRequested = true;
+    if (this.nativeAndroidTrackId) void nativeAndroidAudio.pause().catch(() => {});
     if (this.rustTrackId) void rustAudio.pause().catch(() => {});
     this.audio?.pause();
     this.player?.pauseVideo();
@@ -663,6 +693,8 @@ export class AudioEngine {
 
   dispose(): void {
     this.stop();
+    this.releaseNativeAndroidAudio();
+    nativeAndroidAudio.unregisterEventListeners();
     this.player?.destroy();
     this.playerHost?.remove();
     this.player = null;
@@ -709,6 +741,12 @@ export class AudioEngine {
 
   seekTo(seconds: number): void {
     if (!Number.isFinite(seconds)) return;
+    if (this.nativeAndroidTrackId) {
+      void nativeAndroidAudio.seekTo(Math.round(seconds * 1000)).catch((error: unknown) => {
+        logInternalError("AudioEngine native Android seek failed", error);
+      });
+      return;
+    }
     if (this.rustTrackId) {
       void rustAudio.seek(Math.max(0, seconds)).catch((error: unknown) => {
         rustAudio.warn("AudioEngine rust seek failed", error);
@@ -789,6 +827,9 @@ export class AudioEngine {
      * would otherwise read another tab's playhead. The track id is the discriminator: the
      * events carry it, and only the engine that loaded it matches.
      */
+    if (this.nativeAndroidTrackId) {
+      return nativeAndroidAudio.getCurrentPositionSync() / 1000; // Convert ms to seconds
+    }
     if (this.rustTrackId) {
       return rustAudio.getPositionTrackId() === this.rustTrackId ? rustAudio.getCurrentTime() : 0;
     }
@@ -797,6 +838,7 @@ export class AudioEngine {
   }
 
   getDuration(): number {
+    if (this.nativeAndroidTrackId) return this.nativeAndroidDurationSec;
     if (this.rustTrackId) return this.rustDurationSec;
     if (this.audio) return Number.isFinite(this.audio.duration) ? this.audio.duration : 0;
     return this.player?.getDuration() ?? 0;
@@ -1088,6 +1130,56 @@ export class AudioEngine {
     });
   }
 
+  /**
+   * Loads a track using the native Android ExoPlayer
+   */
+  private async loadNativeAndroidAudio(
+    videoId: string,
+    sourceUrl: string,
+    durationSec: number,
+  ): Promise<void> {
+    const requestId = ++this.loadRequestId;
+    this.iframeFallbackActive = false;
+
+    // Register event listeners for native Android callbacks
+    await nativeAndroidAudio.registerEventListeners(
+      (_isPlaying) => {
+        // Update cached playing state
+        // This could trigger UI updates
+      },
+      (_positionMs) => {
+        // Update cached position
+        // This will be read by getCurrentTime()
+      },
+      () => {
+        // Track ended
+        this.handleRustEnded();
+      }
+    ).catch(() => {});
+
+    // Load the track using native Android audio
+    await nativeAndroidAudio.playTrack(sourceUrl, 0);
+
+    if (requestId !== this.loadRequestId) return;
+
+    this.nativeAndroidTrackId = videoId;
+    this.nativeAndroidDurationSec = durationSec;
+    this.currentVideoId = videoId;
+    await nativeAndroidAudio.setVolume(this.volume);
+    await nativeAndroidAudio.setPlaybackRate(this.playbackRate);
+    logInternalInfo("AudioEngine native Android audio loaded", {
+      videoId,
+      durationSec,
+    });
+  }
+
+  private releaseNativeAndroidAudio(): void {
+    if (!this.nativeAndroidTrackId) return;
+    void nativeAndroidAudio.stop().catch(() => {});
+    this.nativeAndroidTrackId = null;
+    this.nativeAndroidDurationSec = 0;
+  }
+
   private releaseRustAudio(): void {
     if (!this.rustTrackId && !this.rustStandbyTrackId) return;
     /*
@@ -1211,6 +1303,11 @@ export class AudioEngine {
   }
 
   private applyOutputVolume(): void {
+    if (this.nativeAndroidTrackId) {
+      void nativeAndroidAudio.setVolume(this.muted ? 0 : this.volume).catch((error: unknown) => {
+        logInternalError("AudioEngine native Android volume failed", error);
+      });
+    }
     if (this.rustTrackId) {
       void rustAudio.setVolume(this.volume, this.muted).catch((error: unknown) => {
         rustAudio.warn("AudioEngine rust volume failed", error);
