@@ -100,4 +100,58 @@
   html[data-app-skin="noir"] [data-track-row][aria-current="true"] {
     background: transparent;
   }
+
+  /* The player bar's volume: a thin line that fills white, with a dot that appears on hover. */
+  html[data-app-skin="noir"] .noir-volume {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 6rem;
+    height: 3px;
+    margin: 0;
+    border-radius: 999px;
+    outline: none;
+    cursor: pointer;
+    background: linear-gradient(
+      to right,
+      var(--color-foreground) var(--noir-volume, 0%),
+      oklch(1 0 0 / 0.2) var(--noir-volume, 0%)
+    );
+  }
+  html[data-app-skin="noir"] .noir-volume::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--color-foreground);
+    opacity: 0;
+    transition: opacity 120ms;
+  }
+  html[data-app-skin="noir"] .noir-volume:hover::-webkit-slider-thumb,
+  html[data-app-skin="noir"] .noir-volume:focus-visible::-webkit-slider-thumb {
+    opacity: 1;
+  }
+  html[data-app-skin="noir"] .noir-volume:focus-visible {
+    box-shadow: 0 0 0 2px var(--color-ring);
+  }
+
+  /*
+   * The sort buttons above a playlist's songs. The design has no pill row between the hero and
+   * the table, so here they shrink to quiet text — still there, still the same controls.
+   */
+  html[data-app-skin="noir"] [aria-label="Playlist song tools"] {
+    gap: 1.25rem;
+    margin-bottom: -1rem;
+  }
+  html[data-app-skin="noir"] [aria-label="Playlist song tools"] > button {
+    min-height: 0;
+    padding: 0;
+    border-radius: 0;
+    background: transparent;
+    font-size: 12px;
+  }
+  html[data-app-skin="noir"] [aria-label="Playlist song tools"] > button[aria-pressed="true"] {
+    background: transparent;
+    color: var(--color-foreground);
+  }
 }

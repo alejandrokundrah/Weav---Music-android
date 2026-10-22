@@ -16,7 +16,7 @@ function findChecks(dir) {
 }
 
 const checks = findChecks(join(ROOT, "src")).sort();
-const outDir = mkdtempSync(join(tmpdir(), "zuno-landing-checks-"));
+const outDir = mkdtempSync(join(tmpdir(), "weav-landing-checks-"));
 let failed = 0;
 
 try {

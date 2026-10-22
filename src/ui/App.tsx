@@ -48,6 +48,7 @@ import { NoirNavCluster } from "./skins/noir/NoirNavCluster";
 import type { SidebarNav } from "./components/Sidebar";
 import { AzureTopBar } from "./skins/azure/AzureTopBar";
 import { AzureRightRail, AZURE_RAIL_WIDTH } from "./skins/azure/AzureRightRail";
+import { NoirNavCluster, NoirSearchButton } from "./skins/noir/NoirNavCluster";
 import { PlayerBar } from "./components/player/PlayerBar";
 import { NowPlayingScreen } from "./components/player/NowPlayingScreen";
 
@@ -2107,9 +2108,9 @@ useEffect(() => {
             canGoForward={canNavigateForward}
             onBack={handleNavigateBack}
             onForward={handleNavigateForward}
-            onOpenSearch={() => setIsSearchOpen(true)}
           />
         ) : undefined}
+        searchSlot={isNoir ? <NoirSearchButton onOpen={() => setIsSearchOpen(true)} /> : undefined}
       />
       )}
 

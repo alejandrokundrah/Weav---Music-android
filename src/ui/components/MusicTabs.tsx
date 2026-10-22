@@ -28,6 +28,8 @@ interface MusicTabsProps {
   onSwitchTab: (tabId: string) => void;
   onReorderTab: (draggedTabId: string, targetTabId: string, insertAfter: boolean) => void;
   onboardingFirstTabId?: string;
+  /** Noir draws the tabs as plain text links with no pill, as in the design. */
+  variant?: "glass" | "noir";
 }
 
 export function MusicTabs({
@@ -40,7 +42,9 @@ export function MusicTabs({
   onSwitchTab,
   onReorderTab,
   onboardingFirstTabId,
+  variant = "glass",
 }: MusicTabsProps) {
+  const isNoir = variant === "noir";
   const [draggedTabId, setDraggedTabId] = useState<string | null>(null);
   const [dropTarget, setDropTarget] = useState<{
     tabId: string;
@@ -131,7 +135,11 @@ export function MusicTabs({
   return (
     <div className="flex min-w-0 items-center overflow-hidden">
       <div
-        className={cn("flex min-w-0 items-center gap-1  overflow-x-auto px-1", isLinux && "pt-0")}
+        className={cn(
+          "flex min-w-0 items-center gap-1  overflow-x-auto px-1",
+          isLinux && "pt-0",
+          isNoir && "gap-6 px-0",
+        )}
         data-tauri-drag-region={isLinux ? undefined : ""}
       >
         {tabs.map((tab) => {
@@ -146,9 +154,16 @@ export function MusicTabs({
               key={tab.id}
               className={cn(
                 "group relative flex h-8 min-w-0 max-w-52 shrink-0 cursor-default items-center gap-1.5 rounded-md px-3 text-sm transition-colors select-none cursor-pointer",
-                isActive
-                  ? "text-foreground rounded-md"
-                  : "text-muted-foreground hover:bg-card/60 hover:text-foreground rounded-md",
+                isNoir
+                  ? cn(
+                      "rounded-none px-0 text-[13px]",
+                      isActive
+                        ? "font-semibold text-foreground"
+                        : "text-muted-foreground hover:text-foreground",
+                    )
+                  : isActive
+                    ? "text-foreground rounded-md"
+                    : "text-muted-foreground hover:bg-card/60 hover:text-foreground rounded-md",
                 draggedTabId === tab.id && "opacity-40",
                 // Drop indicator: a hairline on the side the tab will land.
                 isDropBefore &&
@@ -192,7 +207,7 @@ export function MusicTabs({
               }}
             >
               {/* Shared-layout pill glides between tabs instead of each tab fading. */}
-              {isActive && (
+              {isActive && !isNoir && (
                 <motion.span
                   layoutId="music-tab-active"
                   transition={{ type: "spring", stiffness: 520, damping: 42 }}

@@ -47,19 +47,19 @@ optdepends=(
 
 # Installs the same files as the community-maintained binary package, so the two cannot
 # be installed together.
-conflicts=('zuno-bin')
+conflicts=('weav-bin')
 
 # The binary is already stripped and relocation-sensitive; leave it alone.
 options=('!strip' '!emptydirs')
 
-source=("${pkgname}-${pkgver}.deb::${url}/releases/download/v${pkgver}/Zuno_${pkgver}_amd64.deb")
+source=("${pkgname}-${pkgver}.deb::${url}/releases/download/v${pkgver}/WEAV_${pkgver}_amd64.deb")
 sha256sums=('3abc57c1accaaf3ef68a0aa37d3b9e6e81ad9ae1a5a8216a739efeb8578c05da')
 
 package() {
   # bsdtar reads the ar archive and the inner tarball without needing dpkg installed.
   bsdtar -O -xf "${pkgname}-${pkgver}.deb" data.tar.gz | bsdtar -C "${pkgdir}" -xf -
 
-  install -Dm644 "${pkgdir}/usr/share/applications/Zuno.desktop" \
+  install -Dm644 "${pkgdir}/usr/share/applications/WEAV.desktop" \
     "${pkgdir}/usr/share/applications/${pkgname}.desktop"
-  rm -f "${pkgdir}/usr/share/applications/Zuno.desktop"
+  rm -f "${pkgdir}/usr/share/applications/WEAV.desktop"
 }

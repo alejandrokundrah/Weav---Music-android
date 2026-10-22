@@ -1,6 +1,6 @@
-# Zuno — marketing site
+# WEAV — marketing site
 
-The public landing page. A separate Vite project that shares Zuno's look but none of its build.
+The public landing page. A separate Vite project that shares WEAV's look but none of its build.
 
 ```bash
 cd landing

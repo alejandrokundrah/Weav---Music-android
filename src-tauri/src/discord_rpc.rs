@@ -97,7 +97,7 @@ impl DiscordRpcManager {
          * The artist, not the app, is the headline.
          *
          * `name` is what Discord prints after "Listening to", so sending the app name made
-         * every song read "Listening to Zuno" — the same line for everything, saying nothing
+         * every song read "Listening to WEAV" — the same line for everything, saying nothing
          * about what is actually playing. The artist goes there and the app name is only the
          * fallback for a track with no artist, so the line is never empty.
          */

@@ -1,6 +1,8 @@
 import { motion } from "motion/react";
 import { cn } from "@/lib/utils";
 import appIcon from "../../../assets/img/logo.svg";
+import noirIcon from "../../../assets/img/logo-noir.svg";
+import { useAppSkin } from "../settings/appSkin";
 
 /*
  * The accent bloom, as a gradient rather than a blurred circle.
@@ -35,6 +37,7 @@ interface AppLoadingScreenProps {
 
 export function AppLoadingScreen({ isLeaving }: AppLoadingScreenProps) {
   const loadingLine = LOADING_LINES[Math.floor(Math.random() * LOADING_LINES.length)];
+  const isNoir = useAppSkin() === "noir";
 
   return (
     <div
@@ -58,8 +61,8 @@ export function AppLoadingScreen({ isLeaving }: AppLoadingScreenProps) {
           initial={{ opacity: 0, scale: 0.92 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ type: "spring", stiffness: 260, damping: 24 }}
-          className="size-20 drop-shadow-2xl"
-          src={appIcon}
+          className={isNoir ? "h-16 w-auto drop-shadow-2xl" : "size-20 drop-shadow-2xl"}
+          src={isNoir ? noirIcon : appIcon}
           alt="WEAV"
         />
 

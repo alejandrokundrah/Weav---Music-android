@@ -20,6 +20,9 @@ import {
 } from "../../player/offlineStore";
 import type { Track, TrackRating } from "../../datasource/types";
 import { libraryController, useLibraryState } from "../../player/playerStore";
+import { MenuDotsIcon } from "@solar-icons/react/linear/menu-dots";
+import { useAppSkin } from "../settings/appSkin";
+import { formatTrackDuration } from "../pages/formatTrackDuration";
 import { useTrackContextMenu } from "./TrackContextMenu";
 import { ArtistLinks } from "./ArtistLinks";
 import { TrackArtwork } from "./TrackArtwork";
@@ -314,6 +317,113 @@ function ExplicitBadge() {
   );
 }
 
+/**
+ * Width the Noir row reserves for its tail (heart, length, more). The column headings above the
+ * list use the same number, so the clock icon lands over the lengths.
+ */
+export const NOIR_ROW_TAIL_WIDTH = 124;
+
+/**
+ * Noir's right-hand end of a row: a heart, the length, and a "more" button — always visible, as in
+ * the design, instead of the glass skin's hover-only rating, download and quick-add actions.
+ *
+ * Nothing is lost by dropping those here: every one of them is in the row's context menu, which
+ * the "more" button opens at the click.
+ */
+function NoirRowTail({
+  track,
+  showRating,
+  onMore,
+}: {
+  track: Track;
+  showRating: boolean;
+  onMore?: (event: MouseEvent<HTMLElement>) => void;
+}) {
+  const { rateTrack } = useTrackContextMenu();
+  const libraryState = useLibraryState();
+  const canRate = showRating && track.source !== "local";
+  const isLiked = canRate && libraryController.getTrackRating(track.id) === "like";
+  const isPending = canRate && libraryState.pendingLikeTrackIds.has(track.id);
+  const duration = formatTrackDuration(track.durationSec);
+
+  const activateLike = () => void rateTrack(track, isLiked ? "none" : "like");
+  const activateMore = (event: MouseEvent<HTMLElement>) => onMore?.(event);
+
+  return (
+    <span
+      className="flex shrink-0 items-center justify-end gap-1 max-md:hidden"
+      style={{ width: NOIR_ROW_TAIL_WIDTH }}
+    >
+      {canRate ? (
+        <span
+          role="button"
+          tabIndex={0}
+          aria-label={isLiked ? `Undo like for ${track.title}` : `Like ${track.title}`}
+          aria-pressed={isLiked}
+          aria-busy={isPending}
+          className={cn(
+            "grid size-8 shrink-0 place-items-center rounded-full transition-colors",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+            isPending && "pointer-events-none opacity-50",
+            isLiked ? "text-primary" : "text-muted-foreground hover:text-foreground",
+          )}
+          onClick={(event) => {
+            event.stopPropagation();
+            activateLike();
+          }}
+          onKeyDown={(event) => {
+            if (event.key !== "Enter" && event.key !== " ") return;
+            event.preventDefault();
+            event.stopPropagation();
+            activateLike();
+          }}
+        >
+          {isLiked ? <HeartActiveIcon size={16} /> : <HeartIcon size={16} />}
+        </span>
+      ) : (
+        <span className="size-8 shrink-0" aria-hidden="true" />
+      )}
+
+      <span className="w-10 shrink-0 text-right text-xs tabular-nums text-muted-foreground">
+        {duration}
+      </span>
+
+      {onMore ? (
+        <span
+          role="button"
+          tabIndex={0}
+          aria-label={`More options for ${track.title}`}
+          aria-haspopup="menu"
+          className="grid size-8 shrink-0 place-items-center rounded-full text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          onClick={(event) => {
+            // Otherwise the row's own click starts the song as well.
+            event.stopPropagation();
+            activateMore(event);
+          }}
+          onPointerDown={(event) => event.stopPropagation()}
+          onKeyDown={(event) => {
+            if (event.key !== "Enter" && event.key !== " ") return;
+            event.preventDefault();
+            event.stopPropagation();
+            const box = event.currentTarget.getBoundingClientRect();
+            // The menu is placed from the event's coordinates, which a key press does not have.
+            activateMore({
+              clientX: box.left,
+              clientY: box.bottom,
+              preventDefault: () => {},
+              stopPropagation: () => {},
+            } as unknown as MouseEvent<HTMLElement>);
+          }}
+        >
+          <MenuDotsIcon size={18} aria-hidden="true" />
+        </span>
+      ) : (
+        <span className="size-8 shrink-0" aria-hidden="true" />
+      )}
+    </span>
+  );
+}
+
 /** Shared by the always-on slot and the hover affordance, so the two cannot drift apart. */
 function SelectionCheckbox({
   title,
@@ -419,6 +529,9 @@ export const TrackRow = memo(function TrackRow({
      and must keep their play-on-hover glyph rather than gain a checkbox that does nothing. */
   const canSelect = Boolean(onToggleSelected);
   const unavailableOffline = useUnavailableOffline(track);
+  // Noir draws its own row ends (a play glyph in front, a heart / length / more behind) and drops
+  // the glass skin's hover-only actions; see `NoirRowTail`.
+  const isNoir = useAppSkin() === "noir";
 
   return (
     <button
@@ -475,11 +588,24 @@ export const TrackRow = memo(function TrackRow({
         <span
           className={cn(
             "transition-opacity",
-            isCurrent ? "opacity-0" : "group-hover/row:opacity-0",
+            // Noir has no position numbers: the slot holds a play glyph all the time.
+            isNoir || isCurrent ? "opacity-0" : "group-hover/row:opacity-0",
           )}
         >
           {index + 1}
         </span>
+
+        {isNoir && !isCurrent && (
+          <PlayActiveIcon
+            size={11}
+            className={cn(
+              "absolute inset-0 m-auto text-foreground transition-opacity",
+              // A list with selection swaps the glyph for the checkbox on hover.
+              canSelect ? "group-hover/row:opacity-0" : "opacity-90 group-hover/row:text-primary",
+            )}
+            aria-hidden="true"
+          />
+        )}
 
         {/*
           On a list that supports multi-select, hover offers the checkbox instead of the play
@@ -497,7 +623,7 @@ export const TrackRow = memo(function TrackRow({
           </span>
         )}
 
-        {!isCurrent && !canSelect && (
+        {!isCurrent && !canSelect && !isNoir && (
           <PlayActiveIcon
             size={14}
             className="absolute inset-0 m-auto opacity-0 transition-opacity group-hover/row:opacity-100"
@@ -560,7 +686,13 @@ export const TrackRow = memo(function TrackRow({
         readable. `basis-0` keeps it from claiming more than its share of a wide row.
       */}
       {showAlbum && (
-        <span className="hidden min-w-0 flex-1 basis-0 truncate text-xs text-muted-foreground lg:block">
+        <span
+          className={cn(
+            "hidden min-w-0 flex-1 basis-0 truncate text-xs text-muted-foreground lg:block",
+            // Centred under its heading, as in the design.
+            isNoir && "text-center",
+          )}
+        >
           {track.album
             ? (openAlbumForTrack && track.source !== "local" ? (
               /*
@@ -596,10 +728,17 @@ export const TrackRow = memo(function TrackRow({
       {/* Hover actions. The row itself is a <button>, so these cannot be buttons — see
           QuickAction. They sit before `trailing` so durations stay hard against the edge. */}
       {/* No hover on a phone, and no width to spare: these only appear on desktop. */}
-      {showRating && <span className="contents max-md:hidden"><RatingActions track={track} /></span>}
-      {showDownload && <span className="contents max-md:hidden"><DownloadAction track={track} /></span>}
+      {isNoir && (
+        <NoirRowTail
+          track={track}
+          showRating={showRating}
+          onMore={onContextMenu ? (event) => handlersRef.current.onContextMenu?.(event) : undefined}
+        />
+      )}
+      {!isNoir && showRating && <span className="contents max-md:hidden"><RatingActions track={track} /></span>}
+      {!isNoir && showDownload && <span className="contents max-md:hidden"><DownloadAction track={track} /></span>}
 
-      {(onQuickAddToQueue || onQuickAdd) && (
+      {!isNoir && (onQuickAddToQueue || onQuickAdd) && (
         <span className="flex shrink-0 items-center max-md:hidden">
           {onQuickAddToQueue && (
             <QuickAction

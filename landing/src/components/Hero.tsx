@@ -91,7 +91,7 @@ export function Hero({
           <ReleaseChip release={release} />
 
           <h1 className="rise mt-6 text-[clamp(4.5rem,10vw,8.5rem)] font-bold leading-[0.9] tracking-[-0.06em]" style={step(1)}>
-            zuno<span className="caret text-primary" aria-hidden="true">_</span>
+            weav<span className="caret text-primary" aria-hidden="true">_</span>
           </h1>
 
           <p className="rise mt-6 max-w-[36ch] text-balance text-xl leading-[1.5] tracking-[-0.01em] text-muted-foreground" style={step(2)}>

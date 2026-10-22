@@ -1,6 +1,6 @@
 # Backend — Rust / Tauri
 
-`src-tauri/` — Tauri 2, edition 2021, crate `zuno`, lib target `zuno_lib`.
+`src-tauri/` — Tauri 2, edition 2021, crate `weav`, lib target `weav_lib`.
 See [architecture.md](./architecture.md) for the system view.
 
 ---
@@ -66,7 +66,7 @@ Serving the frontend over `http://localhost` in release builds is deliberate: th
 player API will not initialize under the `tauri://` custom protocol origin.
 
 `migrate_legacy_app_data` copies app data from the pre-rename
-`com.justanothermusicclient.desktop` identifier into `com.zuno.desktop` on first run.
+`com.justanothermusicclient.desktop` identifier into `com.weav.desktop` on first run.
 
 ### Window events
 
@@ -78,8 +78,8 @@ player API will not initialize under the `tauri://` custom protocol origin.
 
 ### Tray
 
-`build_tray()` installs a `main-tray` icon with a two-item menu (**Show Zuno** / **Quit Zuno**).
-Left click restores the window; the menu is right-click only. **Quit Zuno** is the one path that
+`build_tray()` installs a `main-tray` icon with a two-item menu (**Show WEAV** / **Quit WEAV**).
+Left click restores the window; the menu is right-click only. **Quit WEAV** is the one path that
 always exits regardless of the minimize-to-tray setting.
 
 ---
@@ -379,7 +379,7 @@ playback status, and timeline position. Button presses are emitted back to JS as
 **macOS media** (`macos_media.rs`): populates `MPNowPlayingInfoCenter` through `objc2`. Requires
 `macOSPrivateApi: true` in `tauri.conf.json`.
 
-**Linux media** (`linux_media.rs`): registers an MPRIS2 D-Bus interface (`org.mpris.MediaPlayer2.zuno`)
+**Linux media** (`linux_media.rs`): registers an MPRIS2 D-Bus interface (`org.mpris.MediaPlayer2.weav`)
 via `souvlaki`. Button/seek events come back as `linux-media-control` payloads, same shape as the
 Windows path. Runs unconditionally alongside the WebKitGTK `navigator.mediaSession` bridge.
 
