@@ -138,6 +138,7 @@ import {
   type MiniPlayerHoverAction,
 } from "../settings/miniPlayer";
 import { MiniPlayerSkinPicker } from "../components/mini-player/SkinPicker";
+import { setNotchEnabled, useNotchEnabled } from "../settings/notch";
 import { AppSkinPicker } from "../components/AppSkinPicker";
 import {
   setMainWindowGeometryPersistenceEnabled,
@@ -644,6 +645,7 @@ export function SettingsPage({
   const [listeningShortcut, setListeningShortcut] = useState<KeyboardShortcutAction | null>(null);
   const keyboardShortcuts = useKeyboardShortcuts();
   const miniPlayerEnabled = useMiniPlayerEnabled();
+  const notchEnabled = useNotchEnabled();
   const miniPlayerHoverAction = useMiniPlayerHoverAction();
   const miniPlayerSkin = useMiniPlayerSkin();
   const sidebarMode = useSidebarMode();
@@ -2023,6 +2025,13 @@ export function SettingsPage({
               description="Show compact playback controls when the main window is not focused. Turning this off closes its window and frees around 30 MB."
               checked={miniPlayerEnabled}
               onCheckedChange={setMiniPlayerEnabled}
+            />
+
+            <SettingToggle
+              title="Notch player"
+              description="A compact player that hangs from the top of your screen while music plays. Hover it to open the controls and synced lyrics. It works alongside the mini player."
+              checked={notchEnabled}
+              onCheckedChange={setNotchEnabled}
             />
 
             <div className="flex flex-col gap-3">
