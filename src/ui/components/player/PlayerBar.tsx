@@ -282,7 +282,7 @@ export function PlayerBar({ onToggleLyrics, onToggleQueue, isQueueOpen, onConnec
 
             <DownloadButton />
             <PlaybackOptions />
-            <VolumeControl />
+            <VolumeControl inline={isNoir} />
           </div>
         </div>
 

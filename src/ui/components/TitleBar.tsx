@@ -3,7 +3,8 @@ import { getCurrentWindow } from "@tauri-apps/api/window";
 import { invoke } from "@tauri-apps/api/core";
 import { cn } from "@/lib/utils";
 import { Tooltip } from "@/components/motion/tooltip";
-import { DiscordIcon, LastFmIcon, LoginIcon, SettingsIcon, YouTubeMusicIcon } from "@/ui/icons";
+import { DiscordIcon, DownloadIcon, LastFmIcon, LoginIcon, SettingsIcon, YouTubeMusicIcon } from "@/ui/icons";
+import { HamburgerMenuIcon } from "@solar-icons/react/linear/hamburger-menu";
 import { DiscordRpcService } from "../../player/DiscordRPC";
 import { useDiscordPresenceEnabled } from "../settings/discord";
 import { setLastFmScrobblingEnabled, useLastFmScrobblingEnabled } from "../settings/lastfm";
@@ -55,6 +56,8 @@ interface TitleBarProps {
   variant?: "glass" | "noir";
   /** Extra content between the brand block and the tabs. Noir puts history and search here. */
   leading?: ReactNode;
+  /** Noir only: sits just before the centred tabs (the search button). */
+  searchSlot?: ReactNode;
 }
 
 const ACCOUNT_PANEL_ITEM =
@@ -81,6 +84,7 @@ export function TitleBar({
   onboardingFirstTabId,
   variant = "glass",
   leading,
+  searchSlot,
 }: TitleBarProps) {
   const isNoir = variant === "noir";
   const appWindow = getCurrentWindow();
@@ -98,6 +102,7 @@ export function TitleBar({
       || libraryState.status === "loading"
       || libraryState.status === "authorizing");
   const [isAccountPanelOpen, setIsAccountPanelOpen] = useState(false);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
   const nativeWindowControls = useNativeWindowControls();
   const windowsStyleWindowControls = useWindowsStyleWindowControls();
   const forceWindowControls = useForceWindowControls();
@@ -167,6 +172,21 @@ export function TitleBar({
     }
   };
 
+  const tabsNode = (
+    <MusicTabs
+      tabs={tabs}
+      activeTabId={activeTabId}
+      playingTabId={playingTabId}
+      nonClosableTabId={nonClosableTabId}
+      onCreateTab={onCreateTab}
+      onCloseTab={onCloseTab}
+      onSwitchTab={onSwitchTab}
+      onReorderTab={onReorderTab}
+      onboardingFirstTabId={onboardingFirstTabId}
+      variant={isNoir ? "noir" : "glass"}
+    />
+  );
+
   return (
     <div
       className={cn(
@@ -177,7 +197,7 @@ export function TitleBar({
     >
       <button
         type="button"
-        style={{ width: `${sidebarWidth}px` }}
+        style={isNoir ? undefined : { width: `${sidebarWidth}px` }}
         className={cn(
           // The brand block: its right edge is the sidebar's divider, continued up through the
           // title bar so the left column reads as one full-height strip.
@@ -185,7 +205,7 @@ export function TitleBar({
           isHomeActive ? "opacity-100" : "opacity-85 hover:opacity-100",
           hideHomeText && "justify-center gap-0 px-0",
           // Noir has no divider here, and the brand lines up with the sidebar's text edge.
-          isNoir && "border-r-0 px-0 pl-10",
+          isNoir && "w-auto border-r-0 px-0 pl-10 pr-8",
         )}
         onClick={() => {
           if (suppressHomeClickRef.current) {
@@ -233,28 +253,38 @@ export function TitleBar({
           initial={{ opacity: 0, scale: 0.92 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ type: "spring", stiffness: 260, damping: 24 }}
-          className="size-7"
+          className={isNoir ? "size-5" : "size-7"}
           src={appIcon}
           alt=""
         /> 
         {!hideHomeText && (
-          <h3 className="font-lexend text-[1.65rem] font-light leading-none tracking-[0.1em]">WEAV</h3>
+          <h3
+            className={cn(
+              "font-lexend text-[1.65rem] font-light leading-none tracking-[0.1em]",
+              // A small wordmark, as in the design, rather than glass's large one.
+              isNoir && "text-[0.95rem] font-normal tracking-[0.22em]",
+            )}
+          >
+            WEAV
+          </h3>
         )}
       </button>
 
       {leading}
 
-      <MusicTabs
-        tabs={tabs}
-        activeTabId={activeTabId}
-        playingTabId={playingTabId}
-        nonClosableTabId={nonClosableTabId}
-        onCreateTab={onCreateTab}
-        onCloseTab={onCloseTab}
-        onSwitchTab={onSwitchTab}
-        onReorderTab={onReorderTab}
-        onboardingFirstTabId={onboardingFirstTabId}
-      />
+      {isNoir ? (
+        /*
+          Noir centres the search button and the tabs in the bar itself, not in whatever space the
+          brand and history controls leave over. The wrapper ignores the pointer so the window
+          can still be dragged by the bar around it; its children opt back in.
+        */
+        <div className="pointer-events-none absolute inset-y-0 left-1/2 z-10 flex max-w-[44%] -translate-x-1/2 items-center gap-3 [&>*]:pointer-events-auto">
+          {searchSlot}
+          {tabsNode}
+        </div>
+      ) : (
+        tabsNode
+      )}
 
       <div
         className="min-w-6 flex-1"
@@ -285,7 +315,7 @@ export function TitleBar({
           <NotificationsPanel signedIn={libraryState.status === "ready"} />
         )}
         {downloadsVisible && <DownloadsPanel onOpenDownloads={onOpenDownloads} />}
-        {discordVisible && (
+        {!isNoir && discordVisible && (
         <Tooltip
           side="bottom"
           content={discordEnabled ? "Discord presence on" : "Discord presence off"}
@@ -310,7 +340,7 @@ export function TitleBar({
           </Button>
         </Tooltip>
         )}
-        {lastFmVisible && (
+        {!isNoir && lastFmVisible && (
         <Tooltip
           side="bottom"
           content={lastFmEnabled ? "Last.fm scrobbling on" : "Last.fm scrobbling off"}
@@ -335,7 +365,7 @@ export function TitleBar({
           </Button>
         </Tooltip>
         )}
-        {ytMusicVisible && (
+        {!isNoir && ytMusicVisible && (
         <Tooltip
           side="bottom"
           content={
@@ -367,6 +397,7 @@ export function TitleBar({
         </Tooltip>
         )}
 
+        {!isNoir && (
         <Tooltip side="bottom" content="Settings">
         <Button
             variant='ghost'
@@ -378,6 +409,7 @@ export function TitleBar({
             <SettingsIcon size={17} aria-hidden="true" />
           </Button>
         </Tooltip>
+        )}
 
         {/* Only once signed in: an avatar that opens nothing is worse than no avatar. The
             panel is portalled because the title bar clips its children. */}
@@ -397,16 +429,23 @@ export function TitleBar({
                 aria-expanded={isAccountPanelOpen}
                 aria-label={isSignedIn ? `Account: ${account?.name || "YouTube Music"}` : "Sign in"}
                 className={cn(
-                  "ml-0.5 grid size-7 place-items-center rounded-full transition-shadow",
+                  isNoir
+                    ? "ml-1 flex h-9 items-center gap-2.5 rounded-full pr-1 transition-opacity hover:opacity-80"
+                    : "ml-0.5 grid size-7 place-items-center rounded-full transition-shadow",
                   "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
-                  isAccountPanelOpen && "ring-1 ring-border",
+                  !isNoir && isAccountPanelOpen && "ring-1 ring-border",
                 )}
               >
                 <AccountAvatar
                   artworkUrl={isSignedIn ? account?.artworkUrl : undefined}
-                  className="size-7"
+                  className={isNoir ? "size-8" : "size-7"}
                   iconSize={15}
                 />
+                {isNoir && (
+                  <span className="hidden max-w-[10rem] truncate text-[13px] text-muted-foreground xl:block">
+                    {isSignedIn ? account?.name || "Account" : "Sign in"}
+                  </span>
+                )}
               </button>
             </Tooltip>
           }
@@ -486,6 +525,111 @@ export function TitleBar({
             </div>
           )}
         </FloatingPanel>
+
+        {/*
+          Noir folds the things the glass bar lays out as a row of icons — settings and the three
+          sharing toggles — into one menu, as the design has a single hamburger there.
+        */}
+        {isNoir && (
+          <FloatingPanel
+            open={isMenuOpen}
+            onOpenChange={setIsMenuOpen}
+            side="bottom"
+            className="w-64"
+            trigger={
+              <Tooltip side="bottom" content="Menu">
+                <button
+                  type="button"
+                  onClick={() => setIsMenuOpen((open) => !open)}
+                  aria-haspopup="menu"
+                  aria-expanded={isMenuOpen}
+                  aria-label="Menu"
+                  className="ml-1 grid size-9 place-items-center rounded-full text-foreground transition-opacity hover:opacity-80 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                >
+                  <HamburgerMenuIcon size={20} aria-hidden="true" />
+                </button>
+              </Tooltip>
+            }
+          >
+            <div className="flex flex-col gap-0.5" role="menu">
+              <button
+                type="button"
+                role="menuitem"
+                className={ACCOUNT_PANEL_ITEM}
+                onClick={() => {
+                  setIsMenuOpen(false);
+                  onOpenSettings();
+                }}
+              >
+                <SettingsIcon size={16} aria-hidden="true" />
+                Settings
+              </button>
+              {onOpenDownloads && (
+                <button
+                  type="button"
+                  role="menuitem"
+                  className={ACCOUNT_PANEL_ITEM}
+                  onClick={() => {
+                    setIsMenuOpen(false);
+                    onOpenDownloads();
+                  }}
+                >
+                  <DownloadIcon size={16} aria-hidden="true" />
+                  Downloads
+                </button>
+              )}
+
+              {(discordVisible || lastFmVisible || ytMusicVisible) && (
+                <span className="my-1 h-px bg-border" aria-hidden="true" />
+              )}
+              {discordVisible && (
+                <button
+                  type="button"
+                  role="menuitemcheckbox"
+                  aria-checked={discordEnabled}
+                  className={ACCOUNT_PANEL_ITEM}
+                  onClick={() => void DiscordRpcService.setEnabled(!discordEnabled)}
+                >
+                  <DiscordIcon size={16} aria-hidden="true" />
+                  <span className="flex-1">Discord presence</span>
+                  <span className={cn("text-xs", discordEnabled ? "text-primary" : "text-muted-foreground")}>
+                    {discordEnabled ? "On" : "Off"}
+                  </span>
+                </button>
+              )}
+              {lastFmVisible && (
+                <button
+                  type="button"
+                  role="menuitemcheckbox"
+                  aria-checked={lastFmEnabled}
+                  className={ACCOUNT_PANEL_ITEM}
+                  onClick={() => setLastFmScrobblingEnabled(!lastFmEnabled)}
+                >
+                  <LastFmIcon size={16} aria-hidden="true" />
+                  <span className="flex-1">Last.fm scrobbling</span>
+                  <span className={cn("text-xs", lastFmEnabled ? "text-primary" : "text-muted-foreground")}>
+                    {lastFmEnabled ? "On" : "Off"}
+                  </span>
+                </button>
+              )}
+              {ytMusicVisible && (
+                <button
+                  type="button"
+                  role="menuitemcheckbox"
+                  aria-checked={ytScrobblingEnabled}
+                  className={ACCOUNT_PANEL_ITEM}
+                  onClick={() => setYouTubeScrobbling(!ytScrobblingEnabled)}
+                >
+                  <YouTubeMusicIcon size={16} aria-hidden="true" />
+                  <span className="flex-1">YouTube Music history</span>
+                  <span className={cn("text-xs", ytScrobblingEnabled ? "text-primary" : "text-muted-foreground")}>
+                    {ytScrobblingEnabled ? "On" : "Off"}
+                  </span>
+                </button>
+              )}
+            </div>
+          </FloatingPanel>
+        )}
       </div>
 
       {showCustomWindowControls && (

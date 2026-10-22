@@ -17,7 +17,7 @@ const WHEEL_STEP_PERCENT = 5;
  * The panel is portalled (see FloatingPanel): the player bar sits inside the window's
  * `overflow-hidden` root, so a panel positioned within the bar would be clipped by it.
  */
-export function VolumeControl() {
+export function VolumeControl({ inline = false }: { /** Noir: the slider sits beside the icon, always visible, instead of opening on hover. */ inline?: boolean }) {
   /* This component writes volume on every pointer move of the slider, so it is the last one
      that should be subscribed to fields it does not read. */
   const playerState = usePlayerSelector(
@@ -55,6 +55,39 @@ export function VolumeControl() {
     : displayedVolume < 0.5
       ? VolumeSmallIcon
       : VolumeLoudIcon;
+
+  if (inline) {
+    return (
+      <div className="flex shrink-0 items-center gap-1">
+        <button
+          type="button"
+          onClick={toggleMute}
+          onWheel={(event) => {
+            const delta = event.deltaY || event.deltaX;
+            if (delta === 0) return;
+            applyVolume(percent + (delta < 0 ? 1 : -1) * WHEEL_STEP_PERCENT);
+          }}
+          aria-label={isMuted ? `Unmute (volume ${percent}%)` : `Mute (volume ${percent}%)`}
+          className="flex size-8 items-center justify-center rounded-full text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          <VolumeGlyph size={18} aria-hidden="true" />
+        </button>
+        {/* A plain range input: a thin line is all the design draws, and it stays keyboard- and
+            screen-reader-operable for free. Styled in skins/noir/noir.css. */}
+        <input
+          type="range"
+          className="noir-volume"
+          min={0}
+          max={100}
+          step={1}
+          value={percent}
+          style={{ ["--noir-volume" as string]: `${percent}%` }}
+          onChange={(event) => applyVolume(Number(event.target.value))}
+          aria-label="Volume"
+        />
+      </div>
+    );
+  }
 
   return (
     <FloatingPanel
