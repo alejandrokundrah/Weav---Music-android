@@ -33,6 +33,7 @@ import { useToolbarItemVisible } from "../settings/toolbarItems";
 import { motion } from "motion/react";
 import appIcon from "../../../assets/img/logo.svg";
 import noirIcon from "../../../assets/img/logo-noir.svg";
+import noirWordmark from "../../../assets/img/wordmark-noir.svg";
 
 interface TitleBarProps {
   tabs: Tab[];
@@ -259,17 +260,13 @@ export function TitleBar({
           src={isNoir ? noirIcon : appIcon}
           alt=""
         /> 
-        {!hideHomeText && (
-          <h3
-            className={cn(
-              "font-lexend text-[1.65rem] font-light leading-none tracking-[0.1em]",
-              // A small wordmark, as in the design, rather than glass's large one.
-              isNoir && "text-[0.95rem] font-normal tracking-[0.22em]",
-            )}
-          >
-            WEAV
-          </h3>
-        )}
+        {!hideHomeText && (isNoir ? (
+          // Noir's hand-lettered wordmark. It is an image, so the button's own "Home" label is
+          // what a screen reader gets; the picture is decoration.
+          <img className="h-10 w-auto" src={noirWordmark} alt="" />
+        ) : (
+          <h3 className="font-lexend text-[1.65rem] font-light leading-none tracking-[0.1em]">WEAV</h3>
+        ))}
       </button>
 
       {leading}
