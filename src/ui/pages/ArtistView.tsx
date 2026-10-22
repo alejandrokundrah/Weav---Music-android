@@ -31,6 +31,7 @@ import { PhoneArtist } from "./PhoneArtist";
 import { usePlaylistContextMenu } from "../components/PlaylistContextMenu";
 import { useTrackContextMenu } from "../components/TrackContextMenu";
 import { loadFailedMessage } from "../../internal/connectivity";
+import { AzureHeadphonesIcon } from "../skins/azure/azureIcons";
 
 type ReleaseFilter = "all" | "album" | "single" | "ep";
 
@@ -484,7 +485,8 @@ export function ArtistView({
                     isPlaying={isPlaying && track.id === currentTrackId}
                     suppressArtistId={displayedArtist.id}
                     trailing={
-                      <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
+                      <span className="azure-plays inline-flex shrink-0 items-center gap-2 text-xs tabular-nums text-muted-foreground">
+                        <AzureHeadphonesIcon size={20} className="azure-only text-foreground" />
                         {compactViews(track)}
                       </span>
                     }

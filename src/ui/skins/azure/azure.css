@@ -1,0 +1,186 @@
+/*
+ * Azure — the third desktop skin.
+ *
+ * Everything here hangs off `html[data-app-skin="azure"]`, which `applyAppSkin` sets from the
+ * Settings → Appearance choice. Nothing in this file applies under the glass or noir skins, and
+ * nothing in global.css or noir.css was changed to make room for it.
+ *
+ * Like the other skins it is desktop-only (>=768px): a phone-width window keeps the opaque
+ * palette whatever is selected.
+ *
+ * The palette is taken straight from the design file: a #121212 canvas, #212121 side panels, a
+ * sky-blue #31A9D9 accent (with a brighter #49C4E2 for the logo and waveform) and #949494 for
+ * everything secondary. Components keep following the semantic tokens (`bg-background`,
+ * `text-primary`, …), so most of the app turns charcoal-and-blue by token alone; the chrome that
+ * is specific to this skin lives in `src/ui/skins/azure/*.tsx` and is only mounted while it is
+ * selected.
+ *
+ * There is no backdrop-filter or blur anywhere in this skin, so it costs nothing on a
+ * low-powered GPU.
+ */
+
+/*
+ * Helpers that are inert outside Azure. A component can render an Azure-only detail (a clock
+ * beside the duration, say) unconditionally and let the stylesheet decide whether it shows,
+ * which keeps skin checks out of hot components such as TrackRow.
+ */
+.azure-only {
+  display: none !important;
+}
+
+@media (min-width: 768px) {
+  html[data-app-skin="azure"] .azure-only {
+    display: inline-flex !important;
+  }
+
+  html[data-app-skin="azure"] {
+    --azure-canvas: #121212;
+    --azure-panel: #212121;
+    --azure-accent: #31a9d9;
+    --azure-accent-bright: #49c4e2;
+    --azure-muted: #949494;
+    --azure-track: #656565;
+    --azure-hairline: rgb(255 255 255 / 0.08);
+
+    --color-background: #121212;
+    --color-foreground: #fff;
+
+    /* Veils rather than greys, so they stay correct on top of anything drawn behind them. */
+    --color-card: oklch(1 0 0 / 0.07);
+    --color-card-foreground: #fff;
+    --color-popover: #212121;
+    --color-popover-foreground: #fff;
+
+    --color-muted: oklch(1 0 0 / 0.1);
+    --color-muted-foreground: #949494;
+
+    --color-primary: #31a9d9;
+    --color-primary-foreground: #fff;
+
+    --color-secondary: oklch(1 0 0 / 0.08);
+    --color-secondary-foreground: #fff;
+
+    --color-destructive: oklch(0.704 0.191 22.216);
+    --color-destructive-foreground: oklch(0.985 0 0);
+
+    --color-border: oklch(1 0 0 / 6%);
+    --color-input: oklch(1 0 0 / 12%);
+    --color-ring: #31a9d9;
+
+    --window-edge: oklch(1 0 0 / 12%);
+    --window-edge-highlight: transparent;
+    --glass-divider: oklch(1 0 0 / 0.06);
+
+    /* Seek bar: a white fill on a grey track, as in the design's progress line. */
+    --seek-fill: #fff;
+    --seek-thumb: 0;
+  }
+
+  html[data-app-skin="azure"] ::selection {
+    background: color-mix(in oklab, var(--azure-accent) 45%, transparent);
+  }
+
+  /* The window shell: flat charcoal, no frosted pane and no scenery. */
+  html[data-app-skin="azure"] .azure-shell {
+    background: var(--azure-canvas);
+    box-shadow: inset 0 0 0 1px var(--azure-hairline);
+  }
+
+  /* Section headings above a shelf of cards or a track list: 20px, medium weight. */
+  html[data-app-skin="azure"] [data-page-scroll-root] h2 {
+    font-size: 1.25rem;
+    line-height: 1.75rem;
+    font-weight: 500;
+    letter-spacing: 0;
+    color: #fff;
+  }
+
+  /*
+   * Track rows. They keep their structure and every behaviour (drag-reorder, selection, hover
+   * actions) and only change look: taller rows, bigger artwork, a hairline between rows and a
+   * soft horizontal gradient behind the row that is playing (or hovered).
+   */
+  html[data-app-skin="azure"] [data-track-row] {
+    min-height: 5.375rem;
+    gap: 1.5rem;
+    border-radius: 0;
+    padding-block: 0.5rem;
+    padding-inline: 0.625rem;
+    border-bottom: 1px solid var(--azure-hairline);
+  }
+  html[data-app-skin="azure"] [data-track-row]:hover,
+  html[data-app-skin="azure"] [data-track-row][aria-current="true"] {
+    background: linear-gradient(90deg, rgb(255 255 255 / 0.13), rgb(255 255 255 / 0) 85%);
+  }
+  html[data-app-skin="azure"] [data-track-row] .azure-row-art {
+    width: 3.375rem;
+    height: 3.375rem;
+    border-radius: 0.75rem;
+  }
+  html[data-app-skin="azure"] [data-track-row] .azure-row-title {
+    font-size: 1rem;
+    line-height: 1.5rem;
+  }
+  html[data-app-skin="azure"] [data-track-row] .azure-plays {
+    min-width: 9.5rem;
+    font-size: 1rem;
+    color: #fff;
+  }
+  /* The like heart is always visible in this skin; the dislike thumb stays a hover extra. */
+  html[data-app-skin="azure"] [data-track-row] [data-rate="like"] {
+    opacity: 1;
+    color: #fff;
+  }
+  html[data-app-skin="azure"] [data-track-row] [data-rate="like"][aria-pressed="true"] {
+    color: var(--azure-accent);
+  }
+  html[data-app-skin="azure"] [data-track-row] [data-rate="dislike"] {
+    display: none;
+  }
+
+  /* Release shelves: square-cornered 16px covers with the title and year under them. */
+  html[data-app-skin="azure"] [data-azure-shelf] {
+    display: grid;
+    gap: 1.25rem;
+    grid-template-columns: repeat(auto-fill, minmax(7.375rem, 1fr));
+  }
+
+  /* The hero's secondary action (Follow) is an outlined pill with a check, as in the design. */
+  html[data-app-skin="azure"] [data-azure-hero-actions] button {
+    height: 3rem;
+    border-radius: 9999px;
+    padding-inline: 1.75rem;
+    background: transparent;
+    box-shadow: none;
+    border: 1px solid rgb(255 255 255 / 0.85);
+    font-size: 1rem;
+    font-weight: 500;
+    letter-spacing: 0.02em;
+    color: #fff;
+  }
+  html[data-app-skin="azure"] [data-azure-hero-actions] button:hover {
+    background: rgb(255 255 255 / 0.1);
+  }
+}
+
+/* ---- Docked player ------------------------------------------------------------------------ */
+@media (min-width: 768px) {
+  html[data-app-skin="azure"] [data-azure-player] .azure-player-art {
+    width: 4rem;
+    height: 4rem;
+    border-radius: 0.75rem;
+  }
+  html[data-app-skin="azure"] [data-azure-player] .azure-player-meta .text-sm {
+    font-size: 1.125rem;
+    line-height: 1.5rem;
+  }
+  html[data-app-skin="azure"] [data-azure-player] .azure-player-meta .text-xs {
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+    color: #fff;
+  }
+  /* The transport's heart/like and controls read white rather than the muted default. */
+  html[data-app-skin="azure"] [data-azure-player] button:not([aria-pressed="true"]) {
+    --color-muted-foreground: #fff;
+  }
+}

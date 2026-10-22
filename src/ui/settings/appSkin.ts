@@ -13,6 +13,8 @@ import {
  *   exactly what every install showed before skins existed.
  * - `noir` — pure black, a top navigation bar, a text-only library list, a docked player and a
  *   single red accent.
+ * - `azure` — a dark charcoal canvas with a sky-blue accent: icon sidebar, a rounded search bar,
+ *   a "Recent Played" rail on the right and a docked player with a progress line across the top.
  *
  * Not to be confused with the *mini player* skins (`miniPlayer.ts`), which only restyle that one
  * small window. This one decides the chrome of the whole app.
@@ -20,7 +22,7 @@ import {
  * Desktop only. A phone keeps its own opaque layout whatever is stored here, which is why
  * `applyAppSkin` does nothing on Android and the picker lives in a desktop-only settings card.
  */
-export type AppSkinId = "glass" | "noir";
+export type AppSkinId = "glass" | "noir" | "azure";
 
 const STORAGE_KEY = "app-skin";
 const CHANGE_EVENT = "app-skin-change";
@@ -37,10 +39,15 @@ export const APP_SKINS: ReadonlyArray<{ id: AppSkinId; name: string; description
     name: "Noir",
     description: "Pure black, a top navigation bar and a single red accent.",
   },
+  {
+    id: "azure",
+    name: "Azure",
+    description: "Charcoal panels, an icon sidebar and a sky-blue accent.",
+  },
 ];
 
 function isAppSkinId(value: unknown): value is AppSkinId {
-  return value === "glass" || value === "noir";
+  return value === "glass" || value === "noir" || value === "azure";
 }
 
 /*
@@ -85,7 +92,7 @@ function subscribe(callback: () => void) {
  * Puts the skin on <html>.
  *
  * `data-glass` is what the existing glass palette keys off (see global.css), so it is present
- * for `glass` and absent for `noir`. For the default skin that is exactly the attribute `main.tsx`
+ * for `glass` and absent for `noir` and `azure`. For the default skin that is exactly the attribute `main.tsx`
  * used to set unconditionally, which is what keeps the original look byte-for-byte unchanged.
  */
 export function applyAppSkin(skin: AppSkinId = readAppSkin()): void {

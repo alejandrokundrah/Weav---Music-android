@@ -1,3 +1,4 @@
+import { AzureBellIcon } from "../skins/azure/azureIcons";
 import { useCallback, useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/motion/button";
@@ -78,8 +79,11 @@ export function NotificationsPanel({
   variant = "toolbar",
 }: {
   signedIn: boolean;
-  /** `phone` swaps the toolbar button for the bell used in the phone Home header. */
-  variant?: "toolbar" | "phone";
+  /**
+   * `phone` swaps the toolbar button for the bell used in the phone Home header; `azure` for the
+   * round bell in the Azure skin's top bar.
+   */
+  variant?: "toolbar" | "phone" | "azure";
 }) {
   const [open, setOpen] = useState(false);
   const [notifications, setNotifications] = useState<FeedNotification[] | null>(null);
@@ -144,7 +148,23 @@ export function NotificationsPanel({
       onOpenChange={setOpen}
       side="bottom"
       className="w-96 max-w-[calc(100vw-2rem)] p-2"
-      trigger={variant === "phone" ? (
+      trigger={variant === "azure" ? (
+        <button
+          type="button"
+          className="relative grid size-12 shrink-0 place-items-center rounded-full bg-[var(--azure-panel)] transition-colors hover:bg-[#2c2c2c] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          aria-label={unseen > 0 ? `Notifications, ${unseen} unread` : "Notifications"}
+          aria-expanded={open}
+          onClick={() => setOpen((value) => !value)}
+        >
+          <AzureBellIcon size={18} />
+          {unseen > 0 && (
+            <span
+              className="absolute right-3 top-3 size-2 rounded-full bg-white ring-2 ring-[var(--azure-panel)]"
+              aria-hidden="true"
+            />
+          )}
+        </button>
+      ) : variant === "phone" ? (
         <button
           type="button"
           className="relative grid size-10 place-items-center rounded-full text-[#e7e7e7] transition-transform active:scale-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40"

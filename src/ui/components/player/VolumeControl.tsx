@@ -3,6 +3,7 @@ import { RangeSlider } from "@/components/motion/range-slider";
 import { VolumeLoudIcon, VolumeMutedIcon, VolumeSmallIcon } from "@/ui/icons";
 import { playerController, shallowEqual, usePlayerSelector } from "../../../player/playerStore";
 import { FloatingPanel } from "../FloatingPanel";
+import { AzureVolumeIcon } from "../../skins/azure/azureIcons";
 
 /** Scroll step over the icon, matching the old inline slider's wheel behaviour. */
 const WHEEL_STEP_PERCENT = 5;
@@ -17,7 +18,26 @@ const WHEEL_STEP_PERCENT = 5;
  * The panel is portalled (see FloatingPanel): the player bar sits inside the window's
  * `overflow-hidden` root, so a panel positioned within the bar would be clipped by it.
  */
-export function VolumeControl({ inline = false }: { /** Noir: the slider sits beside the icon, always visible, instead of opening on hover. */ inline?: boolean }) {
+/** Azure's inline slider: a slim blue fill over a grey track, no thumb until hover. */
+const INLINE_SLIDER = [
+  "h-1 w-[99px] cursor-pointer appearance-none rounded-full bg-transparent",
+  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+  "[&::-webkit-slider-runnable-track]:h-1 [&::-webkit-slider-runnable-track]:rounded-full",
+  "[&::-webkit-slider-runnable-track]:bg-[linear-gradient(to_right,var(--azure-accent)_var(--slider-progress),var(--azure-track)_var(--slider-progress))]",
+  "[&::-moz-range-track]:h-1 [&::-moz-range-track]:rounded-full [&::-moz-range-track]:bg-[var(--azure-track)]",
+  "[&::-moz-range-progress]:h-1 [&::-moz-range-progress]:rounded-full [&::-moz-range-progress]:bg-[var(--azure-accent)]",
+  "[&::-webkit-slider-thumb]:-mt-1 [&::-webkit-slider-thumb]:size-3 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full",
+  "[&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:opacity-0 hover:[&::-webkit-slider-thumb]:opacity-100",
+  "focus-visible:[&::-webkit-slider-thumb]:opacity-100",
+  "[&::-moz-range-thumb]:size-3 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-0 [&::-moz-range-thumb]:bg-white",
+].join(" ");
+
+/**
+ * `popover` (default) is the icon that opens a slider on hover. `inline` is Azure's: the icon and
+ * a short slider side by side, always visible, as in its design. `noir-inline` is Noir's take on
+ * the same always-visible arrangement, with its own styling.
+ */
+export function VolumeControl({ variant = "popover" }: { variant?: "popover" | "inline" | "noir-inline" } = {}) {
   /* This component writes volume on every pointer move of the slider, so it is the last one
      that should be subscribed to fields it does not read. */
   const playerState = usePlayerSelector(
@@ -50,13 +70,49 @@ export function VolumeControl({ inline = false }: { /** Noir: the slider sits be
     void playerController.toggleMute();
   };
 
+  if (variant === "inline") {
+    return (
+      <div className="flex shrink-0 items-center gap-3">
+        <button
+          type="button"
+          onClick={toggleMute}
+          onWheel={(event) => {
+            const delta = event.deltaY || event.deltaX;
+            if (delta === 0) return;
+            applyVolume(percent + (delta < 0 ? 1 : -1) * WHEEL_STEP_PERCENT);
+          }}
+          aria-label={isMuted ? `Unmute (volume ${percent}%)` : `Mute (volume ${percent}%)`}
+          className={`flex h-8 items-center justify-center rounded-full transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${isMuted ? "opacity-40" : ""}`}
+        >
+          <AzureVolumeIcon size={23} />
+        </button>
+        <input
+          type="range"
+          min={0}
+          max={100}
+          step={1}
+          value={percent}
+          onChange={(event) => applyVolume(Number(event.target.value))}
+          onWheel={(event) => {
+            const delta = event.deltaY || event.deltaX;
+            if (delta === 0) return;
+            applyVolume(percent + (delta < 0 ? 1 : -1) * WHEEL_STEP_PERCENT);
+          }}
+          className={INLINE_SLIDER}
+          style={{ "--slider-progress": `${percent}%` } as React.CSSProperties}
+          aria-label="Volume"
+        />
+      </div>
+    );
+  }
+
   const VolumeGlyph = isMuted
     ? VolumeMutedIcon
     : displayedVolume < 0.5
       ? VolumeSmallIcon
       : VolumeLoudIcon;
 
-  if (inline) {
+  if (variant === "noir-inline") {
     return (
       <div className="flex shrink-0 items-center gap-1">
         <button

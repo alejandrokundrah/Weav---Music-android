@@ -2,7 +2,7 @@ import { useEffect, useId, useRef, useState } from "react";
 import { shallowEqual, usePlayerSelector } from "../../../player/playerStore";
 import { playerController } from "../../../player/playerStore";
 import { playerUIStore, usePlayerUIState } from "../../stores/playerUIStore";
-import { formatMinutesSeconds } from "@/lib/utils";
+import { cn, formatMinutesSeconds } from "@/lib/utils";
 
 /*
  * Deliberately NOT beUI's RangeSlider: that component snaps to discrete steps, while
@@ -64,7 +64,14 @@ function padTime(seconds: number): string {
   return `${mins}:${secs}`;
 }
 
-export function SeekBar({ variant = "bar" }: { variant?: "bar" | "arc" } = {}) {
+/**
+ * Variants:
+ * - `bar` — the default: elapsed time, the slider, total time.
+ * - `arc` — the phone player's curved scrubber.
+ * - `line` — just the slider, flush and thin, for a progress line across the top of a bar (Azure).
+ * - `time` — just "elapsed / total" as text (Azure), so it can sit apart from the slider.
+ */
+export function SeekBar({ variant = "bar" }: { variant?: "bar" | "arc" | "line" | "time" } = {}) {
   const gradientId = useId();
   const state = usePlayerSelector(
     (player) => ({ currentTrack: player.currentTrack, status: player.status }),
@@ -345,6 +352,40 @@ export function SeekBar({ variant = "bar" }: { variant?: "bar" | "arc" } = {}) {
           aria-label="Seek"
         />
       </div>
+    );
+  }
+
+  if (variant === "time") {
+    return (
+      <span className="shrink-0 whitespace-nowrap text-base tabular-nums text-[var(--azure-muted,var(--color-muted-foreground))]">
+        {formatTime(currentTime)} / {formatTime(duration)}
+      </span>
+    );
+  }
+
+  if (variant === "line") {
+    return (
+      <input
+        type="range"
+        min="0"
+        max={duration || 100}
+        step="any"
+        value={currentTime}
+        onChange={handleSeekChange}
+        onKeyUp={commitKeyboardSeek}
+        onPointerDown={handleSeekStart}
+        onPointerMove={handleSeekMove}
+        onPointerUp={(event) => void handleSeekEnd(event)}
+        onPointerCancel={handleSeekCancel}
+        disabled={isDisabled}
+        className={cn(SEEK_SLIDER, "rounded-none [&::-webkit-slider-runnable-track]:rounded-none")}
+        style={{
+          "--slider-progress": `${duration > 0 ? (currentTime / duration) * 100 : 0}%`,
+          "--color-muted": "var(--azure-track, var(--color-muted))",
+          "--seek-fill": "#fff",
+        } as React.CSSProperties}
+        aria-label="Seek"
+      />
     );
   }
 

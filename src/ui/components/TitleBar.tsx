@@ -55,7 +55,7 @@ interface TitleBarProps {
    * differ; everything that acts on the window or the account is shared, so a fix to window
    * controls or the account panel lands in both skins at once.
    */
-  variant?: "glass" | "noir";
+  variant?: "glass" | "noir" | "azure";
   /** Extra content between the brand block and the tabs. Noir puts history and search here. */
   leading?: ReactNode;
   /** Noir only: sits just before the centred tabs (the search button). */
@@ -89,6 +89,10 @@ export function TitleBar({
   searchSlot,
 }: TitleBarProps) {
   const isNoir = variant === "noir";
+  // Azure keeps this bar as a slim strip for the window controls and app actions: its brand mark
+  // lives in the sidebar, its notifications bell in the top bar, and it shows tabs only once
+  // there is more than one.
+  const isAzure = variant === "azure";
   const appWindow = getCurrentWindow();
   const libraryState = useLibraryState();
   const account = libraryState.library?.account;
@@ -195,6 +199,9 @@ export function TitleBar({
         "relative z-30 flex h-[var(--titlebar-height)] shrink-0 items-stretch pt-1",
         // Noir: one hairline under the whole bar, in place of glass's divider beside the brand.
         isNoir && "border-b border-[var(--noir-hairline)] pt-0",
+        // Azure: the strip is painted in the same three panels as the window under it, so the
+        // sidebar and the right rail run unbroken to the top edge.
+        isAzure && "pt-0 [background:linear-gradient(90deg,#212121_0,#212121_270px,#121212_270px,#121212_calc(100%-298px),#212121_calc(100%-298px))]",
       )}
     >
       <button
@@ -207,7 +214,8 @@ export function TitleBar({
           isHomeActive ? "opacity-100" : "opacity-85 hover:opacity-100",
           hideHomeText && "justify-center gap-0 px-0",
           // Noir has no divider here, and the brand lines up with the sidebar's text edge.
-          isNoir && "w-auto border-r-0 px-0 pl-10 pr-8",
+          isNoir && "border-r-0 px-0 pl-10",
+          isAzure && "hidden",
         )}
         onClick={() => {
           if (suppressHomeClickRef.current) {
@@ -271,7 +279,7 @@ export function TitleBar({
 
       {leading}
 
-      {isNoir ? (
+      {(!isAzure || tabs.length > 1) && (isNoir ? (
         /*
           Noir centres the search button and the tabs in the bar itself, not in whatever space the
           brand and history controls leave over. The wrapper ignores the pointer so the window
@@ -283,7 +291,7 @@ export function TitleBar({
         </div>
       ) : (
         tabsNode
-      )}
+      ))}
 
       <div
         className="min-w-6 flex-1"
@@ -310,7 +318,7 @@ export function TitleBar({
           toggle rather than only a setting buried in a panel. Dimmed when off so the current
           state reads at a glance without a label.
         */}
-        {notificationsVisible && (
+        {notificationsVisible && !isAzure && (
           <NotificationsPanel signedIn={libraryState.status === "ready"} />
         )}
         {downloadsVisible && <DownloadsPanel onOpenDownloads={onOpenDownloads} />}

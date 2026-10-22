@@ -7,6 +7,7 @@ import { TrackArtwork } from "./TrackArtwork";
 import { setAmbientArtwork } from "../stores/ambientArtworkStore";
 import { useAppSkin } from "../settings/appSkin";
 import { NoirMediaHeader } from "../skins/noir/NoirMediaHeader";
+import { AzureMediaHeader } from "../skins/azure/AzureMediaHeader";
 
 /**
  * "24 songs · 1 hr 32 min".
@@ -197,7 +198,9 @@ export function MediaHeader({
   actions,
   descriptionSlot,
 }: MediaHeaderProps) {
-  const isNoir = useAppSkin() === "noir";
+  const skin = useAppSkin();
+  const isNoir = skin === "noir";
+  const isAzure = skin === "azure";
   /* Destructured once, so the body below reads the same as it did when these were flat props
      rather than threading `playback?.` through every branch. */
   const isPlaying = playback?.isPlaying ?? false;
@@ -220,6 +223,29 @@ export function MediaHeader({
 
   // Same props, a different hero: Noir lays the title out beside an arched portrait instead of
   // over a blurred wash. Everything above this line (the ambient tint) is harmless to share.
+  if (isAzure) {
+    return (
+      <AzureMediaHeader
+        eyebrow={eyebrow}
+        title={title}
+        subtitle={subtitle}
+        meta={meta}
+        artworkUrl={artworkUrl}
+        artworkVariant={artworkVariant}
+        artworkSlot={artworkSlot}
+        circularArtwork={circularArtwork}
+        playback={playback}
+        onShuffle={onShuffle}
+        onAddToQueue={onAddToQueue}
+        onAddToPlaylist={onAddToPlaylist}
+        download={download}
+        loop={loop}
+        actionsDisabled={actionsDisabled}
+        actions={actions}
+      />
+    );
+  }
+
   if (isNoir) {
     return (
       <NoirMediaHeader

@@ -58,13 +58,13 @@ export function TrackInfo() {
     >
       {uiState.showAlbumArt && (
         <TrackArtwork
-          className="size-12 shrink-0  object-cover"
+          className="azure-player-art size-12 shrink-0  object-cover"
           size={48}
           artworkUrl={currentTrack.artworkUrl}
           iconSize={22}
         />
       )}
-      <div className="flex min-w-0 flex-col gap-0.5">
+      <div className="azure-player-meta flex min-w-0 flex-col gap-0.5">
         <div ref={titleViewportRef} className="relative min-w-0 overflow-hidden">
           {/* Hidden measuring copy — Marquee duplicates its children, so width
               must be read from a single stable node. */}

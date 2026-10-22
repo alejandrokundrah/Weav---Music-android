@@ -44,6 +44,9 @@ import { ArtistNavigationProvider } from "./components/ArtistLinks";
 import { cn } from "@/lib/utils";
 import { TitleBar } from "./components/TitleBar";
 import { useAppSkin } from "./settings/appSkin";
+import type { SidebarNav } from "./components/Sidebar";
+import { AzureTopBar } from "./skins/azure/AzureTopBar";
+import { AzureRightRail, AZURE_RAIL_WIDTH } from "./skins/azure/AzureRightRail";
 import { NoirNavCluster, NoirSearchButton } from "./skins/noir/NoirNavCluster";
 import { PlayerBar } from "./components/player/PlayerBar";
 import { NowPlayingScreen } from "./components/player/NowPlayingScreen";
@@ -385,7 +388,10 @@ export default function App() {
   const isPhone = useCompactViewport();
   // The Noir desktop skin (Settings → Appearance). A phone-width window always keeps the opaque
   // layout, so this is false there whatever is selected.
-  const isNoir = useAppSkin() === "noir" && !isPhone;
+  const appSkin = useAppSkin();
+  const isNoir = appSkin === "noir" && !isPhone;
+  // The Azure desktop skin: same rule — a phone-width window always keeps the opaque layout.
+  const isAzure = appSkin === "azure" && !isPhone;
   const [loadingScreenState, setLoadingScreenState] = useState<"visible" | "leaving" | "hidden">("visible");
   const [onboardingComplete, setOnboardingComplete] = useState<boolean | null>(() =>
     readLocalOnboardingComplete() ? true : null
@@ -1979,12 +1985,24 @@ useEffect(() => {
   return () => { cleanup.then(fn => fn()); };
 }, []);
 
+  const layoutNav: SidebarNav = {
+    activeView: activeTab?.view,
+    activeBrowseTab: activeTab?.browseTab,
+    onHome: handleNavigateHome,
+    onBrowse: () => handleOpenBrowse(),
+    onLibrary: handleOpenLibrary,
+    onHistory: handleOpenHistory,
+    onDownloads: () => handleOpenBrowse("downloads"),
+    onSettings: handleOpenSettings,
+    activeItemId: activeTab?.playlist?.id ?? activeTab?.album?.id,
+  };
+
   // Its own boundary: the player bar is the one region whose loss ends the session —
   // audio keeps playing but nothing can pause or skip it.
   const playerBarNode = (
     <ErrorBoundary label="Playback controls">
       <PlayerBar
-        variant={isNoir ? "noir" : "glass"}
+        variant={isNoir ? "noir" : isAzure ? "azure" : "glass"}
         onToggleLyrics={handleToggleLyrics}
         onToggleQueue={handleToggleQueue}
         isQueueOpen={isQueuePanelOpen}
@@ -2021,7 +2039,7 @@ useEffect(() => {
         The scenery the glass window floats over. Desktop only: a phone has no desktop to show
         through, so it keeps its opaque, edge-to-edge layout.
       */}
-      {!isPhone && !isNoir && <SceneBackdrop className="absolute inset-0" />}
+      {!isPhone && !isNoir && !isAzure && <SceneBackdrop className="absolute inset-0" />}
       {/*
         The shell. Everything the app draws lives in this one rounded pane; the sidebar, page and
         queue are columns of it, separated by hairlines rather than boxes. Edge to edge when the
@@ -2031,13 +2049,15 @@ useEffect(() => {
       <div
         className={cn(
           "relative flex min-h-0 flex-1 flex-col",
-          !isPhone && !isNoir && "glass-shell overflow-hidden",
-          !isPhone && !isNoir && (playerUIState.isLyricsFullscreen ? "m-0 rounded-none" : "m-3.5 rounded-[28px]"),
+          !isPhone && !isNoir && !isAzure && "glass-shell overflow-hidden",
+          !isPhone && !isNoir && !isAzure && (playerUIState.isLyricsFullscreen ? "m-0 rounded-none" : "m-3.5 rounded-[28px]"),
           // Noir fills the window edge to edge: no floating pane, no scenery behind it.
           isNoir && "noir-shell overflow-hidden",
+          // So does Azure: charcoal panels, no scenery.
+          isAzure && "azure-shell overflow-hidden",
         )}
       >
-      {!isPhone && !isNoir && (
+      {!isPhone && !isNoir && !isAzure && (
         // Same picture as the backdrop, softened — the "frost" without a live backdrop-filter.
         // Offset by the shell's margin so the two line up; it is blurred, so exactness is moot.
         <SceneBackdrop
@@ -2079,7 +2099,7 @@ useEffect(() => {
         onOpenSettings={handleOpenSettings}
         onOpenDownloads={() => handleOpenBrowse("downloads")}
         onboardingFirstTabId={onboardingStep ? onboardingFirstTabId : undefined}
-        variant={isNoir ? "noir" : "glass"}
+        variant={isNoir ? "noir" : isAzure ? "azure" : "glass"}
         leading={isNoir ? (
           <NoirNavCluster
             activeTab={activeTab}
@@ -2119,23 +2139,26 @@ useEffect(() => {
             !playerUIState.isLyricsOpen
             && (activeTab?.view === "playlist" || activeTab?.view === "album")
           }
-          rightPanelWidth={isQueuePanelCollapsed ? COLLAPSED_QUEUE_WIDTH : queuePanelWidth}
+          rightPanelWidth={
+            isAzure && !isQueuePanelOpen
+              ? AZURE_RAIL_WIDTH
+              : isQueuePanelCollapsed ? COLLAPSED_QUEUE_WIDTH : queuePanelWidth
+          }
           onRightPanelWidthChange={isQueuePanelCollapsed ? undefined : setQueuePanelWidth}
+          topBar={isAzure ? (
+            <AzureTopBar
+              activeTab={activeTab}
+              canGoBack={canNavigateBack}
+              onBack={handleNavigateBack}
+              onHome={handleNavigateHome}
+              onOpenSearch={() => setIsSearchOpen(true)}
+            />
+          ) : undefined}
           scrollKey={activeViewKey}
           onOpenSearchFromSidebar={() => setIsSearchOpen(true)}
-          nav={{
-            activeView: activeTab?.view,
-            activeBrowseTab: activeTab?.browseTab,
-            onHome: handleNavigateHome,
-            onBrowse: () => handleOpenBrowse(),
-            onLibrary: handleOpenLibrary,
-            onHistory: handleOpenHistory,
-            onDownloads: () => handleOpenBrowse("downloads"),
-            onSettings: handleOpenSettings,
-            activeItemId: activeTab?.playlist?.id ?? activeTab?.album?.id,
-          }}
+          nav={layoutNav}
           // Noir docks the player under the sidebar as well, so it sits outside this column.
-          footer={isPhone || isNoir || playerUIState.isLyricsFullscreen ? undefined : playerBarNode}
+          footer={isPhone || isNoir || isAzure || playerUIState.isLyricsFullscreen ? undefined : playerBarNode}
           /*
             Bound straight to `isQueuePanelOpen`, not a delayed mirror of it: `AnimatePresence`
             in Layout already keeps the last-rendered panel mounted for the whole exit
@@ -2146,6 +2169,10 @@ useEffect(() => {
           */
           rightPanel={isQueuePanelOpen ? (
             <QueuePanel onClose={() => setIsQueuePanelOpen(false)} onOpenLyrics={handleToggleLyrics} />
+          ) : isAzure && !playerUIState.isLyricsOpen ? (
+            // Azure keeps a column of its own on the right: who is signed in and what you played
+            // last. Opening the queue swaps it out; closing the queue brings it back.
+            <AzureRightRail nav={layoutNav} />
           ) : undefined}
         >
 {/* <ExpandedPlayerBar 
@@ -2278,7 +2305,7 @@ useEffect(() => {
       </div>
 
       {/* Noir's docked player: full width, under the sidebar and the page alike. */}
-      {isNoir && !playerUIState.isLyricsFullscreen && (
+      {(isNoir || isAzure) && !playerUIState.isLyricsFullscreen && (
         <div className="relative shrink-0">{playerBarNode}</div>
       )}
 
