@@ -1,12 +1,4 @@
-import {
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  type MouseEvent,
-  type PointerEvent,
-  type ReactNode,
-} from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { emit, listen } from "@tauri-apps/api/event";
 import { PhysicalPosition, LogicalSize } from "@tauri-apps/api/dpi";
 import {
@@ -17,7 +9,16 @@ import {
 import { WebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { motion } from "motion/react";
 import { useMiniPlayerBridge } from "../mini-player/useMiniPlayerBridge";
-import { formatSkinTime } from "../mini-player/skins/shared";
+import { cn, formatMinutesSeconds } from "@/lib/utils";
+import { SpinnerSteps } from "@/components/motion/loader";
+import {
+  MusicNoteIcon,
+  PauseActiveIcon,
+  PlayActiveIcon,
+  SkipNextIcon,
+  SkipPreviousIcon,
+} from "@/ui/icons";
+import { TrackArtwork } from "../TrackArtwork";
 import { NOTCH_SIZES, type NotchSizeKey } from "../../settings/notch";
 import { useReduceMotion } from "../../settings/renderEffects";
 import { findActiveLineIndex } from "../../pages/lyricsTiming";
@@ -110,6 +111,7 @@ export default function NotchPlayer() {
   const reduceMotion = useReduceMotion();
 
   const isPlaying = playerState.status === "playing";
+  const isLoading = playerState.status === "loading";
   const hasTrack = playerState.status !== "idle" && playerState.title !== null;
   const lines = lyrics?.lines ?? NO_LINES;
   const hasLyrics = lines.length > 0;
@@ -203,15 +205,6 @@ export default function NotchPlayer() {
     ? { duration: 0 }
     : ({ type: "spring", stiffness: 420, damping: 34, mass: 0.9 } as const);
 
-  const handleSeek = (event: PointerEvent<HTMLDivElement>) => {
-    if (timeState.duration <= 0) return;
-    const rect = event.currentTarget.getBoundingClientRect();
-    const ratio = Math.min(1, Math.max(0, (event.clientX - rect.left) / rect.width));
-    void emit("mini-player:seek", { time: ratio * timeState.duration });
-  };
-
-  const stop = (event: MouseEvent) => event.stopPropagation();
-
   return (
     <div
       className="relative h-full w-full"
@@ -246,14 +239,13 @@ export default function NotchPlayer() {
             artist={playerState.artist}
             artworkUrl={artworkUrl}
             isPlaying={isPlaying}
+            isLoading={isLoading}
             currentTime={liveTime}
             duration={timeState.duration}
             lines={lines}
             activeIndex={activeIndex}
             showLyrics={hasLyrics}
-            onSeek={handleSeek}
             onOpenMain={() => void openMainWindow()}
-            onStop={stop}
           />
         ) : (
           <PillContent
@@ -270,11 +262,27 @@ export default function NotchPlayer() {
   );
 }
 
-function Cover({ url, className }: { url: string | null; className: string }) {
+function Cover({
+  url,
+  className,
+  size,
+  iconSize,
+}: {
+  url: string | null;
+  className: string;
+  size: number;
+  iconSize: number;
+}) {
+  // The player's own artwork component, so covers load through the same cache, proxy and
+  // retry ladder as everywhere else — and `size` keeps it from fetching the full-size cover.
   return (
-    <div className={`shrink-0 overflow-hidden bg-white/10 ${className}`}>
-      {url && <img src={url} alt="" draggable={false} className="h-full w-full object-cover" />}
-    </div>
+    <TrackArtwork
+      artworkUrl={url ?? undefined}
+      className={cn("shrink-0 bg-neutral-800", className)}
+      iconSize={iconSize}
+      loading="eager"
+      size={size}
+    />
   );
 }
 
@@ -298,14 +306,14 @@ function PillContent({
       animate={{ opacity: 1 }}
       transition={{ duration: reduceMotion ? 0 : 0.18 }}
     >
-      <Cover url={artworkUrl} className="h-6 w-6 rounded-full" />
+      <Cover url={artworkUrl} className="size-6 rounded-full" size={24} iconSize={11} />
       {/* Title and artist are separate boxes: one truncating run of text let them fuse. */}
       <div className="flex min-w-0 flex-1 items-baseline gap-2 leading-none">
-        <span className="max-w-[62%] shrink-0 truncate text-[12px] font-semibold">
+        <span className="max-w-[62%] shrink-0 truncate text-[12px] font-semibold tracking-[-0.01em]">
           {title ?? "Nothing playing"}
         </span>
         {artist && (
-          <span className="min-w-0 flex-1 truncate text-[11px] text-white/45">{artist}</span>
+          <span className="min-w-0 flex-1 truncate text-[11px] text-white/55">{artist}</span>
         )}
       </div>
       <Bars active={isPlaying && !reduceMotion} />
@@ -334,35 +342,35 @@ function Bars({ active }: { active: boolean }) {
   );
 }
 
+/** Same look as the mini player's buttons, so the two compact players read as one family. */
+const NOTCH_BUTTON =
+  "flex size-7 shrink-0 items-center justify-center rounded-full text-neutral-300 transition-all hover:bg-white/10 hover:text-white active:scale-90 disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50";
+
 function OpenContent({
   title,
   artist,
   artworkUrl,
   isPlaying,
+  isLoading,
   currentTime,
   duration,
   lines,
   activeIndex,
   showLyrics,
-  onSeek,
   onOpenMain,
-  onStop,
 }: {
   title: string | null;
   artist: string | null;
   artworkUrl: string | null;
   isPlaying: boolean;
+  isLoading: boolean;
   currentTime: number;
   duration: number;
   lines: NotchLyricsSync["lines"];
   activeIndex: number;
   showLyrics: boolean;
-  onSeek: (event: PointerEvent<HTMLDivElement>) => void;
   onOpenMain: () => void;
-  onStop: (event: MouseEvent) => void;
 }) {
-  const progress = duration > 0 ? Math.min(1, currentTime / duration) : 0;
-
   return (
     <motion.div
       className="flex h-full w-full items-stretch gap-4 px-4 pb-3.5 pt-4"
@@ -373,62 +381,59 @@ function OpenContent({
       <div className="flex min-w-0 flex-1 items-center gap-3.5">
         <button
           type="button"
-          onClick={(event) => {
-            onStop(event);
-            onOpenMain();
-          }}
+          onClick={onOpenMain}
           aria-label="Open WEAV"
           title="Open WEAV"
           className="shrink-0 rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
         >
-          <Cover url={artworkUrl} className="h-[72px] w-[72px] rounded-2xl" />
+          <Cover url={artworkUrl} className="size-[72px] rounded-2xl" size={72} iconSize={26} />
         </button>
 
         <div className="flex min-w-0 flex-1 flex-col justify-center gap-1.5">
           <div className="min-w-0">
-            <div className="truncate text-[14px] font-semibold leading-tight">
+            <div className="truncate text-[14px] font-semibold leading-tight tracking-[-0.01em]">
               {title ?? "Nothing playing"}
             </div>
             <div className="truncate text-[12px] leading-tight text-white/55">{artist ?? ""}</div>
           </div>
 
-          <div className="flex items-center gap-2 text-[10px] tabular-nums text-white/55">
-            <span className="w-7 text-right">{formatSkinTime(currentTime)}</span>
-            <div
-              role="slider"
-              aria-label="Seek"
-              aria-valuemin={0}
-              aria-valuemax={Math.round(duration)}
-              aria-valuenow={Math.round(currentTime)}
-              className="group relative h-3 flex-1 cursor-pointer"
-              onPointerDown={onSeek}
-            >
-              <div className="absolute inset-x-0 top-1/2 h-1 -translate-y-1/2 rounded-full bg-white/20">
-                <div
-                  className="h-full rounded-full bg-white"
-                  style={{ width: `${progress * 100}%` }}
-                />
-              </div>
-            </div>
-            <span className="w-8">-{formatSkinTime(Math.max(0, duration - currentTime))}</span>
-          </div>
+          <SeekRow currentTime={currentTime} duration={duration} />
 
-          <div className="flex items-center justify-center gap-5">
-            <ControlButton label="Previous" onClick={() => void emit("mini-player:skip-previous")}>
-              <path d="M6 5h2v14H6zM20 5v14L9.5 12z" />
-            </ControlButton>
-            <ControlButton
-              label={isPlaying ? "Pause" : "Play"}
-              size="lg"
-              onClick={() => void emit("mini-player:toggle-play-pause")}
+          <div className="flex items-center justify-center gap-1.5">
+            <button
+              type="button"
+              className={NOTCH_BUTTON}
+              onClick={() => void emit("mini-player:skip-previous")}
+              aria-label="Previous"
             >
-              {isPlaying
-                ? <path d="M7 5h4v14H7zM13 5h4v14h-4z" />
-                : <path d="M8 5v14l11-7z" />}
-            </ControlButton>
-            <ControlButton label="Next" onClick={() => void emit("mini-player:skip-next")}>
-              <path d="M16 5h2v14h-2zM4 5v14l10.5-7z" />
-            </ControlButton>
+              <SkipPreviousIcon size={16} aria-hidden="true" />
+            </button>
+            <button
+              type="button"
+              className="flex size-8 shrink-0 items-center justify-center rounded-full bg-white text-neutral-900 transition-transform duration-150 hover:scale-105 active:scale-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
+              onClick={() => void emit("mini-player:toggle-play-pause")}
+              aria-label={isLoading ? "Loading song" : isPlaying ? "Pause" : "Play"}
+            >
+              <span className="relative grid size-4 place-items-center" aria-hidden="true">
+                <span className={cn("absolute transition-opacity duration-150", isLoading || isPlaying ? "opacity-0" : "opacity-100")}>
+                  <PlayActiveIcon size={15} />
+                </span>
+                <span className={cn("absolute transition-opacity duration-150", !isLoading && isPlaying ? "opacity-100" : "opacity-0")}>
+                  <PauseActiveIcon size={15} />
+                </span>
+                <span className={cn("absolute transition-opacity duration-150", isLoading ? "opacity-100" : "opacity-0")}>
+                  <SpinnerSteps size={13} color="currentColor" />
+                </span>
+              </span>
+            </button>
+            <button
+              type="button"
+              className={NOTCH_BUTTON}
+              onClick={() => void emit("mini-player:skip-next")}
+              aria-label="Next"
+            >
+              <SkipNextIcon size={16} aria-hidden="true" />
+            </button>
           </div>
         </div>
       </div>
@@ -442,34 +447,42 @@ function OpenContent({
   );
 }
 
-function ControlButton({
-  label,
-  onClick,
-  size = "md",
-  children,
-}: {
-  label: string;
-  onClick: () => void;
-  size?: "md" | "lg";
-  children: ReactNode;
-}) {
-  const large = size === "lg";
+/**
+ * Position readout and slider, in the mini player's slider styling. A drag is held locally and
+ * committed on release, so the thumb does not fight the once-a-second time sync mid-drag.
+ */
+function SeekRow({ currentTime, duration }: { currentTime: number; duration: number }) {
+  const [dragValue, setDragValue] = useState<number | null>(null);
+  const max = Math.max(duration, 1);
+  const value = Math.min(max, dragValue ?? currentTime);
+  const progress = (value / max) * 100;
+
+  const commit = () => {
+    if (dragValue === null) return;
+    void emit("mini-player:seek", { time: dragValue });
+    setDragValue(null);
+  };
+
   return (
-    <button
-      type="button"
-      aria-label={label}
-      title={label}
-      onClick={onClick}
-      className={
-        large
-          ? "grid h-8 w-8 place-items-center rounded-full bg-white text-black transition-transform hover:scale-105 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
-          : "grid h-7 w-7 place-items-center rounded-full text-white/85 transition-colors hover:text-white active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
-      }
-    >
-      <svg viewBox="0 0 24 24" className={large ? "h-4 w-4" : "h-[18px] w-[18px]"} fill="currentColor" aria-hidden="true">
-        {children}
-      </svg>
-    </button>
+    <div className="flex items-center gap-2 text-[10px] tabular-nums text-white/55">
+      <span className="w-7 text-right">{formatMinutesSeconds(value)}</span>
+      <input
+        type="range"
+        min={0}
+        max={max}
+        step={0.1}
+        value={value}
+        disabled={duration <= 0}
+        onChange={(event) => setDragValue(Number(event.target.value))}
+        onPointerUp={commit}
+        onPointerCancel={() => setDragValue(null)}
+        onKeyUp={commit}
+        aria-label="Song position"
+        className="h-1 min-w-0 flex-1 cursor-pointer appearance-none rounded-full bg-transparent disabled:cursor-default [&::-webkit-slider-runnable-track]:h-1 [&::-webkit-slider-runnable-track]:rounded-full [&::-webkit-slider-runnable-track]:bg-[linear-gradient(to_right,#fff_var(--slider-progress),rgba(255,255,255,0.18)_var(--slider-progress))] [&::-webkit-slider-thumb]:size-2.5 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:-mt-[3px] [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:transition-transform hover:[&::-webkit-slider-thumb]:scale-125"
+        style={{ "--slider-progress": `${progress}%` } as CSSProperties}
+      />
+      <span className="w-8">-{formatMinutesSeconds(Math.max(0, duration - value))}</span>
+    </div>
   );
 }
 
@@ -493,7 +506,7 @@ function LyricsColumn({
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.22 }}
       >
-        {current ?? "♪"}
+        {current ?? <MusicNoteIcon size={16} aria-hidden="true" className="text-white/50" />}
       </motion.p>
       {next && <p className="line-clamp-2 text-[12px] leading-snug text-white/35">{next}</p>}
     </>
