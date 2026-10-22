@@ -10,14 +10,6 @@ updates:
       npm:
         patterns: ["*"]
 
-  - package-ecosystem: npm
-    directory: /landing
-    schedule:
-      interval: monthly
-    groups:
-      landing:
-        patterns: ["*"]
-
   - package-ecosystem: cargo
     directory: /src-tauri
     schedule:
