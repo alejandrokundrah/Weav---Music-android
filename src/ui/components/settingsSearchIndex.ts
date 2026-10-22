@@ -35,6 +35,7 @@ const ENTRIES: SettingsSearchEntry[] = [
   { tab: "system", category: "Library", title: "Remember window size and location", description: "Restore the main window geometry." },
   { tab: "system", category: "Library", title: "Troubleshooting", description: "Open logs or reset WEAV data." },
   { tab: "window", category: "Window", title: "Mini player", description: "Show a compact player when the main window loses focus." },
+  { tab: "window", category: "Window", title: "Notch player", description: "A compact player at the top of the screen with controls and synced lyrics." },
   { tab: "window", category: "Window", title: "Library sidebar", description: "Choose the playlist rail size and hover behavior." },
   { tab: "window", category: "Window", title: "Window controls", description: "Choose macOS, Windows, or native title-bar buttons." },
   { tab: "window", category: "Window", title: "Compact player bar", description: "Use a smaller playback bar." },

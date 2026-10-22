@@ -4,7 +4,8 @@
   "description": "Desktop-only plugins (no Android equivalent)",
   "windows": [
     "main",
-    "mini-player"
+    "mini-player",
+    "notch"
   ],
   "platforms": [
     "linux",

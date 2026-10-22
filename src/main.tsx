@@ -15,6 +15,7 @@ import {
   hydrateWindowControlSettings,
 } from "./ui/settings/windowControls";
 import { hydrateMiniPlayerSettings } from "./ui/settings/miniPlayer";
+import { hydrateNotchSettings } from "./ui/settings/notch";
 import { hydratePlayerControlSettings } from "./ui/settings/playerControls";
 import { hydrateQueuePanelSettings } from "./ui/settings/queuePanel";
 import { hydrateTraySettings } from "./ui/settings/tray";
@@ -80,6 +81,7 @@ void Promise.all([
   hydrateWindowControlSettings(),
   hydrateMediaSessionSettings(),
   hydrateMiniPlayerSettings(),
+  isAndroid ? Promise.resolve() : hydrateNotchSettings(),
   hydratePlayerControlSettings(),
   hydrateQueuePanelSettings(),
   isAndroid ? Promise.resolve() : hydrateTraySettings(),

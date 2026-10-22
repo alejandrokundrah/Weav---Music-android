@@ -39,6 +39,7 @@ import { SearchOverlay } from "./components/SearchOverlay";
 import { TrackContextMenuProvider } from "./components/TrackContextMenu";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { VolumeSyncBridge } from "./components/player/VolumeSyncBridge";
+import { NotchBridge } from "./components/notch/NotchBridge";
 import { PlaylistContextMenuProvider } from "./components/PlaylistContextMenu";
 import { ArtistNavigationProvider } from "./components/ArtistLinks";
 import { cn } from "@/lib/utils";
@@ -122,6 +123,12 @@ import {
   useMiniPlayerEnabled,
   useMiniPlayerWindowLive,
 } from "./settings/miniPlayer";
+import {
+  destroyNotchWindow,
+  ensureNotchWindow,
+  useNotchEnabled,
+  useNotchWindowLive,
+} from "./settings/notch";
 import { setAutostartEnabled } from "./settings/autostart";
 import {
   eventMatchesShortcut,
@@ -312,6 +319,8 @@ export default function App() {
   const playerUIState = usePlayerUIState();
   const miniPlayerEnabled = useMiniPlayerEnabled();
   const miniPlayerWindowLive = useMiniPlayerWindowLive();
+  const notchEnabled = useNotchEnabled();
+  const notchWindowLive = useNotchWindowLive();
   const keyboardShortcuts = useKeyboardShortcuts();
   const lastFmScrobblingEnabled = useLastFmScrobblingEnabled();
   // The stylesheet kills CSS animation via !important; this is the JS half. Motion writes
@@ -1754,6 +1763,17 @@ useEffect(() => {
   void destroyMiniPlayerWindow();
 }, [miniPlayerEnabled]);
 
+/*
+ * The notch's window follows its setting, and unlike the mini player it is not tied to the
+ * main window losing focus: it hangs at the top of the screen for as long as something plays.
+ * It places and shows itself, and hides itself when nothing is playing.
+ */
+useEffect(() => {
+  if (isAndroid) return;
+  if (notchEnabled) void ensureNotchWindow();
+  else void destroyNotchWindow();
+}, [notchEnabled]);
+
 
 useEffect(() => {
   // Single-window platform: nothing backgrounds into a mini player.
@@ -1938,7 +1958,7 @@ useEffect(() => {
    * it costs nothing between track changes, and it is what the mini player reads first.
    */
   let timeSyncIntervalId = 0;
-  if (miniPlayerWindowLive) {
+  if (miniPlayerWindowLive || notchWindowLive) {
     syncTime();
     timeSyncIntervalId = window.setInterval(syncTime, 1000);
   }
@@ -1960,7 +1980,7 @@ useEffect(() => {
     window.clearInterval(timeSyncIntervalId);
     void resync.then((unlisten) => unlisten());
   };
-}, [miniPlayerWindowLive]);
+}, [miniPlayerWindowLive, notchWindowLive]);
 
 useEffect(() => {
   const setup = async () => {
@@ -2310,6 +2330,7 @@ useEffect(() => {
       )}
 
       <VolumeSyncBridge />
+      <NotchBridge live={notchWindowLive} />
 
       {/*
         Fullscreen lyrics: the bar becomes a bottom overlay instead of a row that permanently
