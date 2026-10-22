@@ -21,6 +21,7 @@ import { isLikedSongsId, likedSongsCover } from "../likedSongsArtwork";
 import { TrackListSkeleton } from "../components/Skeleton";
 import { TrackRow } from "../components/TrackRow";
 import { NoirTrackTableHeader } from "../skins/noir/NoirTrackTableHeader";
+import { useAppSkin } from "../settings/appSkin";
 import { useNowPlaying } from "../hooks/useNowPlaying";
 import { useCompactViewport } from "../hooks/useCompactViewport";
 import { PHONE_PILL_CLASS, PhoneCollection, type PhoneLoopMode } from "./PhoneCollection";
@@ -265,6 +266,8 @@ function PlaylistDescription({
 
 export function PlaylistView({ playlist, playerController, libraryController }: PlaylistViewProps) {
   const isPhone = useCompactViewport();
+  // Noir shows the description inside its hero rather than below it. A phone never wears it.
+  const isNoirSkin = useAppSkin() === "noir" && !isPhone;
   const { openPlaylistPicker, openTrackMenu } = useTrackContextMenu();
   const { openPlaylistMenu } = usePlaylistContextMenu();
   const keyboardShortcuts = useKeyboardShortcuts();
@@ -884,6 +887,9 @@ export function PlaylistView({ playlist, playerController, libraryController }: 
     <div className="flex flex-col gap-8">
       <div onContextMenu={(event) => openPlaylistMenu(event, playlist)}>
         <MediaHeader
+          descriptionSlot={isNoirSkin ? (
+            <PlaylistDescription playlist={playlist} libraryController={libraryController} />
+          ) : undefined}
           eyebrow="Playlist"
           title={playlist.title}
           subtitle={playlist.owner}
@@ -952,7 +958,10 @@ export function PlaylistView({ playlist, playerController, libraryController }: 
             isBusy: isCollectingAll,
           }}
         />
-        <PlaylistDescription playlist={playlist} libraryController={libraryController} />
+        {/* Noir draws the description inside its hero (see `descriptionSlot`). */}
+        {!isNoirSkin && (
+          <PlaylistDescription playlist={playlist} libraryController={libraryController} />
+        )}
       </div>
       {error && <p className="px-2 py-10 text-center text-sm text-muted-foreground">{error}</p>}
       {!isLoading && !error && !hasMoreTracks && tracks.length === 0 && (

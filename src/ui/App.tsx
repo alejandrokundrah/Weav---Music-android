@@ -44,7 +44,7 @@ import { ArtistNavigationProvider } from "./components/ArtistLinks";
 import { cn } from "@/lib/utils";
 import { TitleBar } from "./components/TitleBar";
 import { useAppSkin } from "./settings/appSkin";
-import { NoirNavCluster } from "./skins/noir/NoirNavCluster";
+import { NoirNavCluster, NoirSearchButton } from "./skins/noir/NoirNavCluster";
 import { PlayerBar } from "./components/player/PlayerBar";
 import { NowPlayingScreen } from "./components/player/NowPlayingScreen";
 
@@ -2087,9 +2087,9 @@ useEffect(() => {
             canGoForward={canNavigateForward}
             onBack={handleNavigateBack}
             onForward={handleNavigateForward}
-            onOpenSearch={() => setIsSearchOpen(true)}
           />
         ) : undefined}
+        searchSlot={isNoir ? <NoirSearchButton onOpen={() => setIsSearchOpen(true)} /> : undefined}
       />
       )}
 

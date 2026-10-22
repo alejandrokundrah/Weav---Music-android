@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, useSyncExternalStore, type ComponentType } from "react";
 import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
-import { AlbumIcon, ClockIcon, CompassIcon, DownloadIcon, HomeIcon } from "@/ui/icons";
+import { AlbumIcon, CompassIcon, DownloadIcon, HomeIcon } from "@/ui/icons";
 import type { Album, Playlist } from "../../../datasource/types";
 import { useLibraryState } from "../../../player/playerStore";
 import {
@@ -19,7 +19,7 @@ import { usePlaylistContextMenu } from "../../components/PlaylistContextMenu";
  * Wide enough for a comfortable line of text, narrow enough to leave the page its air. The window
  * reads this too: the brand block in the top bar is sized to it so the two line up.
  */
-export const NOIR_SIDEBAR_WIDTH = 232;
+export const NOIR_SIDEBAR_WIDTH = 296;
 
 /*
  * The same keys the glass sidebar stores a hand-arranged order under. Read-only here — dragging
@@ -79,7 +79,7 @@ function NavItem({
       onClick={onClick}
       aria-current={active ? "page" : undefined}
       className={cn(
-        "group/nav relative flex items-center gap-3 rounded-sm py-1.5 text-left text-[13px] transition-colors",
+        "group/nav relative flex items-center gap-3 rounded-sm py-1.5 pl-3 text-left text-[13px] transition-colors",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
         active ? "text-foreground" : "text-muted-foreground hover:text-foreground",
       )}
@@ -88,7 +88,7 @@ function NavItem({
       <span
         aria-hidden="true"
         className={cn(
-          "absolute -left-3.5 size-1 rounded-full bg-primary transition-opacity",
+          "absolute left-0 size-1 rounded-full bg-primary transition-opacity",
           active ? "opacity-100" : "opacity-0",
         )}
       />
@@ -107,7 +107,7 @@ function LibraryItem({
   label: string;
   active: boolean;
   onClick: () => void;
-  onContextMenu: (event: React.MouseEvent) => void;
+  onContextMenu?: (event: React.MouseEvent) => void;
 }) {
   return (
     <button
@@ -117,7 +117,7 @@ function LibraryItem({
       onContextMenu={onContextMenu}
       aria-current={active ? "page" : undefined}
       className={cn(
-        "block w-full truncate rounded-sm py-1.5 text-left text-[13px] transition-colors",
+        "block w-full truncate rounded-sm py-1.5 pl-3 text-left text-[13px] transition-colors",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
         active ? "text-foreground" : "text-muted-foreground hover:text-foreground",
       )}
@@ -269,9 +269,9 @@ export function NoirSidebar({
           </div>
 
           <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
+            {/* Plain text like the rest of the list: the design's library has no icons. */}
             {nav && (
-              <NavItem
-                icon={ClockIcon}
+              <LibraryItem
                 label={t("sidebar.recentlyPlayed")}
                 active={nav.activeView === "history"}
                 onClick={nav.onHistory}

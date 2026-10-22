@@ -75,6 +75,11 @@ export function describeCollectionDownload(
 }
 
 export interface MediaHeaderProps {
+  /**
+   * Noir only: the page's own description control, drawn inside the hero under the meta line.
+   * The glass hero ignores it — its pages render the description below the header themselves.
+   */
+  descriptionSlot?: ReactNode;
   /** Small uppercase kicker: PLAYLIST, ALBUM, ARTIST. */
   eyebrow: string;
   /** ReactNode so a page can make the title interactive — the artist page's copies its URL. */
@@ -190,6 +195,7 @@ export function MediaHeader({
   loop,
   actionsDisabled = false,
   actions,
+  descriptionSlot,
 }: MediaHeaderProps) {
   const isNoir = useAppSkin() === "noir";
   /* Destructured once, so the body below reads the same as it did when these were flat props
@@ -233,6 +239,7 @@ export function MediaHeader({
         loop={loop}
         actionsDisabled={actionsDisabled}
         actions={actions}
+        descriptionSlot={descriptionSlot}
       />
     );
   }

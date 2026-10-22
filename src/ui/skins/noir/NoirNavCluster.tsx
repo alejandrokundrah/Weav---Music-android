@@ -9,7 +9,6 @@ interface NoirNavClusterProps {
   canGoForward: boolean;
   onBack: () => void;
   onForward: () => void;
-  onOpenSearch: () => void;
 }
 
 const ICON_BUTTON =
@@ -31,7 +30,6 @@ export function NoirNavCluster({
   canGoForward,
   onBack,
   onForward,
-  onOpenSearch,
 }: NoirNavClusterProps) {
   const { t } = useTranslation();
 
@@ -116,15 +114,22 @@ export function NoirNavCluster({
           )}
         </nav>
       )}
-
-      <button
-        type="button"
-        className={cn(ICON_BUTTON, "ml-1")}
-        onClick={onOpenSearch}
-        aria-label={t("sidebar.search")}
-      >
-        <SearchIcon size={18} aria-hidden="true" />
-      </button>
     </div>
+  );
+}
+
+/** The search icon that sits just before the tabs, in the middle of the top bar. */
+export function NoirSearchButton({ onOpen }: { onOpen: () => void }) {
+  const { t } = useTranslation();
+
+  return (
+    <button
+      type="button"
+      className={cn(ICON_BUTTON, "text-foreground")}
+      onClick={onOpen}
+      aria-label={t("sidebar.search")}
+    >
+      <SearchIcon size={18} aria-hidden="true" />
+    </button>
   );
 }
