@@ -32,6 +32,7 @@ import { NotificationsPanel } from "./NotificationsPanel";
 import { useToolbarItemVisible } from "../settings/toolbarItems";
 import { motion } from "motion/react";
 import appIcon from "../../../assets/img/logo.svg";
+import noirIcon from "../../../assets/img/logo-noir.svg";
 
 interface TitleBarProps {
   tabs: Tab[];
@@ -253,8 +254,9 @@ export function TitleBar({
           initial={{ opacity: 0, scale: 0.92 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ type: "spring", stiffness: 260, damping: 24 }}
-          className={isNoir ? "size-5" : "size-7"}
-          src={appIcon}
+          // Noir has its own mark (red and charcoal, wider than tall), so it is sized by height.
+          className={isNoir ? "h-6 w-auto" : "size-7"}
+          src={isNoir ? noirIcon : appIcon}
           alt=""
         /> 
         {!hideHomeText && (
