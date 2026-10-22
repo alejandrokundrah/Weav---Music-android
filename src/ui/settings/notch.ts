@@ -24,7 +24,7 @@ const CHANGE_EVENT = "notch-player-enabled-change";
 
 /** Window sizes in logical pixels. The window is exactly the shape, so it never blocks clicks. */
 export const NOTCH_SIZES = {
-  pill: { width: 232, height: 38 },
+  pill: { width: 288, height: 38 },
   compact: { width: 372, height: 132 },
   lyrics: { width: 580, height: 132 },
 } as const;

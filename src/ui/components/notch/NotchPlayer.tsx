@@ -231,6 +231,15 @@ export default function NotchPlayer() {
         transition={spring}
         style={{ boxShadow: "0 8px 28px rgba(0,0,0,0.45)" }}
       >
+        {/*
+          The content is laid out at its final size and only clipped by the animating shape.
+          Laid out against the shape instead, it was squeezed into a 38px-high box on every
+          expand and collapse, and everything in it landed on top of everything else.
+        */}
+        <div
+          className="absolute left-1/2 top-0 -translate-x-1/2"
+          style={{ width: size.width, height: size.height }}
+        >
         {shape === "open" ? (
           <OpenContent
             title={playerState.title}
@@ -255,6 +264,7 @@ export default function NotchPlayer() {
             reduceMotion={reduceMotion}
           />
         )}
+        </div>
       </motion.div>
     </div>
   );
@@ -283,15 +293,20 @@ function PillContent({
 }) {
   return (
     <motion.div
-      className="flex h-full items-center gap-2.5 px-3.5"
+      className="flex h-full w-full items-center gap-2.5 px-3.5"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: reduceMotion ? 0 : 0.18 }}
     >
       <Cover url={artworkUrl} className="h-6 w-6 rounded-full" />
-      <div className="min-w-0 flex-1 truncate text-[12px] font-medium leading-none">
-        {title ?? "Nothing playing"}
-        {artist && <span className="ml-1.5 font-normal text-white/45">{artist}</span>}
+      {/* Title and artist are separate boxes: one truncating run of text let them fuse. */}
+      <div className="flex min-w-0 flex-1 items-baseline gap-2 leading-none">
+        <span className="max-w-[62%] shrink-0 truncate text-[12px] font-semibold">
+          {title ?? "Nothing playing"}
+        </span>
+        {artist && (
+          <span className="min-w-0 flex-1 truncate text-[11px] text-white/45">{artist}</span>
+        )}
       </div>
       <Bars active={isPlaying && !reduceMotion} />
     </motion.div>
@@ -301,11 +316,11 @@ function PillContent({
 /** Three bars that bounce while playing; flat when paused. */
 function Bars({ active }: { active: boolean }) {
   return (
-    <div className="flex h-3.5 shrink-0 items-end gap-[2px]" aria-hidden="true">
+    <div className="flex h-3.5 w-[13px] shrink-0 items-end justify-between" aria-hidden="true">
       {[0, 1, 2].map((index) => (
         <motion.span
           key={index}
-          className="w-[2.5px] rounded-full bg-white/80"
+          className="w-[3px] rounded-full bg-white/80"
           initial={false}
           animate={{ height: active ? ["30%", "100%", "50%", "85%", "30%"] : "30%" }}
           transition={
@@ -350,7 +365,7 @@ function OpenContent({
 
   return (
     <motion.div
-      className="flex h-full items-stretch gap-4 px-4 pb-3.5 pt-4"
+      className="flex h-full w-full items-stretch gap-4 px-4 pb-3.5 pt-4"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.2, delay: 0.06 }}
