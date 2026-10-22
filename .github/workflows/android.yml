@@ -2,9 +2,9 @@
 # the artifact from the finished run.
 #
 # Two variants (the "variant" input):
-#   phone - arm64 only, phone layout. Artifact: `zuno-android-apk` (zuno-android.apk).
+#   phone - arm64 only, phone layout. Artifact: `weav-android-apk` (weav-android.apk).
 #   tv    - arm64 + 32-bit armv7 in one APK, always the desktop layout, and a manifest that
-#           declares Android TV support. Artifact: `zuno-android-tv-apk` (zuno-android-tv.apk).
+#           declares Android TV support. Artifact: `weav-android-tv-apk` (weav-android-tv.apk).
 #           The armv7 part matters: many TVs (Mali-450 era SoCs) are 32-bit only and refuse an
 #           arm64-only APK as "not compatible".
 #
@@ -80,12 +80,12 @@ jobs:
           if [ "$VARIANT" = "tv" ]; then
             echo "VITE_TV=1" >> "$GITHUB_ENV"
             echo "TARGETS=--target aarch64 --target armv7" >> "$GITHUB_ENV"
-            echo "APK_NAME=zuno-android-tv.apk" >> "$GITHUB_ENV"
-            echo "ARTIFACT_NAME=zuno-android-tv-apk" >> "$GITHUB_ENV"
+            echo "APK_NAME=weav-android-tv.apk" >> "$GITHUB_ENV"
+            echo "ARTIFACT_NAME=weav-android-tv-apk" >> "$GITHUB_ENV"
           else
             echo "TARGETS=--target aarch64" >> "$GITHUB_ENV"
-            echo "APK_NAME=zuno-android.apk" >> "$GITHUB_ENV"
-            echo "ARTIFACT_NAME=zuno-android-apk" >> "$GITHUB_ENV"
+            echo "APK_NAME=weav-android.apk" >> "$GITHUB_ENV"
+            echo "ARTIFACT_NAME=weav-android-apk" >> "$GITHUB_ENV"
           fi
 
       - name: Generate the Android project
@@ -179,11 +179,11 @@ jobs:
           if [ -n "${KEYSTORE_B64:-}" ]; then
             echo "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/release.jks"
           else
-            KEYSTORE_PASSWORD=zuno-throwaway
-            KEY_ALIAS=zuno
+            KEYSTORE_PASSWORD=weav-throwaway
+            KEY_ALIAS=weav
             keytool -genkeypair -keystore "$RUNNER_TEMP/release.jks" -alias "$KEY_ALIAS" \
               -keyalg RSA -keysize 2048 -validity 10000 -storepass "$KEYSTORE_PASSWORD" \
-              -dname "CN=Zuno" >/dev/null 2>&1
+              -dname "CN=WEAV" >/dev/null 2>&1
           fi
 
           tools="$ANDROID_HOME/build-tools/35.0.0"

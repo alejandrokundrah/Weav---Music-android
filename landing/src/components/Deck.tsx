@@ -111,7 +111,7 @@ export function Deck() {
         <div className="screen-ghost deck-ghost" aria-hidden="true">
           <video
             className="float size-full object-cover"
-            src="./zuno-character.mp4"
+            src="./weav-character.mp4"
             autoPlay={!reduced}
             muted
             loop

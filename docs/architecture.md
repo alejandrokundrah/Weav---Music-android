@@ -1,4 +1,4 @@
-# Architecture — Zuno
+# Architecture — WEAV
 
 An unofficial desktop YouTube Music client. Tauri 2 (Rust) shell + React 19 / TypeScript
 front end, bundled by Vite 7. No router and no Redux — plain classes with `useSyncExternalStore`
@@ -6,7 +6,7 @@ and direct Tauri IPC. The UI is built on Tailwind v4 plus animated components ve
 [beUI](https://beui.dev) registry, with [Solar](https://solar-icons.vercel.app) icons.
 
 - Version: `1.2.1` (`package.json`, `src-tauri/Cargo.toml`, `src-tauri/tauri.conf.json` are kept in lockstep)
-- Bundle id: `com.zuno.desktop` · Rust crate `zuno` / lib `zuno_lib`
+- Bundle id: `com.weav.desktop` · Rust crate `weav` / lib `weav_lib`
 - Platforms: Windows, macOS, Linux
 - Companion docs: [frontend.md](./frontend.md) (UI), [backend.md](./backend.md) (Rust/IPC)
 

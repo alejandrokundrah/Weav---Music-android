@@ -1,4 +1,4 @@
-// The app's equaliser maths (src/ui/settings/equalizerCurve.ts): same bands, Q and presets, so the curve drawn is the one Zuno plays.
+// The app's equaliser maths (src/ui/settings/equalizerCurve.ts): same bands, Q and presets, so the curve drawn is the one WEAV plays.
 
 export const EQ_BANDS_HZ = [31, 62, 125, 250, 500, 1000, 2000, 4000, 8000, 16000] as const;
 export const EQ_MAX_DB = 12;

@@ -58,7 +58,7 @@ export function Footer() {
       <div className="relative mt-16 select-none overflow-hidden" aria-hidden="true">
         <p className="wordmark-xl text-center font-semibold">WEAV</p>
         <div className="screen-ghost absolute bottom-0 right-[6%] w-[17%] max-w-52">
-          <video className="float aspect-square w-full object-cover" src="./zuno-character.mp4" autoPlay={!reduced} muted loop playsInline />
+          <video className="float aspect-square w-full object-cover" src="./weav-character.mp4" autoPlay={!reduced} muted loop playsInline />
         </div>
       </div>
 

@@ -284,7 +284,7 @@ By contributing you agree to the [Contributor License Agreement](CLA.md).
 
 ## Credits
 
-WEAV is a fork of Zuno, developed and maintained by Alejandro Kundrah.
+WEAV is a fork of [JustAnotherMusicClient](https://github.com/2latemc/JustAnotherMusicClient) by 2latemc (Apache-2.0), developed and maintained by Alejandro Kundrah.
 
 ## License
 
