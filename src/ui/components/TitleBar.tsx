@@ -33,7 +33,7 @@ import { useToolbarItemVisible } from "../settings/toolbarItems";
 import { motion } from "motion/react";
 import appIcon from "../../../assets/img/logo.svg";
 import noirIcon from "../../../assets/img/logo-noir.svg";
-import noirWordmark from "../../../assets/img/wordmark-noir.svg";
+import wordmark from "../../../assets/img/wordmark-noir.svg";
 
 interface TitleBarProps {
   tabs: Tab[];
@@ -263,18 +263,16 @@ export function TitleBar({
           initial={{ opacity: 0, scale: 0.92 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ type: "spring", stiffness: 260, damping: 24 }}
-          // Noir has its own mark (red and charcoal, wider than tall), so it is sized by height.
+          // Each skin's mark, sized to sit beside the shared wordmark.
           className={isNoir ? "h-6 w-auto" : "size-7"}
           src={isNoir ? noirIcon : appIcon}
           alt=""
         /> 
-        {!hideHomeText && (isNoir ? (
-          // Noir's hand-lettered wordmark. It is an image, so the button's own "Home" label is
-          // what a screen reader gets; the picture is decoration.
-          <img className="h-10 w-auto" src={noirWordmark} alt="" />
-        ) : (
-          <h3 className="font-lexend text-[1.65rem] font-light leading-none tracking-[0.1em]">WEAV</h3>
-        ))}
+        {!hideHomeText && (
+          // The hand-lettered WEAV wordmark, shared by every skin. It is an image, so the
+          // button's own "Home" label is what a screen reader gets; the picture is decoration.
+          <img className="h-10 w-auto" src={wordmark} alt="" />
+        )}
       </button>
 
       {leading}
