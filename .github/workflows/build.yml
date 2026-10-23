@@ -1,0 +1,190 @@
+# Builds the desktop installers on demand, without cutting a release. Run it from the Actions
+# tab ("Run workflow"), then download the artifacts from the finished run — the desktop
+# counterpart of android.yml.
+#
+# release.yml already builds all of these, but only on a version bump or a `v*` tag, and it
+# publishes what it builds. This is for the rest of the time: trying a branch on macOS or
+# Linux, or handing someone a build, without a version bump or a public release.
+#
+# One artifact per platform:
+#   weav-windows        .msi, NSIS setup .exe, and the portable .exe
+#   weav-macos-arm64    .dmg (Apple Silicon)
+#   weav-macos-x64      .dmg (Intel)
+#   weav-linux          .deb, .rpm and .AppImage
+#
+# macOS builds are ad-hoc signed (identity "-"), the same as release.yml: they run, but
+# Gatekeeper will ask for a right-click > Open the first time. Real notarisation needs an
+# Apple Developer ID, which this repo does not have.
+name: Build
+
+on:
+  workflow_dispatch:
+    inputs:
+      windows:
+        description: Build Windows
+        type: boolean
+        default: true
+      macos:
+        description: Build macOS (Apple Silicon and Intel)
+        type: boolean
+        default: true
+      linux:
+        description: Build Linux
+        type: boolean
+        default: true
+      ref:
+        description: Branch, tag or commit to build. Defaults to the branch the run was started on.
+        required: false
+        type: string
+
+# Nothing here writes to the repo or to releases.
+permissions:
+  contents: read
+
+# A second run on the same ref makes the first one's answer irrelevant.
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # Turns the three checkboxes into a matrix. A job-level `if` cannot read the matrix, so the
+  # list has to be decided before the build job exists.
+  plan:
+    name: Plan
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.plan.outputs.matrix }}
+    steps:
+      - name: Choose platforms
+        id: plan
+        shell: bash
+        env:
+          WINDOWS: ${{ inputs.windows }}
+          MACOS: ${{ inputs.macos }}
+          LINUX: ${{ inputs.linux }}
+        run: |
+          set -euo pipefail
+          entries=()
+          if test "$WINDOWS" = true; then
+            entries+=('{"name":"Windows","artifact":"weav-windows","os":"windows-latest","rust_target":"","build_args":"--bundles msi,nsis","bundle_root":"src-tauri/target/release/bundle","apple_signing_identity":""}')
+          fi
+          if test "$MACOS" = true; then
+            entries+=('{"name":"macOS Apple Silicon","artifact":"weav-macos-arm64","os":"macos-latest","rust_target":"aarch64-apple-darwin","build_args":"--target aarch64-apple-darwin --bundles app,dmg","bundle_root":"src-tauri/target/aarch64-apple-darwin/release/bundle","apple_signing_identity":"-"}')
+            entries+=('{"name":"macOS Intel","artifact":"weav-macos-x64","os":"macos-15-intel","rust_target":"x86_64-apple-darwin","build_args":"--target x86_64-apple-darwin --bundles app,dmg","bundle_root":"src-tauri/target/x86_64-apple-darwin/release/bundle","apple_signing_identity":"-"}')
+          fi
+          if test "$LINUX" = true; then
+            entries+=('{"name":"Linux","artifact":"weav-linux","os":"ubuntu-latest","rust_target":"","build_args":"--bundles deb,rpm,appimage","bundle_root":"src-tauri/target/release/bundle","apple_signing_identity":""}')
+          fi
+
+          if test "${#entries[@]}" -eq 0; then
+            echo "Pick at least one platform." >&2
+            exit 1
+          fi
+
+          joined=$(IFS=,; echo "${entries[*]}")
+          echo "matrix={\"include\":[${joined}]}" >> "$GITHUB_OUTPUT"
+
+  build:
+    name: Build ${{ matrix.name }}
+    needs: plan
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.plan.outputs.matrix) }}
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Add Rust target
+        if: matrix.rust_target != ''
+        run: rustup target add ${{ matrix.rust_target }}
+
+      # Mirrors the list in release.yml's Linux build and ci.yml's rust-linux job. If one
+      # changes, change all three.
+      - name: Install Linux system dependencies
+        if: matrix.name == 'Linux'
+        shell: bash
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            build-essential \
+            curl \
+            wget \
+            file \
+            libssl-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev \
+            libgtk-3-dev \
+            libsoup-3.0-dev \
+            libjavascriptcoregtk-4.1-dev \
+            libasound2-dev \
+            libdbus-1-dev \
+            cmake \
+            patchelf
+
+      - name: Cache Rust build
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: "./src-tauri -> target"
+          key: build-${{ matrix.artifact }}
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      # `createUpdaterArtifacts` is on in tauri.conf.json, and with it on `tauri build` fails
+      # unless TAURI_SIGNING_PRIVATE_KEY is set. This run never publishes an updater, so it
+      # is switched off here rather than handing the signing key to a manual build.
+      - name: Build installers
+        shell: bash
+        env:
+          APPLE_SIGNING_IDENTITY: ${{ matrix.apple_signing_identity }}
+        run: |
+          npm run tauri -- build ${{ matrix.build_args }} \
+            --config '{"bundle":{"createUpdaterArtifacts":false}}'
+
+      - name: Collect installers
+        shell: bash
+        env:
+          BUNDLE_ROOT: ${{ matrix.bundle_root }}
+        run: |
+          set -euo pipefail
+          mkdir out
+
+          # Searched rather than listed: each bundler writes into its own subfolder, and the
+          # file names carry the version and architecture.
+          find "$BUNDLE_ROOT" -type f \
+            \( -name '*.msi' -o -name '*.exe' -o -name '*.dmg' \
+               -o -name '*.deb' -o -name '*.rpm' -o -name '*.AppImage' \) \
+            -exec cp -v {} out/ \;
+
+          if test "${{ matrix.name }}" = Windows; then
+            # The same lookup release.yml uses: the one top-level exe, whatever Tauri named it.
+            portable_exe=$(find src-tauri/target/release -maxdepth 1 -type f -name '*.exe' | head -n 1)
+            test -n "$portable_exe" || { echo "No portable executable found" >&2; exit 1; }
+            cp -v "$portable_exe" out/WEAV-Windows-portable.exe
+          fi
+
+          test -n "$(ls -A out)" || { echo "No installers were produced" >&2; exit 1; }
+          ls -lh out
+
+      - name: Upload installers
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: out/*
+          if-no-files-found: error
+          retention-days: 14
