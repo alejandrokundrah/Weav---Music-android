@@ -450,8 +450,8 @@ webkit2gtk4.1 / gtk3 / libayatana-appindicator and recommends the GStreamer plug
 API and runs each in its own process with a 30 s timeout. `npm run verify` is both. The Rust side
 has a `#[cfg(test)]` module in `lib.rs` — 14 tests (`cargo test`). There is no component/DOM test harness.
 
-**Repo layout beyond the app:** `landing/` is a separate Vite site for the product page,
-`packaging/` holds the AUR PKGBUILD, `manifests/` holds the winget submission. Workflows:
+**Repo layout beyond the app:** `packaging/` holds the AUR PKGBUILD, `manifests/` holds the winget
+submission. Workflows:
 `ci.yml`, `release.yml`, `aur.yml`.
 
 **Security posture:**
