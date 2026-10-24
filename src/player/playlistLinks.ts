@@ -34,7 +34,8 @@ export type PlaylistLinkErrorCode =
   | "private"
   | "blocked"
   | "unreadable"
-  | "network";
+  | "network"
+  | "cancelled";
 
 export class PlaylistLinkError extends Error {
   readonly code: PlaylistLinkErrorCode;

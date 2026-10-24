@@ -257,6 +257,9 @@ export function CreatePlaylistButton({
   // Read when an import finishes, to tell whether anyone is still looking at the panel.
   const openRef = useRef(open);
   openRef.current = open;
+  // Which import is the live one. Cancelling, or starting another, makes an older one stale:
+  // it keeps running in the background but can no longer touch the panel.
+  const importRunRef = useRef(0);
 
   useEffect(() => {
     if (!canCreateRemote) setDestination("local");
@@ -321,23 +324,41 @@ export function CreatePlaylistButton({
       return;
     }
 
+    importRunRef.current += 1;
+    const run = importRunRef.current;
+    const isLive = () => importRunRef.current === run;
+
     setBusy(true);
     setError(null);
     setLinkResult(null);
     try {
       const result = await importPlaylistFromLink(link, {
-        local: destination === "local" || !canCreateRemote,
-        onStatus: (status) => setLinkStatus(describeLinkStatus(status)),
+        onStatus: (status) => {
+          if (isLive()) setLinkStatus(describeLinkStatus(status));
+        },
+        isCancelled: () => !isLive(),
       });
+      if (!isLive()) return;
       setLinkResult(result);
       // Closed while it ran: nothing on screen would say it finished.
       if (!openRef.current) onCreated(result.playlist);
     } catch (cause) {
+      if (!isLive()) return;
       setError(cause instanceof Error ? cause.message : "Could not import that playlist.");
     } finally {
-      setBusy(false);
-      setLinkStatus(null);
+      if (isLive()) {
+        setBusy(false);
+        setLinkStatus(null);
+      }
     }
+  };
+
+  /** Gives up on the running import, so another link can be tried straight away. */
+  const cancelLinkImport = () => {
+    importRunRef.current += 1;
+    setBusy(false);
+    setLinkStatus(null);
+    setError(null);
   };
 
   const submit = async () => {
@@ -365,7 +386,6 @@ export function CreatePlaylistButton({
     }
   };
 
-  /* Shared by the new-playlist and import-from-link forms: both end up in one of the two places. */
   const destinationPicker = (
     canCreateRemote ? (
       <div
@@ -399,16 +419,22 @@ export function CreatePlaylistButton({
     <div className="flex flex-col gap-2">
       <span className="text-sm font-medium text-foreground">Import from a link</span>
       <span className="text-xs text-muted-foreground">
-        Paste a Spotify, SoundCloud or Apple Music playlist. Songs are matched on YouTube Music.
+        Paste a Spotify, SoundCloud or Apple Music playlist. Songs are matched on YouTube Music
+        and saved as a playlist on your account.
       </span>
-      {destinationPicker}
+      {!canCreateRemote ? (
+        <span className="rounded-lg bg-card p-2.5 text-xs text-muted-foreground">
+          Sign in to YouTube Music to import playlists. A playlist on this computer can only hold
+          files from your disk, so there is nowhere to put imported songs without an account.
+        </span>
+      ) : null}
       <input
         autoFocus
         className="mt-1 w-full min-w-0 rounded-lg bg-background px-2.5 py-1.5 text-sm text-foreground outline-none placeholder:text-muted-foreground focus:ring-1 focus:ring-inset focus:ring-border"
         value={linkText}
         placeholder="https://open.spotify.com/playlist/..."
         aria-label="Playlist link"
-        disabled={busy}
+        disabled={busy || !canCreateRemote}
         spellCheck={false}
         onChange={(event) => {
           setLinkText(event.target.value);
@@ -434,22 +460,25 @@ export function CreatePlaylistButton({
       <button
         type="button"
         className="mt-1 rounded-full bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground transition-transform hover:scale-[1.02] active:scale-95 disabled:pointer-events-none disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        disabled={busy || !linkText.trim()}
+        disabled={busy || !linkText.trim() || !canCreateRemote}
         onClick={() => void importFromLink()}
       >
         {busy ? "Importing..." : "Import playlist"}
       </button>
       <button
         type="button"
-        disabled={busy}
-        className="rounded-full px-3 py-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground disabled:pointer-events-none disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        className="rounded-full px-3 py-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         onClick={() => {
+          if (busy) {
+            cancelLinkImport();
+            return;
+          }
           setView("create");
           setError(null);
           setLinkResult(null);
         }}
       >
-        Back
+        {busy ? "Cancel" : "Back"}
       </button>
     </div>
   );

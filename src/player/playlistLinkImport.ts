@@ -44,6 +44,27 @@ const PROVIDER_NAMES: Record<PlaylistProvider, string> = {
   apple: "Apple Music",
 };
 
+/** A search that has not answered by now is stuck, not slow; it counts as a failed search. */
+const SEARCH_TIMEOUT_MS = 25_000;
+/** Songs put into the playlist by the create call itself; the rest are added one at a time. */
+const CREATE_BATCH = 100;
+
+function withTimeout<T>(promise: Promise<T>, ms: number, what: string): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = globalThis.setTimeout(() => reject(new Error(`${what} timed out`)), ms);
+    promise.then(
+      (value) => {
+        globalThis.clearTimeout(timer);
+        resolve(value);
+      },
+      (error: unknown) => {
+        globalThis.clearTimeout(timer);
+        reject(error);
+      },
+    );
+  });
+}
+
 /** How many searches run at once. Enough to be quick, few enough not to look like a flood. */
 const SEARCH_CONCURRENCY = 3;
 /** SoundCloud's track lookup takes at most this many ids per request. */
@@ -216,6 +237,7 @@ export interface MatchResult {
 export async function matchOnYouTube(
   refs: readonly ImportedTrackRef[],
   onProgress?: (done: number, total: number) => void,
+  isCancelled?: () => boolean,
 ): Promise<MatchResult> {
   const found: Array<Track | null> = new Array(refs.length).fill(null);
   let searchFailures = 0;
@@ -223,7 +245,7 @@ export async function matchOnYouTube(
   let next = 0;
 
   const worker = async (): Promise<void> => {
-    while (next < refs.length) {
+    while (next < refs.length && !isCancelled?.()) {
       const index = next;
       next += 1;
       const ref = refs[index];
@@ -231,7 +253,7 @@ export async function matchOnYouTube(
 
       for (const query of searchQueries(ref)) {
         try {
-          const results = await searchController.searchTracks(query);
+          const results = await withTimeout(searchController.searchTracks(query), SEARCH_TIMEOUT_MS, "search");
           failedEvery = false;
           const best = pickBestMatch(ref, results);
           if (best) {
@@ -292,12 +314,19 @@ export interface LinkImportResult {
   warning?: string;
 }
 
-/** Reads a playlist link, finds its songs on YouTube Music and saves them as a new playlist. */
+/**
+ * Reads a playlist link, finds its songs on YouTube Music and saves them as a new playlist on
+ * the signed-in account.
+ *
+ * Never a local playlist: those hold files on disk and nothing else, so a YouTube song cannot
+ * be put in one. Importing while signed out is refused up front, not after minutes of searching.
+ */
 export async function importPlaylistFromLink(
   link: PlaylistLink,
-  options: { local: boolean; onStatus?: (status: LinkImportStatus) => void },
+  options: { onStatus?: (status: LinkImportStatus) => void; isCancelled?: () => boolean },
 ): Promise<LinkImportResult> {
-  const { local, onStatus } = options;
+  const { onStatus, isCancelled } = options;
+  const cancelled = () => new PlaylistLinkError("cancelled", "Import cancelled.");
 
   onStatus?.({ phase: "reading" });
   const fetched = await fetchPlaylistFromLink(link);
@@ -306,11 +335,15 @@ export async function importPlaylistFromLink(
     songs: fetched.tracks.length,
     warned: Boolean(fetched.warning),
   });
+  if (isCancelled?.()) throw cancelled();
 
   onStatus?.({ phase: "matching", done: 0, total: fetched.tracks.length });
-  const matched = await matchOnYouTube(fetched.tracks, (done, total) =>
-    onStatus?.({ phase: "matching", done, total }),
+  const matched = await matchOnYouTube(
+    fetched.tracks,
+    (done, total) => onStatus?.({ phase: "matching", done, total }),
+    isCancelled,
   );
+  if (isCancelled?.()) throw cancelled();
 
   // Before anything is created: an empty playlist is a thing to go and delete.
   if (!matched.tracks.length) {
@@ -320,28 +353,47 @@ export async function importPlaylistFromLink(
     );
   }
 
-  const playlist = await libraryController.createPlaylist(fetched.title, { local });
   onStatus?.({ phase: "saving", done: 0, total: matched.tracks.length });
-  const saved = await libraryController.addTracksToPlaylist(matched.tracks, playlist, (done, total) =>
-    onStatus?.({ phase: "saving", done, total }),
-  );
+  const ids = matched.tracks.map((track) => track.id);
+  // The same call "save queue as playlist" makes: the playlist is created with its first songs
+  // in one request, instead of one request per song.
+  const playlist = await libraryController.createPlaylist(fetched.title, {
+    trackIds: ids.slice(0, CREATE_BATCH),
+  });
+  let added = Math.min(ids.length, CREATE_BATCH);
+  let failed = 0;
+  onStatus?.({ phase: "saving", done: added, total: ids.length });
+
+  for (const track of matched.tracks.slice(CREATE_BATCH)) {
+    try {
+      await libraryController.addTrackToPlaylist(track, playlist);
+      added += 1;
+    } catch (error) {
+      failed += 1;
+      logInternalWarn("playlistLinkImport.add failed", {
+        trackId: track.id,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+    onStatus?.({ phase: "saving", done: added + failed, total: ids.length });
+  }
 
   logInternalInfo("playlistLinkImport.done", {
     provider: fetched.provider,
     requested: fetched.tracks.length,
     matched: matched.tracks.length,
     missing: matched.missing.length,
-    added: saved.added,
-    failed: saved.failed,
+    added,
+    failed,
   });
 
   return {
     playlist,
     provider: fetched.provider,
     requested: fetched.tracks.length,
-    added: saved.added + saved.alreadyPresent,
+    added,
     missing: matched.missing,
-    failed: saved.failed,
+    failed,
     warning: fetched.warning,
   };
 }
