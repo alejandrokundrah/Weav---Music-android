@@ -40,7 +40,7 @@ jobs:
         id: resolve
         shell: bash
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
           EVENT_NAME: ${{ github.event_name }}
           REF_NAME: ${{ github.ref_name }}
           REF_TYPE: ${{ github.ref_type }}
@@ -135,7 +135,7 @@ jobs:
         shell: bash
         run: gh release view "$RELEASE_TAG" --repo "$RELEASE_REPO"
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
 
       - name: Read release type
         id: release_metadata
@@ -153,7 +153,7 @@ jobs:
             echo "publish_update=true" >> "$GITHUB_OUTPUT"
           fi
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
 
       - name: Check out repository
         uses: actions/checkout@v4
@@ -246,7 +246,7 @@ jobs:
             "${portable_exe}#WEAV-Windows-portable.exe" \
             --clobber
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
 
       - name: Verify macOS DMG and app signature
         if: startsWith(matrix.platform.name, 'macOS')
@@ -301,7 +301,7 @@ jobs:
             echo "publish_update=true" >> "$GITHUB_OUTPUT"
           fi
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
 
       - name: Download generated updater metadata
         if: steps.release_metadata.outputs.publish_update == 'true'
@@ -314,7 +314,7 @@ jobs:
             --dir "$RUNNER_TEMP/updater-channel"
           test -s "$RUNNER_TEMP/updater-channel/latest.json"
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
 
       - name: Publish updater channel
         if: steps.release_metadata.outputs.publish_update == 'true'
@@ -372,7 +372,7 @@ jobs:
             --json isPrerelease --jq '"prerelease=" + (.isPrerelease | tostring)' \
             >> "$GITHUB_OUTPUT"
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
 
       # Version defaults to the release tag with the leading `v` stripped.
       - uses: vedantmgoyal9/winget-releaser@main
