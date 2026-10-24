@@ -223,7 +223,7 @@ jobs:
           releaseCommitish: main
           tagName: ${{ env.RELEASE_TAG }}
           releaseDraft: false
-          uploadUpdaterJson: ${{ steps.release_metadata.outputs.publish_update }}
+          includeUpdaterJson: ${{ steps.release_metadata.outputs.publish_update }}
           uploadUpdaterSignatures: false
           updaterJsonPreferNsis: true
           args: ${{ matrix.platform.build_args }}
