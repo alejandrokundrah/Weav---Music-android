@@ -89,7 +89,7 @@ enjoy using it as much as I enjoyed building it!
 
 ### Desktop
 
-Grab the newest installer from the [latest release](../../releases) for Windows, macOS or Linux.
+Grab the newest installer for Windows, macOS or Linux.
 
 On Arch and derivatives, install from the AUR instead:
 
