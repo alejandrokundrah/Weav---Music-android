@@ -19,6 +19,9 @@ on:
 permissions:
   contents: write
 
+env:
+  RELEASE_REPO: alejandrokundrah/weav-releases
+
 jobs:
   prepare:
     name: Resolve release
@@ -61,7 +64,7 @@ jobs:
 
           # An ordinary commit on main is not a release. Only the one that lands a version
           # nobody has released yet is, which is what makes "bump, commit, push" enough.
-          if gh release view "$tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+          if gh release view "$tag" --repo "$RELEASE_REPO" >/dev/null 2>&1; then
             if test "$EVENT_NAME" = push && test "$REF_TYPE" = branch; then
               echo "$tag is already released; nothing to do."
               echo "proceed=false" >> "$GITHUB_OUTPUT"
@@ -87,10 +90,10 @@ jobs:
           fi
 
           if test -s "$notes"; then
-            gh release create "$tag" --repo "$GITHUB_REPOSITORY" \
+            gh release create "$tag" --repo "$RELEASE_REPO" \
               --title "WEAV ${tag#v}" --notes-file "$notes"
           else
-            gh release create "$tag" --repo "$GITHUB_REPOSITORY" \
+            gh release create "$tag" --repo "$RELEASE_REPO" \
               --title "WEAV ${tag#v}" --generate-notes
           fi
           echo "proceed=true" >> "$GITHUB_OUTPUT"
@@ -130,7 +133,7 @@ jobs:
     steps:
       - name: Verify release exists
         shell: bash
-        run: gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY"
+        run: gh release view "$RELEASE_TAG" --repo "$RELEASE_REPO"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -140,7 +143,7 @@ jobs:
         run: |
           set -euo pipefail
           is_prerelease="$(gh release view "$RELEASE_TAG" \
-            --repo "$GITHUB_REPOSITORY" \
+            --repo "$RELEASE_REPO" \
             --json isPrerelease \
             --jq .isPrerelease)"
 
@@ -210,11 +213,14 @@ jobs:
       - name: Build and upload installers
         uses: tauri-apps/tauri-action@v0
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }}
           APPLE_SIGNING_IDENTITY: ${{ matrix.platform.apple_signing_identity }}
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
+          owner: alejandrokundrah
+          repo: weav-releases
+          releaseCommitish: main
           tagName: ${{ env.RELEASE_TAG }}
           releaseDraft: false
           uploadUpdaterJson: ${{ steps.release_metadata.outputs.publish_update }}
@@ -285,7 +291,7 @@ jobs:
         run: |
           set -euo pipefail
           is_prerelease="$(gh release view "$RELEASE_TAG" \
-            --repo "$GITHUB_REPOSITORY" \
+            --repo "$RELEASE_REPO" \
             --json isPrerelease \
             --jq .isPrerelease)"
 
@@ -303,7 +309,7 @@ jobs:
         run: |
           set -euo pipefail
           gh release download "$RELEASE_TAG" \
-            --repo "$GITHUB_REPOSITORY" \
+            --repo "$RELEASE_REPO" \
             --pattern latest.json \
             --dir "$RUNNER_TEMP/updater-channel"
           test -s "$RUNNER_TEMP/updater-channel/latest.json"
@@ -362,7 +368,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" \
+          gh release view "$RELEASE_TAG" --repo "$RELEASE_REPO" \
             --json isPrerelease --jq '"prerelease=" + (.isPrerelease | tostring)' \
             >> "$GITHUB_OUTPUT"
         env:
