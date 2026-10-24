@@ -18,8 +18,14 @@
 name: Android
 
 on:
+  push:
+    tags: ['v*']
   workflow_dispatch:
     inputs:
+      release_tag:
+        description: "Release tag for publishing, for example v1.2.4"
+        required: false
+        type: string
       variant:
         description: "Which APK to build"
         type: choice
@@ -36,6 +42,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 90
     env:
+      RELEASE_REPO: alejandrokundrah/weav-releases
+      RELEASE_TAG: ${{ inputs.release_tag || github.ref_name }}
       NDK_VERSION: 27.2.12479018
       VARIANT: ${{ inputs.variant || 'phone' }}
     steps:
@@ -204,3 +212,13 @@ jobs:
           name: ${{ env.ARTIFACT_NAME }}
           path: out/${{ env.APK_NAME }}
           if-no-files-found: error
+
+      - name: Publish APK to public release
+        if: github.event_name == 'push' || inputs.release_tag != ''
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh release view "$RELEASE_TAG" --repo "$RELEASE_REPO" >/dev/null 2>&1 || gh release create "$RELEASE_TAG" --repo "$RELEASE_REPO" --title "WEAV ${RELEASE_TAG#v}" --generate-notes
+          gh release upload "$RELEASE_TAG" --repo "$RELEASE_REPO" "out/$APK_NAME" --clobber
