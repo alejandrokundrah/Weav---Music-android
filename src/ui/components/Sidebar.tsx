@@ -15,6 +15,12 @@ import { Tooltip } from "@/components/motion/tooltip";
 import { FloatingPanel } from "./FloatingPanel";
 import { GoogleSignInButton } from "./GoogleSignInButton";
 import { importPlaylistFile } from "../../player/playlistTransfer";
+import {
+  importPlaylistFromLink,
+  type LinkImportResult,
+  type LinkImportStatus,
+} from "../../player/playlistLinkImport";
+import { describeUnsupportedLink, detectPlaylistLink } from "../../player/playlistLinks";
 import { isLikedSongsId, likedSongsCover } from "../likedSongsArtwork";
 import {
   AlbumIcon,
@@ -243,6 +249,14 @@ export function CreatePlaylistButton({
     canCreateRemote ? "youtube" : "local",
   );
   const inputRef = useRef<HTMLInputElement>(null);
+  /** "link" is the import-from-a-Spotify/SoundCloud/Apple-Music-link form. */
+  const [view, setView] = useState<"create" | "link">("create");
+  const [linkText, setLinkText] = useState("");
+  const [linkStatus, setLinkStatus] = useState<string | null>(null);
+  const [linkResult, setLinkResult] = useState<LinkImportResult | null>(null);
+  // Read when an import finishes, to tell whether anyone is still looking at the panel.
+  const openRef = useRef(open);
+  openRef.current = open;
 
   useEffect(() => {
     if (!canCreateRemote) setDestination("local");
@@ -292,6 +306,40 @@ export function CreatePlaylistButton({
     }
   };
 
+  /**
+   * Imports a Spotify, SoundCloud or Apple Music playlist from its link.
+   *
+   * Takes a while — every song is searched for on YouTube Music — so progress is shown, and
+   * the result stays on screen afterwards: some songs are usually not found, and the person
+   * should see which, not discover them missing later.
+   */
+  const importFromLink = async () => {
+    if (busy) return;
+    const link = detectPlaylistLink(linkText);
+    if (!link) {
+      setError(describeUnsupportedLink(linkText));
+      return;
+    }
+
+    setBusy(true);
+    setError(null);
+    setLinkResult(null);
+    try {
+      const result = await importPlaylistFromLink(link, {
+        local: destination === "local" || !canCreateRemote,
+        onStatus: (status) => setLinkStatus(describeLinkStatus(status)),
+      });
+      setLinkResult(result);
+      // Closed while it ran: nothing on screen would say it finished.
+      if (!openRef.current) onCreated(result.playlist);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Could not import that playlist.");
+    } finally {
+      setBusy(false);
+      setLinkStatus(null);
+    }
+  };
+
   const submit = async () => {
     const trimmed = name.trim();
     if (!trimmed) {
@@ -317,13 +365,110 @@ export function CreatePlaylistButton({
     }
   };
 
+  /* Shared by the new-playlist and import-from-link forms: both end up in one of the two places. */
+  const destinationPicker = (
+    canCreateRemote ? (
+      <div
+        className="mt-0.5 flex rounded-lg bg-card p-0.5"
+        role="radiogroup"
+        aria-label="Where to create the playlist"
+      >
+        {(["youtube", "local"] as const).map((value) => (
+          <button
+            key={value}
+            type="button"
+            role="radio"
+            aria-checked={destination === value}
+            onClick={() => setDestination(value)}
+            className={cn(
+              "flex-1 rounded-md px-2 py-1 text-xs font-medium transition-colors",
+              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
+              destination === value
+                ? "bg-background text-foreground shadow-sm"
+                : "text-muted-foreground hover:text-foreground",
+            )}
+          >
+            {value === "youtube" ? "YouTube Music" : "This computer"}
+          </button>
+        ))}
+      </div>
+    ) : null
+  );
+
+  const linkView = (
+    <div className="flex flex-col gap-2">
+      <span className="text-sm font-medium text-foreground">Import from a link</span>
+      <span className="text-xs text-muted-foreground">
+        Paste a Spotify, SoundCloud or Apple Music playlist. Songs are matched on YouTube Music.
+      </span>
+      {destinationPicker}
+      <input
+        autoFocus
+        className="mt-1 w-full min-w-0 rounded-lg bg-background px-2.5 py-1.5 text-sm text-foreground outline-none placeholder:text-muted-foreground focus:ring-1 focus:ring-inset focus:ring-border"
+        value={linkText}
+        placeholder="https://open.spotify.com/playlist/..."
+        aria-label="Playlist link"
+        disabled={busy}
+        spellCheck={false}
+        onChange={(event) => {
+          setLinkText(event.target.value);
+          if (error) setError(null);
+          if (linkResult) setLinkResult(null);
+        }}
+        onKeyDown={(event) => {
+          if (event.key === "Enter") void importFromLink();
+          if (event.key === "Escape") setOpen(false);
+        }}
+      />
+      {error ? <span className="text-xs text-destructive">{error}</span> : null}
+      {busy && linkStatus ? (
+        <span className="text-xs text-muted-foreground" role="status" aria-live="polite">
+          {linkStatus}
+        </span>
+      ) : null}
+      {linkResult ? <LinkImportSummary result={linkResult} onOpen={() => {
+        setOpen(false);
+        onOpenChange?.(false);
+        onCreated(linkResult.playlist);
+      }} /> : null}
+      <button
+        type="button"
+        className="mt-1 rounded-full bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground transition-transform hover:scale-[1.02] active:scale-95 disabled:pointer-events-none disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        disabled={busy || !linkText.trim()}
+        onClick={() => void importFromLink()}
+      >
+        {busy ? "Importing..." : "Import playlist"}
+      </button>
+      <button
+        type="button"
+        disabled={busy}
+        className="rounded-full px-3 py-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground disabled:pointer-events-none disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        onClick={() => {
+          setView("create");
+          setError(null);
+          setLinkResult(null);
+        }}
+      >
+        Back
+      </button>
+    </div>
+  );
+
   return (
     <FloatingPanel
       open={open}
       onOpenChange={(next) => {
         setOpen(next);
         onOpenChange?.(next);
-        if (!next) setError(null);
+        if (!next) {
+          setError(null);
+          // An import in flight keeps its text and finishes in the background.
+          if (!busy) {
+            setView("create");
+            setLinkText("");
+            setLinkResult(null);
+          }
+        }
       }}
       className="w-64"
       trigger={
@@ -360,38 +505,14 @@ export function CreatePlaylistButton({
         </Button>
       }
     >
+      {view === "link" ? linkView : (
       <div className="flex flex-col gap-2">
         <span className="text-sm font-medium text-foreground">New playlist</span>
 
         {/* Segmented control rather than a checkbox: these are two destinations, not a
             modifier, and the description below changes with the choice so the consequence is
             visible before you commit. */}
-        {canCreateRemote ? (
-          <div
-            className="mt-0.5 flex rounded-lg bg-card p-0.5"
-            role="radiogroup"
-            aria-label="Where to create the playlist"
-          >
-            {(["youtube", "local"] as const).map((value) => (
-              <button
-                key={value}
-                type="button"
-                role="radio"
-                aria-checked={destination === value}
-                onClick={() => setDestination(value)}
-                className={cn(
-                  "flex-1 rounded-md px-2 py-1 text-xs font-medium transition-colors",
-                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
-                  destination === value
-                    ? "bg-background text-foreground shadow-sm"
-                    : "text-muted-foreground hover:text-foreground",
-                )}
-              >
-                {value === "youtube" ? "YouTube Music" : "This computer"}
-              </button>
-            ))}
-          </div>
-        ) : null}
+        {destinationPicker}
 
         <span className="text-xs text-muted-foreground">
           {destination === "youtube"
@@ -431,8 +552,74 @@ export function CreatePlaylistButton({
         >
           Import from file...
         </button>
+
+        <button
+          type="button"
+          disabled={busy}
+          className="rounded-full px-3 py-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground disabled:pointer-events-none disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          onClick={() => {
+            setView("link");
+            setError(null);
+          }}
+        >
+          Import from a link...
+        </button>
       </div>
+      )}
     </FloatingPanel>
+  );
+}
+
+function describeLinkStatus(status: LinkImportStatus): string {
+  switch (status.phase) {
+    case "reading":
+      return "Reading the playlist...";
+    case "matching":
+      return `Finding songs on YouTube Music... ${status.done}/${status.total}`;
+    case "saving":
+      return `Adding songs... ${status.done}/${status.total}`;
+  }
+}
+
+const MISSING_PREVIEW = 8;
+
+/** What an import did: how many songs made it, what was left out and why it might be. */
+function LinkImportSummary({ result, onOpen }: { result: LinkImportResult; onOpen: () => void }) {
+  const left = result.missing.length + result.failed;
+  return (
+    <div className="flex flex-col gap-1.5 rounded-lg bg-card p-2.5 text-xs" role="status">
+      <span className="font-medium text-foreground">
+        Added {result.added} of {result.requested} {result.requested === 1 ? "song" : "songs"} to "
+        {result.playlist.title}"
+      </span>
+      {result.warning ? <span className="text-muted-foreground">{result.warning}</span> : null}
+      {left > 0 ? (
+        <details className="text-muted-foreground">
+          <summary className="cursor-pointer select-none hover:text-foreground">
+            {result.missing.length > 0
+              ? `${result.missing.length} not found on YouTube Music`
+              : `${result.failed} could not be added`}
+          </summary>
+          <ul className="mt-1 flex max-h-32 flex-col gap-0.5 overflow-y-auto">
+            {result.missing.slice(0, MISSING_PREVIEW).map((track, index) => (
+              <li key={`${track.title}-${index}`} className="truncate">
+                {track.artist ? `${track.artist} - ${track.title}` : track.title}
+              </li>
+            ))}
+            {result.missing.length > MISSING_PREVIEW ? (
+              <li>and {result.missing.length - MISSING_PREVIEW} more</li>
+            ) : null}
+          </ul>
+        </details>
+      ) : null}
+      <button
+        type="button"
+        className="mt-0.5 self-start rounded-full bg-background px-3 py-1 font-medium text-foreground transition-colors hover:bg-background/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        onClick={onOpen}
+      >
+        Open playlist
+      </button>
+    </div>
   );
 }
 
