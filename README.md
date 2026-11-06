@@ -104,7 +104,8 @@ workflow:
 
 1. Open the repository's **Actions** tab and choose **Android → Run workflow**.
 2. Pick a variant:
-   - **phone** — arm64, with the phone layout.
+   - **phone** — arm64 and 32-bit armv7 in one APK, with the phone layout. The armv7 part lets it
+     install on older and budget 32-bit phones.
    - **tv** — arm64 and 32-bit armv7 in one APK, always the desktop layout, declared for Android TV.
      The armv7 part matters: many TVs are 32-bit only and refuse an arm64-only APK as "not compatible".
 3. When the run finishes, download the APK from its **Artifacts** section and install it.

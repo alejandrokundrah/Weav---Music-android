@@ -2,7 +2,10 @@
 # the artifact from the finished run.
 #
 # Two variants (the "variant" input):
-#   phone - arm64 only, phone layout. Artifact: `weav-android-apk` (weav-android.apk).
+#   phone - arm64 + 32-bit armv7 in one APK, phone layout. Artifact: `weav-android-apk`
+#           (weav-android.apk). The armv7 part matters: many older and budget phones are 32-bit
+#           only (or run a 32-bit userspace on a 64-bit chip) and refuse an arm64-only APK with
+#           INSTALL_FAILED_NO_MATCHING_ABIS.
 #   tv    - arm64 + 32-bit armv7 in one APK, always the desktop layout, and a manifest that
 #           declares Android TV support. Artifact: `weav-android-tv-apk` (weav-android-tv.apk).
 #           The armv7 part matters: many TVs (Mali-450 era SoCs) are 32-bit only and refuse an
@@ -85,13 +88,13 @@ jobs:
         # VITE_TV is read by the frontend build (`beforeBuildCommand` inherits this environment)
         # and switches the app to its always-desktop TV layout.
         run: |
+          # Both variants ship arm64 and 32-bit armv7 so the APK installs on 32-bit devices too.
+          echo "TARGETS=--target aarch64 --target armv7" >> "$GITHUB_ENV"
           if [ "$VARIANT" = "tv" ]; then
             echo "VITE_TV=1" >> "$GITHUB_ENV"
-            echo "TARGETS=--target aarch64 --target armv7" >> "$GITHUB_ENV"
             echo "APK_NAME=weav-android-tv.apk" >> "$GITHUB_ENV"
             echo "ARTIFACT_NAME=weav-android-tv-apk" >> "$GITHUB_ENV"
           else
-            echo "TARGETS=--target aarch64" >> "$GITHUB_ENV"
             echo "APK_NAME=weav-android.apk" >> "$GITHUB_ENV"
             echo "ARTIFACT_NAME=weav-android-apk" >> "$GITHUB_ENV"
           fi
@@ -201,11 +204,9 @@ jobs:
             --ks-pass env:KEYSTORE_PASSWORD --out "out/$APK_NAME" "$RUNNER_TEMP/aligned.apk"
           "$tools/apksigner" verify "out/$APK_NAME"
 
-          if [ "$VARIANT" = "tv" ]; then
-            # Fail the run, not the user's TV, if a 32-bit library is missing from the APK.
-            unzip -l "out/$APK_NAME" | grep -q 'lib/armeabi-v7a/' || { echo "no armeabi-v7a libs in the TV APK"; exit 1; }
-            unzip -l "out/$APK_NAME" | grep -q 'lib/arm64-v8a/' || { echo "no arm64-v8a libs in the TV APK"; exit 1; }
-          fi
+          # Fail the run, not the user's device, if a 32-bit or 64-bit library is missing.
+          unzip -l "out/$APK_NAME" | grep -q 'lib/armeabi-v7a/' || { echo "no armeabi-v7a libs in the APK"; exit 1; }
+          unzip -l "out/$APK_NAME" | grep -q 'lib/arm64-v8a/' || { echo "no arm64-v8a libs in the APK"; exit 1; }
 
       - uses: actions/upload-artifact@v4
         with:
