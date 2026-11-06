@@ -381,3 +381,69 @@ export function LastFmIcon({ size = 24, ...props }: SVGProps<SVGSVGElement> & { 
     </svg>
   );
 }
+
+/* ── Desktop player bar glyphs ─────────────────────────────────────── */
+
+/**
+ * Download, for the desktop player bar: a circle that fades out around an upward arrow.
+ *
+ * Drawn on Lucide's 24px grid (`circle-fading-arrow-up`) with a 2.5 stroke, which is heavier
+ * than the Solar linear icons around it — that weight is the design, so it is the default here
+ * and callers can still override `strokeWidth`. The phone layout keeps `DownloadIcon`.
+ */
+export function DesktopDownloadIcon({ size = 24, ...props }: SVGProps<SVGSVGElement> & { size?: number | string }) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      width={size}
+      height={size}
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2.5}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      {...props}
+    >
+      <path d="M12 2a10 10 0 0 1 7.38 16.75" />
+      <path d="m16 12-4-4-4 4" />
+      <path d="M12 16V8" />
+      <path d="M2.5 8.875a10 10 0 0 0-.5 3" />
+      <path d="M2.83 16a10 10 0 0 0 2.43 3.4" />
+      <path d="M4.636 5.235a10 10 0 0 1 .891-.857" />
+      <path d="M8.644 21.42a10 10 0 0 0 7.631-.38" />
+    </svg>
+  );
+}
+
+/**
+ * Lyrics, for the desktop player bar: six audio-level bars (Lucide `audio-lines`, 2.5 stroke).
+ *
+ * One glyph for both states. The Solar pair signals "open" by switching to the bold weight; this
+ * one has no filled form, so the button's own accent colour and chip carry the state instead.
+ */
+export function DesktopLyricsIcon({ size = 24, ...props }: SVGProps<SVGSVGElement> & { size?: number | string }) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      width={size}
+      height={size}
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2.5}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      {...props}
+    >
+      <path d="M2 10v3" />
+      <path d="M6 6v11" />
+      <path d="M10 3v18" />
+      <path d="M14 8v7" />
+      <path d="M18 5v13" />
+      <path d="M22 10v3" />
+    </svg>
+  );
+}
