@@ -49,6 +49,9 @@ jobs:
       RELEASE_TAG: ${{ inputs.release_tag || github.ref_name }}
       NDK_VERSION: 27.2.12479018
       VARIANT: ${{ inputs.variant || 'phone' }}
+      # libopus (built from source by the `opus` crate) still declares an ancient
+      # cmake_minimum_required; CMake 4 on the runner rejects that unless told to allow it.
+      CMAKE_POLICY_VERSION_MINIMUM: "3.5"
     steps:
       - uses: actions/checkout@v7
 
